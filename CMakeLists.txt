@@ -43,6 +43,8 @@ endif()
 
 find_package(fmt CONFIG REQUIRED)
 
+find_package(outcome CONFIG REQUIRED)
+
 if (BUILD_TESTING)
     set(DLOG_REQUIRE_UNIT_TEST_FRAMEWORK unit_test_framework)
 endif()
@@ -80,6 +82,9 @@ target_include_directories(deeplog PUBLIC
 )
 target_link_libraries(deeplog PUBLIC
     Deeplex::deeplog_compiler_settings
+    
+    fmt::fmt
+    outcome::outcome
 )
 
 target_sources(deeplog PRIVATE
