@@ -1,0 +1,14 @@
+# build directory as mandated by the pitchfork layout
+/build
+
+# visual studio cmake config
+/CMakeSettings.json
+# visual studio settings
+/.vs
+/out
+# visual studio code settings
+/.vscode
+# clion files
+/.idea
+/cmake-build-debug
+/cmake-build-release
