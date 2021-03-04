@@ -43,7 +43,11 @@ endif()
 
 find_package(fmt CONFIG REQUIRED)
 
+find_package(llfio CONFIG REQUIRED)
+
 find_package(outcome CONFIG REQUIRED)
+
+find_package(deeppack CONFIG REQUIRED)
 
 if (BUILD_TESTING)
     set(DLOG_REQUIRE_UNIT_TEST_FRAMEWORK unit_test_framework)
@@ -82,8 +86,10 @@ target_include_directories(deeplog PUBLIC
 )
 target_link_libraries(deeplog PUBLIC
     Deeplex::deeplog_compiler_settings
+    Deeplex::deeppack
     
     fmt::fmt
+    llfio::llfio
     outcome::outcome
 )
 
@@ -92,6 +98,11 @@ target_sources(deeplog PRIVATE
 
     "include/dplx/dlog/disappointment.hpp"
     "src/dlog/disappointment.cpp"
+
+    "include/dplx/dlog/log_bus.hpp"
+    "include/dplx/dlog/sink.hpp"
+
+    "include/dplx/dlog/detail/utils.hpp"
 )
 
 ########################################################################
@@ -108,6 +119,11 @@ if (BUILD_TESTING)
     target_sources(deeplog-tests PRIVATE
         "tests/deeplog-tests.main.cpp"
         "tests/boost-test.hpp"
+        "tests/test-utils.hpp"
+
+        #"tests/api.test.cpp"
+        "tests/bufferbus.test.cpp"
+        "tests/ringbus.test.cpp"
     )
 
     add_test(NAME deeplog-tests COMMAND deeplog-tests)

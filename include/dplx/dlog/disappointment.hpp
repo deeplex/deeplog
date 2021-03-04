@@ -25,6 +25,7 @@ enum class errc
 {
     nothing = 0, // to be removed
     bad = 1,
+    not_enough_space,
 };
 auto error_category() noexcept -> std::error_category const &;
 
@@ -35,7 +36,6 @@ inline auto make_error_code(errc value) -> std::error_code
 
 } // namespace dplx::dlog
 
-
 template <>
 struct std::is_error_code_enum<dplx::dlog::errc> : std::true_type
 {
@@ -44,3 +44,27 @@ struct std::is_error_code_enum<dplx::dlog::errc> : std::true_type
 #ifndef DPLX_TRY
 #define DPLX_TRY(...) OUTCOME_TRY(__VA_ARGS__)
 #endif
+
+namespace dplx::dlog::detail
+{
+
+template <typename T>
+concept tryable = requires(T &&t)
+{
+    oc::try_operation_has_value(t);
+    {
+        oc::try_operation_return_as(static_cast<T &&>(t))
+    }
+    ->std::convertible_to<result<void>>;
+    oc::try_operation_extract_value(static_cast<T &&>(t));
+};
+
+template <tryable T>
+using result_value_t = std::remove_cvref_t<decltype(
+        oc::try_operation_extract_value(std::declval<T &&>()))>;
+
+template <typename T, typename R>
+concept tryable_result = tryable<T> &&std::convertible_to<result_value_t<T>, R>;
+
+
+} // namespace dplx::dlog::detail
