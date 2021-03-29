@@ -18,53 +18,13 @@
 #include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 
+#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
 
-namespace dplx::dlog::detail
-{
-
-// clang-format off
-template <typename T>
-concept bus_write_result
-    = detail::tryable<T>
-    && dp::output_stream<detail::result_value_t<T>>;
-// clang-format on
-
-} // namespace dplx::dlog::detail
-
 namespace dplx::dlog
 {
-
-// clang-format off
-template <typename T>
-concept bus
-        = requires(T &&t,
-                   typename T::logger_token logger,
-                   unsigned int const size,
-                   void (&dummy_consumer)(std::span<std::byte const>) noexcept)
-        {
-            typename T::logger_token;
-            { t.create_token() }
-                -> detail::tryable_result<typename T::logger_token>;
-
-            { t.write(logger, size) } -> detail::bus_write_result;
-            t.commit(logger);
-
-            { t.consume_content(dummy_consumer) }
-                    -> detail::tryable;
-        };
-// clang-format on
-
-// clang-format off
-template <typename Fn>
-concept bus_consumer
-        = requires(Fn &&fn, std::span<std::byte const> const content)
-        {
-            static_cast<Fn &&>(fn)(content);
-        };
-// clang-format on
 
 class bufferbus_handle
 {
@@ -97,6 +57,8 @@ public:
         , mBuffer(mBackingFile.address(), static_cast<int>(bufferCap), 0)
     {
     }
+
+    using output_stream = dp::byte_buffer_view;
 
     struct logger_token
     {
@@ -136,7 +98,7 @@ public:
     }
 
     auto write(logger_token &, unsigned int msgSize) noexcept
-            -> result<dp::byte_buffer_view>
+            -> result<output_stream>
     {
         auto const overhead = dp::detail::var_uint_encoded_size(msgSize);
         auto const totalSize = overhead + msgSize;
@@ -364,6 +326,8 @@ public:
         return ringbus_mt_handle(std::move(existing), numRegions);
     }
 
+    using output_stream = dp::byte_buffer_view;
+
     struct logger_token
     {
         unsigned int regionId;
@@ -516,7 +480,7 @@ private:
 
 public:
     auto write(logger_token &logger, unsigned int msgSize) noexcept
-            -> result<dp::byte_buffer_view>
+            -> result<output_stream>
     {
         if (msgSize > block_size * blocks_per_bucket - 3)
         {
@@ -580,19 +544,19 @@ public:
 
         if (numFirst != logger.msgBlocks)
         {
-            std::atomic_ref<std::uint64_t> const secondBucketRef(
+            std::atomic_ref<bucket_type> const secondBucketRef(
                     ctx->alloc_map[firstBucket + 1]);
 
             auto const numSecond = logger.msgBlocks - numFirst;
             secondBucketRef.fetch_or(
-                    detail::make_mask<std::uint64_t>(numSecond),
+                    detail::make_mask<bucket_type>(numSecond),
                     std::memory_order::relaxed);
         }
 
-        std::atomic_ref<std::uint64_t> const firstBucketRef(
+        std::atomic_ref<bucket_type> const firstBucketRef(
                 ctx->alloc_map[firstBucket]);
         firstBucketRef.fetch_or(
-                detail::make_mask<std::uint64_t>(numFirst, offset),
+                detail::make_mask<bucket_type>(numFirst, offset),
                 std::memory_order::release);
     }
 
@@ -647,8 +611,8 @@ private:
 
         std::uint32_t padding[5];
 
-        alignas(std::atomic_ref<std::uint64_t>::required_alignment)
-                std::uint64_t alloc_map[region_alloc_buckets];
+        alignas(std::atomic_ref<bucket_type>::required_alignment)
+                bucket_type alloc_map[region_alloc_buckets];
     };
     static_assert(sizeof(region_ctrl) == region_ctrl_overhead);
     static_assert(std::is_trivial_v<region_ctrl>);

@@ -122,9 +122,12 @@ target_sources(deeplog PRIVATE
     "include/dplx/dlog/disappointment.hpp"
     "src/dlog/disappointment.cpp"
 
+    "include/dplx/dlog/concepts.hpp"
+
     "include/dplx/dlog/log_bus.hpp"
     "include/dplx/dlog/sink.hpp"
 
+    "include/dplx/dlog/detail/codec_dummy.hpp"
     "include/dplx/dlog/detail/utils.hpp"
 )
 
