@@ -13,6 +13,30 @@ along with this software. If not, see
 
 #]=====================================================================]
 cmake_minimum_required(VERSION 3.16)
+
+########################################################################
+# configure vcpkg from environment vars if possible
+include("${CMAKE_SOURCE_DIR}/options.cmake")
+
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "")
+endif()
+
+if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+    set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}" CACHE STRING "")
+endif()
+
+if(NOT DEFINED VCPKG_FEATURE_FLAGS)
+    set(VCPKG_FEATURE_FLAGS "registries" CACHE STRING "")
+endif()
+
+option(BUILD_TESTING "Add test targets" OFF)
+if (BUILD_TESTING)
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
+
+########################################################################
 project(deeplog VERSION 0.0.0 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake/")
@@ -32,7 +56,6 @@ endif()
 
 ########################################################################
 # options
-include("${CMAKE_SOURCE_DIR}/options.cmake")
 
 if (BUILD_TESTING)
     enable_testing()
@@ -87,7 +110,7 @@ target_include_directories(deeplog PUBLIC
 target_link_libraries(deeplog PUBLIC
     Deeplex::deeplog_compiler_settings
     Deeplex::deeppack
-    
+
     fmt::fmt
     llfio::llfio
     outcome::outcome

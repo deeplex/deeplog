@@ -1,0 +1,15 @@
+{
+    "registries": [
+        {
+            "kind": "git",
+            "repository": "https://github.com/deeplex-net/vcpkg-registry",
+            "packages": [
+                "quickcpplib-unofficial",
+                "outcome",
+                "ntkernel-error-category",
+                "deeppack",
+                "llfio"
+            ]
+        }
+    ]
+}

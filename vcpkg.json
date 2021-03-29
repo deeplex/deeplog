@@ -1,0 +1,19 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+    "name": "deeplog",
+    "version-string": "0.0.0",
+    "homepage": "https://github.com/deeplex-net/deeplog",
+    "dependencies": [
+        "boost-predef",
+        "deeppack",
+        "fmt",
+        "llfio",
+        "outcome"
+    ],
+    "features": {
+        "tests": {
+            "description": "Build the test suite",
+            "dependencies": [ "boost-test" ]
+        }
+    }
+}
