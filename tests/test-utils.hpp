@@ -9,7 +9,10 @@
 
 #include "boost-test.hpp"
 
+#include <fmt/core.h>
+
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/disappointment.hpp>
 
 namespace dlog_tests
 {
@@ -27,9 +30,10 @@ inline auto check_result(dlog::result<R> const &rx)
     {
         auto error = rx.assume_error();
         auto const &cat = error.category();
-        prx.message() << "[category: " << cat.name()
-                      << "; value: " << error.value()
-                      << "; message: " << error.message() << "]";
+
+        fmt::print(prx.message().stream(),
+                   "[category: {}; value: {}; message: {}]", cat.name(),
+                   error.value(), error.message());
     }
     return prx;
 }
@@ -39,4 +43,4 @@ inline auto check_result(dlog::result<R> const &rx)
 #define DPLX_REQUIRE_RESULT(...)                                               \
     BOOST_TEST_REQUIRE((::dlog_tests::check_result((__VA_ARGS__))))
 
-}
+} // namespace dlog_tests
