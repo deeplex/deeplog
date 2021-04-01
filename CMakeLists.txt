@@ -125,6 +125,8 @@ target_sources(deeplog PRIVATE
     "include/dplx/dlog/concepts.hpp"
 
     "include/dplx/dlog/log_bus.hpp"
+    "include/dplx/dlog/log_clock.hpp"
+    "src/dlog/log_clock.cpp"
     "include/dplx/dlog/sink.hpp"
 
     "include/dplx/dlog/detail/codec_dummy.hpp"
