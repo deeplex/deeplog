@@ -49,4 +49,14 @@ constexpr auto make_mask(int num, int off = 0) noexcept -> T
         << off;
 }
 
+template <typename T>
+using remove_cref_t = std::remove_const_t<std::remove_reference_t<T>>;
+
+template <typename Enum>
+requires std::is_enum_v<Enum> constexpr auto to_underlying(Enum value) noexcept
+        -> typename std::underlying_type<Enum>::type
+{
+    return static_cast<std::underlying_type_t<Enum>>(value);
+}
+
 } // namespace dplx::dlog::detail

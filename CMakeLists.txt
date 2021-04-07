@@ -123,7 +123,10 @@ target_sources(deeplog PRIVATE
     "src/dlog/disappointment.cpp"
 
     "include/dplx/dlog/concepts.hpp"
+    "include/dplx/dlog/definitions.hpp"
 
+    "include/dplx/dlog/arguments.hpp"
+    "include/dplx/dlog/argument_transmorpher_fmt.hpp"
     "include/dplx/dlog/log_bus.hpp"
     "include/dplx/dlog/log_clock.hpp"
     "src/dlog/log_clock.cpp"
@@ -149,7 +152,7 @@ if (BUILD_TESTING)
         "tests/boost-test.hpp"
         "tests/test-utils.hpp"
 
-        #"tests/api.test.cpp"
+        "tests/api.test.cpp"
         "tests/bufferbus.test.cpp"
         "tests/ringbus.test.cpp"
     )
