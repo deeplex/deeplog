@@ -12,7 +12,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include <dplx/dp/byte_buffer.hpp>
+#include <dplx/dp/memory_buffer.hpp>
 #include <dplx/dp/item_emitter.hpp>
 #include <dplx/dp/item_parser.hpp>
 #include <dplx/dp/streams/memory_input_stream.hpp>
@@ -29,7 +29,7 @@ namespace dplx::dlog
 class bufferbus_handle
 {
     llfio::mapped_file_handle mBackingFile;
-    dp::byte_buffer_view mBuffer;
+    dp::memory_buffer mBuffer;
 
 public:
     explicit bufferbus_handle() noexcept = default;
@@ -39,14 +39,14 @@ public:
 
     bufferbus_handle(bufferbus_handle &&other) noexcept
         : mBackingFile(std::move(other.mBackingFile))
-        , mBuffer(std::exchange(other.mBuffer, dp::byte_buffer_view{}))
+        , mBuffer(std::exchange(other.mBuffer, dp::memory_buffer{}))
     {
     }
     auto operator=(bufferbus_handle &&other) noexcept -> bufferbus_handle &
     {
         mBackingFile = std::exchange(other.mBackingFile,
                                      llfio::mapped_file_handle{});
-        mBuffer = std::exchange(other.mBuffer, dp::byte_buffer_view{});
+        mBuffer = std::exchange(other.mBuffer, dp::memory_buffer{});
 
         return *this;
     }
@@ -58,7 +58,7 @@ public:
     {
     }
 
-    using output_stream = dp::byte_buffer_view;
+    using output_stream = dp::memory_buffer;
 
     struct logger_token
     {
@@ -115,7 +115,7 @@ public:
                           bufferStart, msgSize,
                           static_cast<std::byte>(dp::type_code::binary));
 
-        return dp::byte_buffer_view(msgStart, static_cast<int>(msgSize), 0);
+        return dp::memory_buffer(msgStart, static_cast<int>(msgSize), 0);
     }
 
     void commit(logger_token &)
@@ -123,18 +123,17 @@ public:
     }
 
     template <typename ConsumeFn>
-    auto consume_content(ConsumeFn &&consume) noexcept
-            -> result<void> requires bus_consumer<ConsumeFn &&>
+        requires bus_consumer<ConsumeFn &&>
+    auto consume_content(ConsumeFn &&consume) noexcept -> result<void>
     {
-        dp::const_byte_buffer_view content(mBuffer.consumed_begin(),
+        dp::memory_view content(mBuffer.consumed_begin(),
                                            mBuffer.consumed_size(), 0);
 
         while (content.remaining_size() > 0)
         {
-            DPLX_TRY(auto msgInfo, dp::detail::parse_item_info(content));
-            if (std::byte{msgInfo.type} != dp::type_code::binary
-                || static_cast<unsigned>(content.remaining_size())
-                           < msgInfo.value)
+            DPLX_TRY(auto msgInfo, dp::detail::parse_item(content));
+            if (msgInfo.type != dp::type_code::binary || msgInfo.indefinite()
+                || content.remaining_size() < msgInfo.value)
                 DPLX_ATTR_UNLIKELY
                 {
                     // we ignore bad blocks
@@ -165,7 +164,7 @@ public:
 
     auto release() -> llfio::mapped_file_handle
     {
-        mBuffer = dp::byte_buffer_view{};
+        mBuffer = dp::memory_buffer{};
         return std::move(mBackingFile);
     }
     auto unlink(llfio::deadline deadline = std::chrono::seconds(30)) noexcept
@@ -326,7 +325,7 @@ public:
         return ringbus_mt_handle(std::move(existing), numRegions);
     }
 
-    using output_stream = dp::byte_buffer_view;
+    using output_stream = dp::memory_buffer;
 
     struct logger_token
     {
@@ -399,11 +398,12 @@ private:
             {
                 auto blockStart = firstBlock + blockIt * block_size;
 
-                auto msgInfo
-                        = dp::detail::parse_item_info_speculative(blockStart);
+                DPLX_TRY(dp::item_info const msgInfo,
+                         dp::detail::parse_item_speculative(blockStart));
+
                 if (auto const space = (readEnd - blockIt) * block_size;
-                    msgInfo.code != dp::detail::decode_errc::nothing
-                    || std::byte{msgInfo.type} != dp::type_code::binary
+                    msgInfo.type != dp::type_code::binary
+                    || msgInfo.indefinite()
                     || space < msgInfo.encoded_length + msgInfo.value)
                     DPLX_ATTR_UNLIKELY
                     {
@@ -529,8 +529,8 @@ public:
                 bufferStart, msgSize,
                 static_cast<std::byte>(dp::type_code::binary));
 
-        return dp::byte_buffer_view{bufferStart + encodedSize,
-                                    static_cast<int>(msgSize), 0};
+        return dp::memory_buffer{bufferStart + encodedSize,
+                                    msgSize, 0};
     }
 
     void commit(logger_token &logger)
@@ -548,9 +548,8 @@ public:
                     ctx->alloc_map[firstBucket + 1]);
 
             auto const numSecond = logger.msgBlocks - numFirst;
-            secondBucketRef.fetch_or(
-                    detail::make_mask<bucket_type>(numSecond),
-                    std::memory_order::relaxed);
+            secondBucketRef.fetch_or(detail::make_mask<bucket_type>(numSecond),
+                                     std::memory_order::relaxed);
         }
 
         std::atomic_ref<bucket_type> const firstBucketRef(

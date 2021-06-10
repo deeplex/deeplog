@@ -7,6 +7,10 @@
 
 #pragma once
 
+#include <cstddef>
+
+#include <span>
+
 #include <dplx/dp/concepts.hpp>
 
 #include <dplx/dlog/detail/codec_dummy.hpp>
@@ -15,6 +19,9 @@
 
 namespace dplx::dlog
 {
+
+using bytes = std::span<std::byte const>;
+using writable_bytes = std::span<std::byte>;
 
 // clang-format off
 template <typename T>

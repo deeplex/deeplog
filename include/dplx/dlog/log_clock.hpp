@@ -140,9 +140,9 @@ public:
 };
 
 constexpr auto tag_invoke(encoded_size_of_fn,
-                          dlog::log_clock::time_point) noexcept -> int
+                          dlog::log_clock::time_point) noexcept -> unsigned
 {
-    return 9;
+    return 9U;
 }
 
 } // namespace dplx::dp

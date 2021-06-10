@@ -1,8 +1,13 @@
 {
+    "default-registry": {
+        "kind": "builtin",
+        "baseline": "0dc27b9b672cb9d069cf58c48f3ae3f7395d108b"
+    },
     "registries": [
         {
             "kind": "git",
             "repository": "https://github.com/deeplex-net/vcpkg-registry",
+            "baseline": "9ee4fb01e03a67db36040cae571d684b10e9e760",
             "packages": [
                 "quickcpplib-unofficial",
                 "outcome",

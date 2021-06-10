@@ -104,9 +104,9 @@ public:
     }
 };
 
-constexpr auto tag_invoke(encoded_size_of_fn, dlog::severity) -> int
+constexpr auto tag_invoke(encoded_size_of_fn, dlog::severity) -> unsigned
 {
-    return 1;
+    return 1U;
 }
 
 } // namespace dplx::dp

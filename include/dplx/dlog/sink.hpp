@@ -10,7 +10,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include <dplx/dp/byte_buffer.hpp>
+#include <dplx/dp/memory_buffer.hpp>
 
 namespace dplx::dlog
 {

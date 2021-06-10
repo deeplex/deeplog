@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(tmp)
 
     auto consumeRx
             = bufferbus.consume_content([&](std::span<std::byte const> msg) {
-                  dp::const_byte_buffer_view msgBuffer(msg);
+                  dp::memory_view msgBuffer(msg);
 
                   auto decodeRx
                           = dp::decode(dp::as_value<unsigned int>, msgBuffer);
