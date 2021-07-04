@@ -201,6 +201,13 @@ class ringbus_mt_handle
     unsigned int mNumRegions;
 
 public:
+    ~ringbus_mt_handle() noexcept
+    {
+        if (mBackingFile.is_valid())
+        {
+            (void)unlink();
+        }
+    }
     ringbus_mt_handle() noexcept = default;
 
     ringbus_mt_handle(ringbus_mt_handle const &) = delete;
@@ -458,7 +465,7 @@ private:
                 break;
             }
 
-            auto const numAvailableLocal = std::countl_one(mapValue);
+            auto const numAvailableLocal = std::countr_one(mapValue);
             numAvailable += numAvailableLocal;
 
             // use xor to flip the bits to zero

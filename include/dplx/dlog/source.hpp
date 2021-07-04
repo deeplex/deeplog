@@ -67,7 +67,7 @@ public:
         auto const timeStamp = log_clock::now();
 
         using encoded_size_type = decltype((0u + ... + dp::tag_invoke_result_t<
-                dp::encoded_size_of_fn, argument<Args> &&>>{}));
+                dp::encoded_size_of_fn, argument<Args> &&>{}));
 
         constexpr encoded_size_type encodedArraySize
                 = dp::additional_information_size(5U);
