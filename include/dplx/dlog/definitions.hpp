@@ -53,27 +53,20 @@ namespace dplx::dp
 template <input_stream Stream>
 class basic_decoder<dlog::severity, Stream>
 {
+    using parse = item_parser<Stream>;
+    using underlying_type = std::underlying_type_t<dlog::severity>;
+
 public:
     using value_type = dlog::severity;
 
     auto operator()(Stream &inStream, value_type &value) -> result<void>
     {
-        DPLX_TRY(auto itemInfo, detail::parse_item_info(inStream));
+        DPLX_TRY(auto parsed,
+                 parse::template integer<underlying_type>(
+                         inStream, detail::to_underlying(value_type::trace),
+                         parse_mode::canonical));
 
-        if (std::byte{itemInfo.type} != type_code::posint)
-        {
-            return errc::item_type_mismatch;
-        }
-        if (itemInfo.encoded_length != 1)
-        {
-            return errc::invalid_additional_information;
-        }
-        if (itemInfo.value > static_cast<unsigned>(value_type::trace))
-        {
-            return errc::item_value_out_of_range;
-        }
-
-        value = static_cast<value_type>(itemInfo.value);
+        value = static_cast<value_type>(parsed);
         return oc::success();
     }
 };

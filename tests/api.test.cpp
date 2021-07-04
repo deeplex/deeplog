@@ -9,6 +9,7 @@
 #include "test-utils.hpp"
 
 #include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/sink.hpp>
 #include <dplx/dlog/source.hpp>
 
 namespace dlog_tests
@@ -18,10 +19,32 @@ BOOST_AUTO_TEST_SUITE(api)
 
 BOOST_AUTO_TEST_CASE(tmp)
 {
-    auto bus = dlog::ringbus({}, "./tmp", 1 << 10).value();
-    dlog::logger xlog{bus};
+    using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
+
+    auto sinkBackendOpenRx = dlog::file_sink_backend::file_sink(
+            {}, ".", "log-test", 1024 * 1024, {}, 64 * 1024);
+    DPLX_REQUIRE_RESULT(sinkBackendOpenRx);
+
+    auto sinkOwner = std::make_unique<sink_type>(
+            dlog::severity::info, std::move(sinkBackendOpenRx).assume_value());
+    auto sink = sinkOwner.get();
+
+    dlog::core core{dlog::ringbus({}, "./tmp", 1 << 10).value()};
+    core.attach_sink(std::move(sinkOwner));
+
+
+    dlog::logger xlog{core.connector()};
     DLOG_GENERIC(xlog, dlog::severity::warn,
-                 u8"important msg with arg {} and {}", 1, 2);
+                 u8"important msg with arg {} and {}", 1, dlog::arg("argx", 2));
+
+    auto retireRx = core.retire_log_records();
+    DPLX_REQUIRE_RESULT(retireRx);
+    BOOST_TEST(retireRx.assume_value() == 0);
+
+    core.release_sink(sink);
+    sinkOwner.reset(sink);
+    auto finRx = sinkOwner->backend().finalize();
+    DPLX_REQUIRE_RESULT(finRx);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

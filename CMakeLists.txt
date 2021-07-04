@@ -127,6 +127,9 @@ target_sources(deeplog PRIVATE
 
     "include/dplx/dlog/arguments.hpp"
     "include/dplx/dlog/argument_transmorpher_fmt.hpp"
+    "include/dplx/dlog/core.hpp"
+    "src/dlog/core.cpp"
+    "src/dlog/file_sink_backend.cpp"
     "include/dplx/dlog/log_bus.hpp"
     "include/dplx/dlog/log_clock.hpp"
     "src/dlog/log_clock.cpp"

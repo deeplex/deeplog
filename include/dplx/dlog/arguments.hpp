@@ -13,6 +13,7 @@
 #include <dplx/dp/concepts.hpp>
 #include <dplx/dp/encoder/api.hpp>
 #include <dplx/dp/encoder/core.hpp>
+#include <dplx/dp/encoder/narrow_strings.hpp>
 #include <dplx/dp/item_emitter.hpp>
 
 #include <dplx/dlog/definitions.hpp>
@@ -44,49 +45,64 @@ struct argument<T>
     type value;
 
     static constexpr resource_id type_id{std::is_unsigned_v<T> ? 0u : 1u};
+
+    friend inline auto tag_invoke(dp::encoded_size_of_fn,
+                                  argument const &self) noexcept
+    {
+        return dp::additional_information_size(2u)
+             + dp::encoded_size_of(argument<T>::type_id)
+             + dp::encoded_size_of(self.value);
+    }
 };
 
-template <typename T>
-inline auto tag_invoke(dp::encoded_size_of_fn, argument<T> const &arg) noexcept
-        -> int
-{
-    return dp::encoded_size_of(2u) + dp::encoded_size_of(argument<T>::type_id)
-         + dp::encoded_size_of(arg.value);
-}
-
 template <typename Char, typename T>
+    requires(std::same_as<Char, char> || std::same_as<Char, char8_t>)
 struct named_arg
 {
     std::basic_string_view<Char> name;
     T const &value;
 };
 
+inline constexpr struct arg_fn
+{
+    template <typename T>
+    auto operator()(std::string_view name, T const &value) const noexcept
+            -> named_arg<char, T>
+    {
+        return {name, value};
+    }
+    template <typename T>
+    auto operator()(std::u8string_view name, T const &value) const noexcept
+            -> named_arg<char8_t, T>
+    {
+        return {name, value};
+    }
+} arg{};
+
 template <typename Char, typename T>
-inline auto tag_invoke(dp::encoded_size_of_fn,
-                       named_arg<Char, T> const &arg) noexcept -> int
-{
-    return dp::encoded_size_of(3u) + dp::encoded_size_of(arg.name)
-         + dp::encoded_size_of(argument<T>::type_id)
-         + dp::encoded_size_of(arg.value);
-}
-
-template <typename T>
-struct argument<named_arg<char, T>>
+struct argument<named_arg<Char, T>>
 {
     using type = T;
-    char const *name;
-    type value;
+    std::basic_string_view<Char> name;
+    type const &value;
 
-    static constexpr resource_id type_id{23u};
-};
-template <typename T>
-struct argument<named_arg<char8_t, T>>
-{
-    using type = T;
-    char8_t const *name;
-    type value;
+    explicit constexpr argument(named_arg<Char, T> const &self) noexcept
+        : name(self.name)
+        , value(self.value)
+    {
+    }
 
-    static constexpr resource_id type_id{23u};
+    static constexpr resource_id type_id{argument<T>::type_id};
+
+    friend inline auto tag_invoke(dp::encoded_size_of_fn,
+                                  argument const &self) noexcept
+    {
+        return dp::additional_information_size(3u)
+             + dp::encoded_size_of(type_id)
+             + dp::additional_information_size(self.name.size())
+             + self.name.size() // std::string_view is missing size_of -.-
+             + dp::encoded_size_of(self.value);
+    }
 };
 
 } // namespace dplx::dlog
@@ -98,7 +114,7 @@ template <typename T, output_stream Stream>
 class basic_encoder<dlog::argument<T>, Stream>
 {
     using emit = item_emitter<Stream>;
-    using key_encoder = basic_encoder<std::uint64_t, Stream>;
+    using type_encoder = basic_encoder<dlog::resource_id, Stream>;
     using value_encoder = basic_encoder<T, Stream>;
 
 public:
@@ -109,29 +125,30 @@ public:
             -> result<void>
     {
         DPLX_TRY(emit::array(stream, 2u));
-        DPLX_TRY(key_encoder()(dlog::argument<T>::type_id));
-        DPLX_TRY(value_encoder()(arg.value));
+        DPLX_TRY(type_encoder()(stream, dlog::argument<T>::type_id));
+        DPLX_TRY(value_encoder()(stream, arg.value));
         return oc::success();
     }
 };
 
 template <typename Char, typename T, output_stream Stream>
-class basic_encoder<dlog::named_arg<Char, T>, Stream>
+    requires dlog::loggable_argument<T, Stream>
+class basic_encoder<dlog::argument<dlog::named_arg<Char, T>>, Stream>
 {
     using emit = item_emitter<Stream>;
-    using name_encoder = basic_encoder<std::basic_string_view<Char>, Stream>;
     using type_encoder = basic_encoder<dlog::resource_id, Stream>;
+    using name_encoder = basic_encoder<std::basic_string_view<Char>, Stream>;
     using value_encoder = basic_encoder<T, Stream>;
 
 public:
-    using value_type = dlog::argument<fmt::detail::named_arg<char, T>>;
+    using value_type = dlog::argument<dlog::named_arg<Char, T>>;
 
     auto operator()(Stream &stream, value_type const &arg) const -> result<void>
     {
         DPLX_TRY(emit::array(stream, 3u));
-        DPLX_TRY(name_encoder()(arg.name));
-        DPLX_TRY(type_encoder()(dlog::argument<T>::type_id));
-        DPLX_TRY(value_encoder()(arg.value));
+        DPLX_TRY(type_encoder()(stream, dlog::argument<T>::type_id));
+        DPLX_TRY(name_encoder()(stream, arg.name));
+        DPLX_TRY(value_encoder()(stream, arg.value));
         return oc::success();
     }
 };

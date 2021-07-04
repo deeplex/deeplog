@@ -124,7 +124,7 @@ public:
         DPLX_TRY(auto readProxy, read(inStream, 9u));
 
         auto const data = std::ranges::data(readProxy);
-        if (*data != to_byte(type_code::posint) | std::byte{27u})
+        if (*data != (to_byte(type_code::posint) | std::byte{27u}))
         {
             return errc::item_type_mismatch;
         }
