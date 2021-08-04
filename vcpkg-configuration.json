@@ -7,7 +7,7 @@
         {
             "kind": "git",
             "repository": "https://github.com/deeplex-net/vcpkg-registry",
-            "baseline": "52145729779fc4368051151b4bc4cb8f5d2afe60",
+            "baseline": "e394481759599b3b57fc2add0912f78d6f0ad649",
             "packages": [
                 "quickcpplib-unofficial",
                 "outcome",
