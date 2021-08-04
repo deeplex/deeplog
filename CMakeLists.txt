@@ -137,6 +137,9 @@ target_sources(deeplog PRIVATE
 
     "include/dplx/dlog/detail/codec_dummy.hpp"
     "include/dplx/dlog/detail/utils.hpp"
+
+    "include/dplx/dlog/detail/interleaving_stream.hpp"
+    "src/dlog/interleaving_stream.cpp"
 )
 
 ########################################################################
@@ -158,6 +161,8 @@ if (BUILD_TESTING)
         "tests/api.test.cpp"
         "tests/bufferbus.test.cpp"
         "tests/ringbus.test.cpp"
+
+        "tests/interleaving_stream.test.cpp"
     )
 
     add_test(NAME deeplog-tests COMMAND deeplog-tests)
