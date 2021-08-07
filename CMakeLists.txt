@@ -135,6 +135,9 @@ target_sources(deeplog PRIVATE
     "src/dlog/log_clock.cpp"
     "include/dplx/dlog/sink.hpp"
 
+    "include/dplx/dlog/file_database.hpp"
+    "src/dlog/file_database.cpp"
+
     "include/dplx/dlog/detail/codec_dummy.hpp"
     "include/dplx/dlog/detail/utils.hpp"
 
@@ -161,6 +164,8 @@ if (BUILD_TESTING)
         "tests/api.test.cpp"
         "tests/bufferbus.test.cpp"
         "tests/ringbus.test.cpp"
+
+        "tests/file_database.test.cpp"
 
         "tests/interleaving_stream.test.cpp"
     )

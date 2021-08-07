@@ -1,0 +1,110 @@
+
+// Copyright Henrik Steffen Gaßmann 2021
+//
+// Distributed under the Boost Software License, Version 1.0.
+//         (See accompanying file LICENSE or copy at
+//           https://www.boost.org/LICENSE_1_0.txt)
+
+#pragma once
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/llfio.hpp>
+#include <dplx/dp/object_def.hpp>
+#include <dplx/dp/tuple_def.hpp>
+
+namespace dplx::dlog
+{
+
+enum class file_sink_id : std::uint32_t
+{
+    default_ = 0,
+};
+
+class file_database_handle
+{
+public:
+    struct record_container_meta
+    {
+        std::filesystem::path path;
+        unsigned byte_size;
+        file_sink_id sink_id;
+        unsigned rotation;
+
+        static constexpr dp::tuple_def<
+                dp::tuple_member_def<&record_container_meta::sink_id>{},
+                dp::tuple_member_def<&record_container_meta::rotation>{},
+                dp::tuple_member_def<&record_container_meta::byte_size>{},
+                dp::tuple_member_def<&record_container_meta::path>{}>
+                layout_descriptor{};
+    };
+    using record_containers_type = std::vector<record_container_meta>;
+
+private:
+    struct contents_t
+    {
+        unsigned revision;
+        std::vector<record_container_meta> record_containers;
+
+        static constexpr dp::object_def<
+                dp::property_def<1, &contents_t::revision>{},
+                dp::property_def<2, &contents_t::record_containers>{}>
+                layout_descriptor{
+                        .version = 0,
+                        .allow_versioned_auto_decoder = true,
+                };
+    };
+
+    llfio::file_handle mRootHandle;
+    llfio::path_handle mRootDirHandle;
+    contents_t mContents;
+    std::string mFileNamePattern;
+
+public:
+    file_database_handle() noexcept = default;
+    file_database_handle(llfio::file_handle rootHandle,
+                         llfio::path_handle rootDirHandle,
+                         std::string sinkFileNamePattern)
+        : mRootHandle(std::move(rootHandle))
+        , mRootDirHandle(std::move(rootDirHandle))
+        , mContents{}
+        , mFileNamePattern(std::move(sinkFileNamePattern))
+    {
+    }
+
+    static auto file_database(llfio::path_handle const &base,
+                              llfio::path_view const path,
+                              std::string sinkFileNamePattern) noexcept
+            -> result<file_database_handle>;
+
+    static constexpr std::string_view extension{".ddb"};
+
+    auto fetch_content() noexcept -> result<void>;
+    auto unlink_all() noexcept -> result<void>;
+
+private:
+    auto fetch_content_impl() noexcept -> result<void>;
+
+public:
+    auto create_record_container(file_sink_id sinkId = file_sink_id::default_,
+                                 llfio::file_handle::caching caching
+                                 = llfio::file_handle::caching::reads,
+                                 llfio::file_handle::flag flags
+                                 = llfio::file_handle::flag::none)
+            -> result<llfio::file_handle>;
+
+private:
+    static auto file_name(std::string const &pattern,
+                          file_sink_id sinkId,
+                          unsigned rotationCount) -> std::string;
+
+    auto initialize_storage() noexcept -> result<void>;
+    auto retire_to_storage(contents_t const &contents) noexcept -> result<void>;
+};
+
+} // namespace dplx::dlog
