@@ -9,6 +9,7 @@
 #include "test-utils.hpp"
 
 #include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/sink.hpp>
 #include <dplx/dlog/source.hpp>
 
@@ -21,8 +22,16 @@ BOOST_AUTO_TEST_CASE(tmp)
 {
     using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
 
+    auto dbOpenRx = dlog::file_database_handle::file_database(
+            {}, "log-test.ddb", "log-test.{iso8601}.blog");
+    DPLX_REQUIRE_RESULT(dbOpenRx);
+    auto &&db = std::move(dbOpenRx).assume_value();
+
     auto sinkBackendOpenRx = dlog::file_sink_backend::file_sink(
-            {}, ".", "log-test", 1024 * 1024, {}, 64 * 1024);
+            db.create_record_container(dlog::file_sink_id::default_,
+                                       dlog::file_sink_backend::file_mode)
+                    .value(),
+            64 * 1024, {});
     DPLX_REQUIRE_RESULT(sinkBackendOpenRx);
 
     auto sinkOwner = std::make_unique<sink_type>(
@@ -31,7 +40,6 @@ BOOST_AUTO_TEST_CASE(tmp)
 
     dlog::core core{dlog::ringbus({}, "./tmp", 1 << 10).value()};
     core.attach_sink(std::move(sinkOwner));
-
 
     dlog::logger xlog{core.connector()};
     DLOG_GENERIC(xlog, dlog::severity::warn,

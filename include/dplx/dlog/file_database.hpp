@@ -92,6 +92,8 @@ private:
 
 public:
     auto create_record_container(file_sink_id sinkId = file_sink_id::default_,
+                                 llfio::file_handle::mode fileMode
+                                 = llfio::file_handle::mode::write,
                                  llfio::file_handle::caching caching
                                  = llfio::file_handle::caching::reads,
                                  llfio::file_handle::flag flags

@@ -106,64 +106,42 @@ private:
 
 class file_sink_backend
 {
+    using rotate_fn = std::function<result<void>(llfio::file_handle &)>;
+
     dp::memory_buffer mWriteBuffer;
     llfio::file_handle mBackingFile;
-    llfio::directory_handle mLogDirectory;
 
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>>
             mBufferAllocation;
-    std::string mLogFileNamePattern;
-    llfio::file_handle::extent_type mFileRotationSizeThreshold;
-    std::function<bool()> mShouldRotate;
+    rotate_fn mRotateBackingFile;
     unsigned mTargetBufferSize;
 
 public:
     file_sink_backend() noexcept = default;
 
-    static auto
-    file_sink(llfio::path_handle const &base,
-              llfio::path_view logDirectoryPath,
-              std::string &&logFileNamePattern,
-              llfio::file_handle::extent_type fileRotationSizeThreshold,
-              std::function<bool()> &&shouldRotate,
-              unsigned targetBufferSize) noexcept -> result<file_sink_backend>
+    static auto file_sink(llfio::file_handle backingFile,
+                          unsigned targetBufferSize,
+                          rotate_fn &&rotate) noexcept
+            -> result<file_sink_backend>
     {
         file_sink_backend self{};
         self.mTargetBufferSize = targetBufferSize;
-        self.mFileRotationSizeThreshold = fileRotationSizeThreshold;
 
         DPLX_TRY(self.mBufferAllocation.resize(targetBufferSize));
         self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
 
-        std::string fileName;
-        try
-        {
-            fileName = file_name(logFileNamePattern, 0);
-        }
-        catch (const std::bad_alloc &)
-        {
-            return std::errc::not_enough_memory;
-        }
-
-        DPLX_TRY(
-                self.mLogDirectory,
-                llfio::directory(base, logDirectoryPath,
-                                 llfio::directory_handle::mode::write,
-                                 llfio::directory_handle::creation::if_needed));
-
         DPLX_TRY(dp::item_emitter<dp::memory_buffer>::array_indefinite(
                 self.mWriteBuffer));
 
-        // TODO: properly detect whether we created the file or not
-        DPLX_TRY(
-                self.mBackingFile,
-                llfio::file(self.mLogDirectory, fileName,
-                            llfio::file_handle::mode::append,
-                            llfio::file_handle::creation::always_new,
-                            llfio::file_handle::caching::reads_and_metadata,
-                            llfio::file_handle::flag::disable_safety_barriers));
+        if (rotate)
+        {
+            DPLX_TRY(rotate(backingFile));
+        }
+        self.mBackingFile = std::move(backingFile);
 
+        DPLX_TRY(auto const maxExtent, self.mBackingFile.maximum_extent());
         // if created
+        if (maxExtent == 0u)
         {
             llfio::file_handle::const_buffer_type writeBuffers[]
                     = {self.mWriteBuffer.consumed()};
@@ -172,11 +150,17 @@ public:
             self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
         }
 
-        self.mLogFileNamePattern = std::move(logFileNamePattern);
-        self.mShouldRotate = std::move(shouldRotate);
+        self.mRotateBackingFile = std::move(rotate);
 
         return std::move(self);
     }
+
+    static inline constexpr llfio::file_handle::mode file_mode
+            = llfio::file_handle::mode::append;
+    static inline constexpr llfio::file_handle::caching file_caching
+            = llfio::file_handle::caching::reads;
+    static inline constexpr llfio::file_handle::flag file_flags
+            = llfio::file_handle::flag::none;
 
     auto write(unsigned size) noexcept -> result<dp::memory_buffer>
     {
@@ -219,19 +203,10 @@ public:
             DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
         }
 
-        DPLX_TRY(auto maxExtent, mBackingFile.maximum_extent());
-        if (maxExtent > mFileRotationSizeThreshold
-            || (mShouldRotate && mShouldRotate()))
+        if (mRotateBackingFile)
         {
-            DPLX_TRY(rotate());
+            DPLX_TRY(mRotateBackingFile(mBackingFile));
         }
-
-        return oc::success();
-    }
-
-    auto rotate() noexcept -> result<void>
-    {
-        // TODO: implement file rotation
         return oc::success();
     }
 
@@ -252,29 +227,6 @@ public:
         *this = file_sink_backend();
 
         return oc::success();
-    }
-
-private:
-    static auto file_name(std::string const &pattern, int rotationCount)
-            -> std::string
-    {
-        using namespace std::string_view_literals;
-
-        auto const timePoint = std::chrono::system_clock::now();
-        auto const date = std::chrono::floor<std::chrono::days>(timePoint);
-        std::chrono::hh_mm_ss const timeOfDay{timePoint - date};
-        std::chrono::year_month_day const calendar{date};
-
-        auto const iso8601DateTime = fmt::format(
-                "{:04}{:02}{:02}T{:02}{:02}{:02}"sv,
-                static_cast<int>(calendar.year()),
-                static_cast<unsigned>(calendar.month()),
-                static_cast<unsigned>(calendar.day()),
-                timeOfDay.hours().count(), timeOfDay.minutes().count(),
-                timeOfDay.seconds().count());
-
-        return fmt::format(pattern, fmt::arg("iso8601", iso8601DateTime),
-                           fmt::arg("rot-ctr", rotationCount));
     }
 };
 

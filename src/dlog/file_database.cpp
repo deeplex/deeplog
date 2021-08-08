@@ -172,6 +172,7 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
 
 auto file_database_handle::create_record_container(
         file_sink_id sinkId,
+        llfio::file_handle::mode fileMode,
         llfio::file_handle::caching caching,
         llfio::file_handle::flag flags) -> result<llfio::file_handle>
 {
@@ -199,10 +200,10 @@ auto file_database_handle::create_record_container(
     {
         meta.path = file_name(mFileNamePattern, meta.sink_id, meta.rotation);
 
-        if (auto openRx = llfio::file(
-                    mRootDirHandle, meta.path, llfio::file_handle::mode::write,
-                    llfio::file_handle::creation::only_if_not_exist, caching,
-                    flags);
+        if (auto openRx
+            = llfio::file(mRootDirHandle, meta.path, fileMode,
+                          llfio::file_handle::creation::only_if_not_exist,
+                          caching, flags);
             openRx.has_value())
         {
             file = std::move(openRx).assume_value();
