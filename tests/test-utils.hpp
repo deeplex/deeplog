@@ -11,14 +11,16 @@
 
 #include <fmt/core.h>
 
-#include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/llfio.hpp>
 
 namespace dlog_tests
 {
 
 using namespace dplx;
 namespace llfio = dlog::llfio;
+
+extern llfio::directory_handle test_dir;
 
 template <typename R>
 inline auto check_result(dlog::result<R> const &rx)

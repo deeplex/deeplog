@@ -22,8 +22,8 @@ BOOST_AUTO_TEST_CASE(api)
             = std::string{dbName}.append(dlog::file_database_handle::extension);
     auto const sinkFilePattern = dbName + ".{ctr}_{iso8601}.blog";
 
-    auto createRx = dlog::file_database_handle::file_database({}, dbFullName,
-                                                              sinkFilePattern);
+    auto createRx = dlog::file_database_handle::file_database(
+            test_dir, dbFullName, sinkFilePattern);
     DPLX_REQUIRE_RESULT(createRx);
     auto &&db = std::move(createRx).assume_value();
 

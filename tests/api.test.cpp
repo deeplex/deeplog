@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(tmp)
     using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
 
     auto dbOpenRx = dlog::file_database_handle::file_database(
-            {}, "log-test.ddb", "log-test.{iso8601}.blog");
+            test_dir, "log-test.ddb", "log-test.{iso8601}.blog");
     DPLX_REQUIRE_RESULT(dbOpenRx);
     auto &&db = std::move(dbOpenRx).assume_value();
 
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(tmp)
             dlog::severity::info, std::move(sinkBackendOpenRx).assume_value());
     auto sink = sinkOwner.get();
 
-    dlog::core core{dlog::ringbus({}, "./tmp", 1 << 10).value()};
+    dlog::core core{dlog::ringbus(test_dir, "tmp", 1 << 10).value()};
     core.attach_sink(std::move(sinkOwner));
 
     dlog::logger xlog{core.connector()};

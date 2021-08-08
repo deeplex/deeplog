@@ -7,3 +7,46 @@
 
 #define BOOST_TEST_MODULE deeplog tests
 #include "boost-test.hpp"
+
+#include "test-utils.hpp"
+
+constinit dlog_tests::llfio::directory_handle dlog_tests::test_dir{};
+struct dlog_test_dir_fixtures
+{
+    dlog_test_dir_fixtures()
+    {
+        using namespace dlog_tests;
+
+        BOOST_TEST_CHECKPOINT("creating/opening test-files directory");
+        auto testFilesDir
+                = llfio::directory({}, "_test-files",
+                                   llfio::directory_handle::mode::write,
+                                   llfio::directory_handle::creation::if_needed)
+                          .value();
+
+        BOOST_TEST_CHECKPOINT("creating unique directory for test files");
+        test_dir = llfio::uniquely_named_directory(
+                           testFilesDir, llfio::directory_handle::mode::write,
+                           llfio::directory_handle::caching::all)
+                           .value();
+
+        fmt::print(
+                "created unique test directory at '{}'\n",
+                llfio::to_win32_path(test_dir, llfio::win32_path_namespace::dos)
+                        .value()
+                        .string());
+    }
+
+    void teardown()
+    {
+        using namespace dlog_tests;
+
+        BOOST_TEST_CHECKPOINT("removing the unique directory for test files");
+        if (auto reduceRx = llfio::algorithm::reduce(std::move(test_dir));
+            reduceRx.has_error())
+        {
+            reduceRx.assume_error().throw_exception();
+        }
+    }
+};
+BOOST_TEST_GLOBAL_FIXTURE(dlog_test_dir_fixtures);
