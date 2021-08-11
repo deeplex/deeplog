@@ -12,9 +12,9 @@
 #include <concepts>
 #include <type_traits>
 
-#include <dplx/dp/memory_buffer.hpp>
 #include <dplx/dp/item_emitter.hpp>
 #include <dplx/dp/item_parser.hpp>
+#include <dplx/dp/memory_buffer.hpp>
 #include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 
@@ -127,7 +127,7 @@ public:
     auto consume_content(ConsumeFn &&consume) noexcept -> result<void>
     {
         dp::memory_view content(mBuffer.consumed_begin(),
-                                           mBuffer.consumed_size(), 0);
+                                mBuffer.consumed_size(), 0);
 
         while (content.remaining_size() > 0)
         {
@@ -536,8 +536,7 @@ public:
                 bufferStart, msgSize,
                 static_cast<std::byte>(dp::type_code::binary));
 
-        return dp::memory_buffer{bufferStart + encodedSize,
-                                    msgSize, 0};
+        return dp::memory_buffer{bufferStart + encodedSize, msgSize, 0};
     }
 
     void commit(logger_token &logger)
@@ -675,4 +674,23 @@ inline auto ringbus(llfio::mapped_file_handle &&existing) noexcept
     return ringbus_mt_handle::ringbus(std::move(existing));
 }
 
+template <bus Bus>
+struct bus_write_lock
+{
+    using bus_type = Bus;
+    using token_type = typename bus_type::logger_token;
+
+    bus_type &bus;
+    token_type &token;
+
+    BOOST_FORCEINLINE explicit bus_write_lock(bus_type &bus, token_type &token)
+        : bus(bus)
+        , token(token)
+    {
+    }
+    BOOST_FORCEINLINE ~bus_write_lock()
+    {
+        bus.commit(token);
+    }
+};
 } // namespace dplx::dlog

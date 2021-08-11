@@ -98,9 +98,7 @@ struct argument<named_arg<Char, T>>
                                   argument const &self) noexcept
     {
         return dp::additional_information_size(3u)
-             + dp::encoded_size_of(type_id)
-             + dp::additional_information_size(self.name.size())
-             + self.name.size() // std::string_view is missing size_of -.-
+             + dp::encoded_size_of(type_id) + dp::encoded_size_of(self.name)
              + dp::encoded_size_of(self.value);
     }
 };
