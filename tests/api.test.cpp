@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(tmp)
     using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
 
     auto dbOpenRx = dlog::file_database_handle::file_database(
-            test_dir, "log-test.ddb", "log-test.{iso8601}.blog");
+            test_dir, "log-test.drot", "log-test.{iso8601}.dlog");
     DPLX_REQUIRE_RESULT(dbOpenRx);
     auto &&db = std::move(dbOpenRx).assume_value();
 

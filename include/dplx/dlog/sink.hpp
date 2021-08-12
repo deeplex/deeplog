@@ -16,7 +16,8 @@
 
 #include <fmt/format.h>
 
-#include <dplx/dp/decoder/tuple_utils.hpp>
+#include <dplx/dp/encoder/api.hpp>
+#include <dplx/dp/encoder/object_utils.hpp>
 #include <dplx/dp/memory_buffer.hpp>
 #include <dplx/dp/skip_item.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
@@ -104,6 +105,16 @@ private:
     }
 };
 
+struct file_info
+{
+    log_clock::epoch_info epoch;
+
+    static inline constexpr dp::object_def<
+            dp::property_def<4U, &file_info::epoch>{}>
+            layout_descriptor{.version = 0U,
+                              .allow_versioned_auto_decoder = true};
+};
+
 class file_sink_backend
 {
     using rotate_fn = std::function<result<void>(llfio::file_handle &)>;
@@ -129,6 +140,10 @@ public:
 
         DPLX_TRY(self.mBufferAllocation.resize(targetBufferSize));
         self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
+
+        DPLX_TRY(dp::write(self.mWriteBuffer, magic.data(), magic.size()));
+        file_info info{.epoch = log_clock::epoch()};
+        DPLX_TRY(dp::encode(self.mWriteBuffer, info));
 
         DPLX_TRY(dp::item_emitter<dp::memory_buffer>::array_indefinite(
                 self.mWriteBuffer));
@@ -161,6 +176,11 @@ public:
             = llfio::file_handle::caching::reads;
     static inline constexpr llfio::file_handle::flag file_flags
             = llfio::file_handle::flag::none;
+
+    static inline constexpr std::string_view extension{".dlog"};
+    static inline constexpr auto magic = detail::make_byte_array<16>(
+            {0x83, 0x4E, 0x0D, 0x0A, 0xAB, 0x7E, 0x7B, 0x64, 0x6C, 0x6F, 0x67,
+             0x7D, 0x7E, 0xBB, 0x0A, 0x1A});
 
     auto write(unsigned size) noexcept -> result<dp::memory_buffer>
     {

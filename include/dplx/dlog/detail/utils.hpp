@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <limits>
 #include <type_traits>
 
@@ -59,4 +60,19 @@ requires std::is_enum_v<Enum> constexpr auto to_underlying(Enum value) noexcept
     return static_cast<std::underlying_type_t<Enum>>(value);
 }
 
+template <std::size_t N, typename T>
+consteval auto make_byte_array(std::initializer_list<T> vs,
+                               std::byte const fill = std::byte{0xFE}) noexcept
+        -> std::array<std::byte, N>
+{
+    std::array<std::byte, N> bs;
+    auto last
+            = std::transform(vs.begin(), vs.end(), bs.data(),
+                             [](auto v) { return static_cast<std::byte>(v); });
+    for (auto const bsEnd = bs.data() + N; last != bsEnd; ++last)
+    {
+        *last = fill;
+    }
+    return bs;
+}
 } // namespace dplx::dlog::detail
