@@ -63,6 +63,7 @@ endif()
 
 ########################################################################
 # dependencies
+find_path(PARALLEL_HASHMAP_INCLUDE_DIRS "parallel_hashmap/phmap.h")
 
 find_package(fmt CONFIG REQUIRED)
 
@@ -103,9 +104,12 @@ endif()
 # deeplog library
 add_library(deeplog)
 add_library(Deeplex::deeplog ALIAS deeplog)
-target_include_directories(deeplog PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+target_include_directories(deeplog
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${PARALLEL_HASHMAP_INCLUDE_DIRS}
 )
 target_link_libraries(deeplog PUBLIC
     Deeplex::deeplog_compiler_settings
@@ -135,6 +139,9 @@ target_sources(deeplog PRIVATE
     "include/dplx/dlog/log_clock.hpp"
     "src/dlog/log_clock.cpp"
     "include/dplx/dlog/sink.hpp"
+
+    "include/dplx/dlog/record_container.hpp"
+    "src/dlog/record_container.cpp"
 
     "include/dplx/dlog/file_database.hpp"
     "src/dlog/file_database.cpp"
@@ -167,6 +174,7 @@ if (BUILD_TESTING)
         "tests/ringbus.test.cpp"
 
         "tests/file_database.test.cpp"
+        "tests/record_container.test.cpp"
 
         "tests/interleaving_stream.test.cpp"
     )

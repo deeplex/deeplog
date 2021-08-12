@@ -105,6 +105,11 @@ public:
                                  = llfio::file_handle::flag::none)
             -> result<llfio::file_handle>;
 
+    auto record_containers() const noexcept -> record_containers_type const &
+    {
+        return mContents.record_containers;
+    }
+
 private:
     static auto file_name(std::string const &pattern,
                           file_sink_id sinkId,

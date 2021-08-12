@@ -9,7 +9,8 @@
         "deeppack",
         "fmt",
         "llfio",
-        "outcome"
+        "outcome",
+        "parallel-hashmap"
     ],
     "features": {
         "tests": {

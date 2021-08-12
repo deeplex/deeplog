@@ -11,11 +11,12 @@
 #include <deque>
 #include <string>
 
-#include <boost/container/flat_map.hpp>
+#include <parallel_hashmap/phmap.h>
 
 #include <dplx/dp/concepts.hpp>
 #include <dplx/dp/decoder/api.hpp>
 #include <dplx/dp/decoder/core.hpp>
+#include <dplx/dp/item_parser.hpp>
 
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/definitions.hpp>
@@ -40,6 +41,22 @@ public:
         auto &inserted = mArgNames.push_back(std::move(name));
         return inserted.c_str();
     }
+
+    friend inline auto tag_invoke(dp::container_reserve_fn,
+                                  dynamic_format_arg_store &self,
+                                  std::size_t const reservationSize)
+            -> result<void>
+    {
+        try
+        {
+            self.reserve(reservationSize, reservationSize);
+            return oc::success();
+        }
+        catch (std::bad_alloc const &)
+        {
+            return std::errc::not_enough_memory;
+        }
+    }
 };
 
 template <dp::input_stream Stream>
@@ -53,26 +70,25 @@ class argument_transmorpher
                                        dynamic_arg_store &store,
                                        char const *name) noexcept;
 
-    boost::container::flat_map<key_type, revive_fn> mKnownTypes;
+    phmap::flat_hash_map<key_type, revive_fn> mKnownTypes;
+
+    using parse = dp::item_parser<Stream>;
 
 public:
-    auto operator()(Stream &inStream, unsigned const num)
-            -> result<dynamic_arg_store>
+    auto operator()(Stream &inStream, dynamic_arg_store &store) -> result<void>
     {
-        result<dynamic_arg_store> storeRx = dynamic_arg_store{};
-        auto &store = storeRx.assume_value();
-        store.reserve(num, num);
-        for (unsigned i = 0; i < num; ++i)
-        {
-            DPLX_TRY(decode_arg(inStream, store, nullptr));
-        }
+        store.clear();
 
-        return storeRx;
+        return parse::array_finite(
+                inStream, store,
+                [this](Stream &inStream, dynamic_arg_store &store,
+                       std::size_t const)
+                { return decode_arg(inStream, store, nullptr); });
     }
 
     template <typename T>
-    requires loggable_argument<T, Stream> &&dp::decodable<T, Stream> auto
-    register_type() -> result<void>
+        requires loggable_argument<T, Stream> && dp::decodable<T, Stream>
+    auto register_type() -> result<void>
     {
         try
         {
