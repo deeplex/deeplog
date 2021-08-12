@@ -13,10 +13,12 @@
 #include <utility>
 #include <vector>
 
-#include <dplx/dlog/disappointment.hpp>
-#include <dplx/dlog/llfio.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
+
+#include <dplx/dlog/detail/utils.hpp>
+#include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/llfio.hpp>
 
 namespace dplx::dlog
 {
@@ -82,7 +84,10 @@ public:
                               std::string sinkFileNamePattern) noexcept
             -> result<file_database_handle>;
 
-    static constexpr std::string_view extension{".ddb"};
+    static inline constexpr std::string_view extension{".drot"};
+    static inline constexpr auto magic = detail::make_byte_array<17>(
+            {0x82, 0x4E, 0x0D, 0x0A, 0xAB, 0x7E, 0x7B, 0x64, 0x72, 0x6F, 0x74,
+             0x7D, 0x7E, 0xBB, 0x0A, 0x1A, 0xA0});
 
     auto fetch_content() noexcept -> result<void>;
     auto unlink_all() noexcept -> result<void>;
@@ -105,6 +110,7 @@ private:
                           file_sink_id sinkId,
                           unsigned rotationCount) -> std::string;
 
+    auto validate_magic() noexcept -> result<void>;
     auto initialize_storage() noexcept -> result<void>;
     auto retire_to_storage(contents_t const &contents) noexcept -> result<void>;
 };

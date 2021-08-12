@@ -23,7 +23,9 @@
 #include <dplx/dp/encoder/object_utils.hpp>
 #include <dplx/dp/encoder/std_path.hpp>
 #include <dplx/dp/encoder/tuple_utils.hpp>
+#include <dplx/dp/memory_buffer.hpp>
 
+#include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 
@@ -67,6 +69,7 @@ auto file_database_handle::file_database(
         DPLX_TRY(auto maxExtent, db.mRootHandle.maximum_extent());
         if (std::popcount(maxExtent) == 1)
         {
+            DPLX_TRY(db.validate_magic());
             DPLX_TRY(db.fetch_content_impl());
         }
         else
@@ -260,9 +263,61 @@ auto file_database_handle::file_name(std::string const &pattern,
                        fmt::arg("ctr", rotationCount));
 }
 
+auto file_database_handle::validate_magic() noexcept -> result<void>
+{
+    dp::memory_allocation<llfio::utils::page_allocator<std::byte>> readBuffer;
+    DPLX_TRY(readBuffer.resize(8 * 1024));
+
+    llfio::file_handle::buffer_type readBuffers[] = {readBuffer.as_span()};
+    if (auto readRx = mRootHandle.read({readBuffers, 0U}); readRx.has_failure())
+    {
+        return std::move(readRx).as_failure();
+    }
+    else if (readRx.bytes_transferred() != readBuffer.size())
+    {
+        return errc::missing_data;
+    }
+    else
+    {
+        auto read = std::move(readRx).assume_value();
+        bytes header;
+        if (read.size() != 1U) [[unlikely]]
+        {
+            auto out = readBuffer.as_span().data();
+            for (auto buf : read)
+            {
+                out = std::ranges::copy(buf, out).out;
+            }
+            header = readBuffer.as_span();
+        }
+        else
+        {
+            header = read[0];
+        }
+
+        if (!std::ranges::equal(header.first(magic.size()), magic))
+        {
+            return errc::invalid_file_database_header;
+        }
+        else if (auto areaZero = header.subspan(magic.size());
+                 std::ranges::find_if(areaZero, [](std::byte v)
+                                      { return v != std::byte{}; })
+                 != areaZero.end())
+        {
+            return errc::invalid_file_database_header;
+        }
+    }
+
+    return oc::success();
+}
+
 auto file_database_handle::initialize_storage() noexcept -> result<void>
 {
     DPLX_TRY(mRootHandle.truncate(4u << 12)); // 16KiB aka 4 pages
+
+    llfio::file_handle::const_buffer_type writeBuffers[] = {bytes(magic)};
+    DPLX_TRY(mRootHandle.write({writeBuffers, 0}));
+
     DPLX_TRY(retire_to_storage(mContents));
     return oc::success();
 }

@@ -26,6 +26,8 @@ enum class errc
     nothing = 0, // to be removed
     bad = 1,
     not_enough_space,
+    missing_data,
+    invalid_file_database_header,
 };
 auto error_category() noexcept -> std::error_category const &;
 

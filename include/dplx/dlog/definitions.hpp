@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include <compare>
+#include <span>
 
 #include <dplx/dp/decoder/api.hpp>
 #include <dplx/dp/decoder/core.hpp>
@@ -17,6 +19,15 @@
 #include <dplx/dp/encoder/core.hpp>
 #include <dplx/dp/item_emitter.hpp>
 #include <dplx/dp/item_parser.hpp>
+
+// span aliasse
+namespace dplx::dlog
+{
+
+using bytes = std::span<std::byte const>;
+using writable_bytes = std::span<std::byte>;
+
+} // namespace dplx::dlog
 
 // resource id
 namespace dplx::dlog
