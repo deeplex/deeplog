@@ -10,6 +10,7 @@
 namespace dplx::dlog
 {
 
-log_clock::epoch_info log_clock::epoch;
+log_clock::epoch_info log_clock::epoch_(std::chrono::system_clock::now(),
+                                        internal_clock::now());
 
 }
