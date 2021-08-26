@@ -19,6 +19,11 @@ add_library(Deeplex::deeplog-cli ALIAS deeplog-cli)
 target_link_libraries(deeplog-cli PUBLIC
     Deeplex::deeplog
     Deeplex::deeplog_compiler_settings
+
+    fmt::fmt
+    ftxui::component
+    ftxui::dom
+    ftxui::screen
 )
 
 target_sources(deeplog-cli PRIVATE

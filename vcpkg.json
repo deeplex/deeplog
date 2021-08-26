@@ -8,6 +8,7 @@
         "boost-predef",
         "deeppack",
         "fmt",
+        "ftxui",
         "llfio",
         "outcome",
         "parallel-hashmap"

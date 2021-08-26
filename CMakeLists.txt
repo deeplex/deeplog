@@ -67,6 +67,8 @@ find_path(PARALLEL_HASHMAP_INCLUDE_DIRS "parallel_hashmap/phmap.h")
 
 find_package(fmt CONFIG REQUIRED)
 
+find_package(ftxui CONFIG REQUIRED)
+
 find_package(llfio CONFIG REQUIRED)
 
 find_package(outcome CONFIG REQUIRED)

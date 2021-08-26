@@ -9,11 +9,12 @@
             "repository": "https://github.com/deeplex-net/vcpkg-registry",
             "baseline": "94d2ffb017a9aaffeeea60d9742a97133dcaf6d0",
             "packages": [
-                "quickcpplib-unofficial",
-                "outcome",
-                "ntkernel-error-category",
                 "deeppack",
-                "llfio"
+                "ftxui",
+                "llfio",
+                "outcome",
+                "quickcpplib-unofficial",
+                "ntkernel-error-category"
             ]
         }
     ]
