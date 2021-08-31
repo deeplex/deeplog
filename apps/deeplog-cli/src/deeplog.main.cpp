@@ -7,6 +7,7 @@
 
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/file_database.hpp>
+#include <dplx/dlog/record_container.hpp>
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
@@ -62,6 +63,7 @@ private:
 
         phmap::flat_hash_map<file_sink_id, ftxui::Component> resourcesView;
 
+        mEnabledContainersBuilder.clear();
         for (auto const &container : recordContainers)
         {
             bool enabled = true;
@@ -109,24 +111,53 @@ private:
     }
 };
 
+class LogDisplayGridComponent : public ftxui::ComponentBase
+{
+    std::vector<record> &mRecords;
+    std::size_t mSelected;
+
+    ftxui::Elements mLevel;
+
+public:
+    LogDisplayGridComponent(std::vector<record> &records)
+        : ComponentBase()
+        , mRecords(records)
+        , mSelected(0)
+        , mLevel{
+                  ftxui::text(" N/A ") | ftxui::color(ftxui::Color::GrayLight),
+                  ftxui::text("CRIT") | ftxui::color(ftxui::Color::Red),
+                  ftxui::text("ERROR") | ftxui::color(ftxui::Color::RedLight),
+                  ftxui::text("WARN") | ftxui::color(ftxui::Color::Yellow),
+                  ftxui::text("info") | ftxui::color(ftxui::Color::Blue),
+                  ftxui::text("debug") | ftxui::color(ftxui::Color::Cyan),
+                  ftxui::text("trace") | ftxui::color(ftxui::Color::White),
+                  ftxui::text("INVAL") | ftxui::color(ftxui::Color::Violet),
+          }
+    {
+    }
+
+    auto Render() -> ftxui::Element override
+    {
+    }
+};
+
 class LogDisplayComponent : public ftxui::ComponentBase
 {
     file_database_handle &mFileDb;
     options &mOptions;
 
-    ftxui::Component mLogGrid;
+    std::vector<record> mDisplayRecords;
+    std::shared_ptr<LogDisplayGridComponent> mLogGrid;
 
 public:
     LogDisplayComponent(file_database_handle &fileDb, options &opts)
         : ComponentBase()
-        , mFileDb(mFileDb)
+        , mFileDb(fileDb)
         , mOptions(opts)
-        , mLogGrid()
+        , mLogGrid(std::make_shared<LogDisplayGridComponent>(mDisplayRecords))
     {
         Add(mLogGrid);
     }
-
-
 };
 
 class MainComponent : public ftxui::ComponentBase
@@ -152,7 +183,8 @@ public:
         , mTabToggle(ftxui::Toggle(&mTabs, &mTabSelector))
         , mOptionsComponent(
                   std::make_shared<OptionsComponent>(mFileDb, mOptions))
-        , mLogDisplayComponent(std::make_shared<LogDisplayComponent>())
+        , mLogDisplayComponent(
+                  std::make_shared<LogDisplayComponent>(mFileDb, mOptions))
     {
         Add(ftxui::Container::Vertical(
                 {mTabToggle, ftxui::Container::Tab(
