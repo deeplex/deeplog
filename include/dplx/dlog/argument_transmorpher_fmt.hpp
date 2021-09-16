@@ -38,14 +38,14 @@ public:
     auto persist_arg_name(std::basic_string<char_type> name)
             -> char_type const *
     {
-        auto &inserted = mArgNames.push_back(std::move(name));
+        auto &inserted = mArgNames.emplace_back(std::move(name));
         return inserted.c_str();
     }
 
     friend inline auto tag_invoke(dp::container_reserve_fn,
                                   dynamic_format_arg_store &self,
-                                  std::size_t const reservationSize)
-            -> result<void>
+                                  std::size_t const reservationSize) noexcept
+            -> dp::result<void>
     {
         try
         {
@@ -79,11 +79,16 @@ public:
     {
         store.clear();
 
-        return parse::array_finite(
-                inStream, store,
-                [this](Stream &inStream, dynamic_arg_store &store,
-                       std::size_t const)
-                { return decode_arg(inStream, store, nullptr); });
+        if (auto parseRx = parse::array_finite(
+                    inStream, store,
+                    [this](Stream &inStream, dynamic_arg_store &store,
+                           std::size_t const)
+                    { return decode_arg(inStream, store); });
+            parseRx.has_failure())
+        {
+            return std::move(parseRx).as_failure();
+        }
+        return oc::success();
     }
 
     template <typename T>
@@ -101,11 +106,42 @@ public:
     }
 
 private:
-    auto decode_arg(Stream &inStream,
-                    dynamic_arg_store &store,
-                    char const *name) noexcept -> result<void>
+    auto decode_arg(Stream &inStream, dynamic_arg_store &store) noexcept
+            -> result<void>
     {
+        DPLX_TRY(dp::item_info tupleHead, parse::generic(inStream));
+        if (tupleHead.type != dp::type_code::array)
+        {
+            return dp::errc::item_type_mismatch;
+        }
+        if (tupleHead.indefinite()
+            || (tupleHead.value != 2 && tupleHead.value != 3))
+        {
+            return dp::errc::tuple_size_mismatch;
+        }
+        if (tupleHead.encoded_length != 1)
+        {
+            return dp::errc::oversized_additional_information_coding;
+        }
+        bool const named = tupleHead.value == 3;
+
         DPLX_TRY(auto key, dp::decode(dp::as_value<key_type>, inStream));
+
+        char const *name = nullptr;
+        if (named)
+        {
+            try
+            {
+                std::string nameStore;
+                DPLX_TRY(parse::u8string_finite(inStream, nameStore));
+
+                name = store.persist_arg_name(std::move(nameStore));
+            }
+            catch (std::bad_alloc const &)
+            {
+                return std::errc::not_enough_memory;
+            }
+        }
 
         if (key == argument<std::uint64_t>::type_id)
         {
@@ -115,18 +151,6 @@ private:
         {
             return revive_template<std::int64_t>(inStream, store, name);
         }
-        if (key == resource_id{23u}) // named arg
-        {
-            if (name == nullptr)
-            {
-                return revive_named_arg(inStream, store);
-            }
-            else
-            {
-                return errc::bad; // TODO: proper error code for nested named
-                                  // args
-            }
-        }
         if (auto it = mKnownTypes.find(key); it != mKnownTypes.end())
         {
             revive_fn revive = it->second;
@@ -134,62 +158,6 @@ private:
         }
 
         return errc::bad; // TODO: proper error code for unknown arg type id
-    }
-
-    auto revive_named_arg(Stream &inStream, dynamic_arg_store &store)
-            -> result<void>
-    {
-        {
-            DPLX_TRY(dp::detail::item_info tupleInfo,
-                     dp::detail::parse_item_info(inStream));
-            if (std::byte{tupleInfo.type} != dp::type_code::array)
-            {
-                return dp::errc::item_type_mismatch;
-            }
-            if (tupleInfo.encoded_length != 1)
-            {
-                return dp::errc::invalid_additional_information;
-            }
-            if (tupleInfo.value != 3)
-            {
-                return dp::errc::tuple_size_mismatch;
-            }
-        }
-
-        char_type const *name;
-        try
-        {
-            DPLX_TRY(dp::detail::item_info nameInfo,
-                     dp::detail::parse_item_info(inStream));
-            if (std::byte{nameInfo.type} != dp::type_code::text)
-            {
-                return dp::errc::item_type_mismatch;
-            }
-            DPLX_TRY(auto &&availableBytes, dp::available_input_size(inStream));
-            if (availableBytes < nameInfo.value)
-            {
-                return dp::errc::missing_data;
-            }
-            if (!std::in_range<std::size_t>(nameInfo.value))
-            {
-                return std::errc::not_enough_memory;
-            }
-
-            std::string nameStore;
-            nameStore.resize(static_cast<std::size_t>(nameInfo.value));
-
-            DPLX_TRY(dp::read(inStream,
-                              reinterpret_cast<std::byte *>(nameStore.data()),
-                              nameStore.size()));
-
-            name = store.persist_arg_name(std::move(nameStore));
-        }
-        catch (std::bad_alloc const &)
-        {
-            return std::errc::not_enough_memory;
-        }
-
-        return decode_arg(inStream, store, name);
     }
 
     template <typename T>
