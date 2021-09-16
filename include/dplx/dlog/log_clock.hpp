@@ -55,6 +55,26 @@ public:
                  + dp::encoded_size_of(
                            value.steady_reference.time_since_epoch());
         }
+
+        template <typename Duration>
+        auto to_sys(std::uint64_t nanoseconds) const noexcept
+                -> std::chrono::time_point<
+                        std::chrono::system_clock,
+                        std::common_type_t<
+                                Duration,
+                                std::chrono::duration<std::int64_t, std::nano>>>
+        {
+            std::chrono::duration<std::uint64_t, std::nano> sinceEpoch(
+                    nanoseconds);
+
+            auto const internalSinceEpoch
+                    = sinceEpoch - steady_reference.time_since_epoch();
+            auto const systemTime = system_reference + internalSinceEpoch;
+
+            using requested_duration = std::common_type_t<
+                    Duration, std::chrono::duration<std::int64_t, std::nano>>;
+            return time_point_cast<requested_duration>(systemTime);
+        }
     };
 
 private:
