@@ -28,6 +28,7 @@ enum class errc
     not_enough_space,
     missing_data,
     invalid_file_database_header,
+    invalid_record_container_header,
 };
 auto error_category() noexcept -> std::error_category const &;
 
