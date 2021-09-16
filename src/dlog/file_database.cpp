@@ -240,6 +240,20 @@ auto file_database_handle::create_record_container(
     return std::move(file);
 }
 
+auto file_database_handle::open_record_container(
+        record_container_meta const &which,
+        llfio::file_handle::mode fileMode,
+        llfio::file_handle::caching caching,
+        llfio::file_handle::flag flags) -> result<llfio::file_handle>
+{
+    DPLX_TRY(auto &&containerFile,
+             llfio::file_handle::file(
+                     mRootDirHandle, which.path, fileMode,
+                     llfio::file_handle::creation::open_existing, caching,
+                     flags));
+    return std::move(containerFile);
+}
+
 auto file_database_handle::file_name(std::string const &pattern,
                                      file_sink_id sinkId,
                                      unsigned rotationCount) -> std::string

@@ -105,6 +105,15 @@ public:
                                  = llfio::file_handle::flag::none)
             -> result<llfio::file_handle>;
 
+    auto open_record_container(record_container_meta const &which,
+                               llfio::file_handle::mode fileMode
+                               = llfio::file_handle::mode::read,
+                               llfio::file_handle::caching caching
+                               = llfio::file_handle::caching::reads,
+                               llfio::file_handle::flag flags
+                               = llfio::file_handle::flag::none)
+            -> result<llfio::file_handle>;
+
     auto record_containers() const noexcept -> record_containers_type const &
     {
         return mContents.record_containers;
