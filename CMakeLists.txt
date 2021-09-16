@@ -149,6 +149,7 @@ target_sources(deeplog PRIVATE
     "src/dlog/file_database.cpp"
 
     "include/dplx/dlog/detail/codec_dummy.hpp"
+    "include/dplx/dlog/detail/iso8601.hpp"
     "include/dplx/dlog/detail/utils.hpp"
 
     "include/dplx/dlog/detail/interleaving_stream.hpp"
