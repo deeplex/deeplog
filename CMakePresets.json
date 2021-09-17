@@ -113,9 +113,10 @@
             ],
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": {
-                    "value": "$env{HOME}/.vs/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                    "value": "~/.vs/vcpkg/scripts/buildsystems/vcpkg.cmake",
                     "type": "FILEPATH"
-                }
+                },
+                "VCPKG_TARGET_TRIPLET": "x64-linux"
             },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
