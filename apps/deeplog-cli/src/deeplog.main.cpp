@@ -5,7 +5,10 @@
 
 #include <parallel_hashmap/phmap.h>
 
+#include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/detail/file_stream.hpp>
+#include <dplx/dlog/detail/iso8601.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/record_container.hpp>
 
@@ -14,12 +17,18 @@
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
 
+#include <dplx/dlog/tui/log_display_grid.hpp>
+#include <dplx/dlog/tui/theme.hpp>
+
 namespace dplx::dlog::tui
 {
+
+auto current_theme = theme_carbon_grey90();
 
 struct options
 {
     phmap::flat_hash_map<std::string, bool> enabled_containers;
+    log_clock::epoch_info display_epoch;
 };
 
 class OptionsComponent : public ftxui::ComponentBase
@@ -111,42 +120,14 @@ private:
     }
 };
 
-class LogDisplayGridComponent : public ftxui::ComponentBase
-{
-    std::vector<record> &mRecords;
-    std::size_t mSelected;
-
-    ftxui::Elements mLevel;
-
-public:
-    LogDisplayGridComponent(std::vector<record> &records)
-        : ComponentBase()
-        , mRecords(records)
-        , mSelected(0)
-        , mLevel{
-                  ftxui::text(" N/A ") | ftxui::color(ftxui::Color::GrayLight),
-                  ftxui::text("CRIT") | ftxui::color(ftxui::Color::Red),
-                  ftxui::text("ERROR") | ftxui::color(ftxui::Color::RedLight),
-                  ftxui::text("WARN") | ftxui::color(ftxui::Color::Yellow),
-                  ftxui::text("info") | ftxui::color(ftxui::Color::Blue),
-                  ftxui::text("debug") | ftxui::color(ftxui::Color::Cyan),
-                  ftxui::text("trace") | ftxui::color(ftxui::Color::White),
-                  ftxui::text("INVAL") | ftxui::color(ftxui::Color::Violet),
-          }
-    {
-    }
-
-    auto Render() -> ftxui::Element override
-    {
-    }
-};
-
 class LogDisplayComponent : public ftxui::ComponentBase
 {
     file_database_handle &mFileDb;
     options &mOptions;
 
-    std::vector<record> mDisplayRecords;
+    phmap::flat_hash_map<std::string, record_container> mClosedContainers;
+
+    std::vector<record *> mDisplayRecords;
     std::shared_ptr<LogDisplayGridComponent> mLogGrid;
 
 public:
@@ -154,9 +135,70 @@ public:
         : ComponentBase()
         , mFileDb(fileDb)
         , mOptions(opts)
-        , mLogGrid(std::make_shared<LogDisplayGridComponent>(mDisplayRecords))
+        , mLogGrid(std::make_shared<LogDisplayGridComponent>(
+                  mDisplayRecords, mOptions.display_epoch, current_theme))
     {
         Add(mLogGrid);
+
+        for (auto const &container : fileDb.record_containers())
+        {
+            if (auto loadRx = LoadClosedContainer(container);
+                loadRx.has_value())
+            {
+                mOptions.display_epoch
+                        = loadRx.assume_value().info.epoch; // FIXME
+                mClosedContainers.insert({container.path.generic_string(),
+                                          std::move(loadRx).assume_value()});
+            }
+        }
+
+        auto joined = mClosedContainers | std::views::values
+                    | std::views::transform(
+                              [](record_container &container)
+                                      -> std::pmr::vector<record> & {
+                                  return container.records;
+                              })
+                    | std::views::join
+                    | std::views::transform(
+                              [](record &v) -> record * { return &v; });
+
+        mDisplayRecords.assign(joined.begin(), joined.end());
+        std::ranges::stable_sort(mDisplayRecords, [](record *l, record *r)
+                                 { return l->timestamp < r->timestamp; });
+    }
+
+    auto Render() -> ftxui::Element override
+    {
+        return mLogGrid->Render();
+    }
+
+private:
+    auto
+    LoadClosedContainer(file_database_handle::record_container_meta const &meta)
+            -> result<record_container>
+    {
+        using input_stream = detail::os_input_stream_handle;
+
+        DPLX_TRY(auto &&containerFile, mFileDb.open_record_container(meta));
+        DPLX_TRY(auto const maxExtent, containerFile.maximum_extent());
+
+        DPLX_TRY(auto &&inStream,
+                 detail::os_input_stream_handle::os_input_stream(containerFile,
+                                                                 maxExtent));
+
+        dlog::argument_transmorpher<input_stream> argumentTransmorpher;
+        dlog::record_attribute_reviver<input_stream> parseAttrs;
+        (void)parseAttrs.register_attribute<attr::file>();
+        (void)parseAttrs.register_attribute<attr::line>();
+
+        dp::basic_decoder<record, input_stream> decode_record(
+                argumentTransmorpher, parseAttrs);
+        dp::basic_decoder<record_container, input_stream> decode(decode_record);
+
+        record_container value;
+        DPLX_TRY(decode(inStream, value));
+
+        return value;
     }
 };
 
@@ -206,9 +248,12 @@ public:
         }
         else if (mTabSelector == 1)
         {
+            detail = mLogDisplayComponent->Render();
         }
 
-        return ftxui::vbox({mTabToggle->Render(), ftxui::separator(), detail});
+        return ftxui::vbox({mTabToggle->Render(), ftxui::separator(), detail})
+             | color(current_theme.text_02)
+             | bgcolor(current_theme.ui_background);
     }
 };
 

@@ -16,6 +16,11 @@ along with this software. If not, see
 # deeplog-cli library
 add_library(deeplog-cli)
 add_library(Deeplex::deeplog-cli ALIAS deeplog-cli)
+target_include_directories(deeplog-cli
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
 target_link_libraries(deeplog-cli PUBLIC
     Deeplex::deeplog
     Deeplex::deeplog_compiler_settings
@@ -27,7 +32,11 @@ target_link_libraries(deeplog-cli PUBLIC
 )
 
 target_sources(deeplog-cli PRIVATE
-    src/placeholder.cpp
+    "include/dplx/dlog/tui/theme.hpp"
+    "src/dlog/theme.cpp"
+
+    "include/dplx/dlog/tui/log_display_grid.hpp"
+    "src/dlog/log_display_grid.cpp"
 )
 
 # deeplog-cli executable utility
