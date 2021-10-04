@@ -35,6 +35,8 @@ class LogDisplayGridComponent : public ftxui::ComponentBase
 {
     std::vector<record *> &mRecords;
     std::size_t mSelected;
+    ftxui::Box mDisplayBox;
+    ftxui::Box mSelectedRowBox;
 
     log_clock::epoch_info &mDisplayEpoch;
     theme &mCurrentTheme;
@@ -48,6 +50,11 @@ public:
         : ComponentBase()
         , mRecords(records)
         , mSelected(0)
+        , mDisplayBox{.x_min = 0,
+                      .x_max = INT_MAX,
+                      .y_min = 0,
+                      .y_max = INT_MAX}
+        , mSelectedRowBox{}
         , mDisplayEpoch(displayEpoch)
         , mCurrentTheme(currentTheme)
         , mSeverities{derive_severity_infos(mCurrentTheme)}

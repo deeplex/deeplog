@@ -32,6 +32,30 @@ auto LogDisplayGridComponent::derive_severity_infos(theme const &t)
     };
 }
 
+static auto compute_render_window(std::size_t selected,
+                                  std::size_t numElements,
+                                  std::size_t lines)
+        -> std::pair<std::size_t, std::size_t>
+{
+    if (numElements <= lines)
+    {
+        return {0U, numElements};
+    }
+    auto const lineSplit = lines / 2U;
+    if (selected <= lineSplit)
+    {
+        return {0U, lines};
+    }
+    else if (lineSplit >= numElements - selected)
+    {
+        return {numElements - lines, numElements};
+    }
+    else
+    {
+        return {selected - lineSplit, selected + lineSplit};
+    }
+}
+
 auto LogDisplayGridComponent::Render() -> ftxui::Element
 {
     constexpr int layout_size_level = 8;
@@ -54,7 +78,12 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
     std::string previousTime;
     ftxui::Elements formattedRecords;
 
-    for (std::size_t i = 0, limit = mRecords.size(); i < limit; ++i)
+    auto const lines
+            = static_cast<std::size_t>(mDisplayBox.y_max - mDisplayBox.y_min)
+            + 3U;
+    for (auto [i, limit]
+         = tui::compute_render_window(mSelected, mRecords.size(), lines);
+         i < limit; ++i)
     {
         auto const &record = *mRecords[i];
         auto const focused = i == mSelected;
@@ -79,6 +108,7 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
             {
                 lineDecorator = lineDecorator | ftxui::focus;
             }
+            lineDecorator = lineDecorator | ftxui::reflect(mSelectedRowBox);
         }
 
         auto sysTime
@@ -130,7 +160,8 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
     }
 
     return ftxui::vbox({header, ftxui::separator(),
-                        ftxui::vbox(formattedRecords) | ftxui::yframe});
+                        ftxui::vbox(formattedRecords) | ftxui::yframe
+                                | ftxui::reflect(mDisplayBox)});
 }
 
 auto LogDisplayGridComponent::OnEvent(ftxui::Event event) -> bool
@@ -139,18 +170,42 @@ auto LogDisplayGridComponent::OnEvent(ftxui::Event event) -> bool
     {
         return false;
     }
+    if (event.is_mouse() && event.mouse().button == ftxui::Mouse::Button::None)
+    {
+        return false;
+    }
+
+    auto const pageSize
+            = static_cast<unsigned>(mDisplayBox.y_max - mDisplayBox.y_min) + 1;
 
     auto prev = mSelected;
-    if (event == ftxui::Event::ArrowUp && mSelected != 0u)
+    if (event == ftxui::Event::ArrowUp && mSelected != 0U)
     {
-        mSelected -= 1;
+        mSelected -= 1U;
     }
-    if (event == ftxui::Event::ArrowDown)
+    else if (event == ftxui::Event::ArrowDown)
     {
-        mSelected += 1;
+        mSelected += 1U;
+    }
+    else if (event == ftxui::Event::Home)
+    {
+        mSelected = 0U;
+    }
+    else if (event == ftxui::Event::End)
+    {
+        mSelected = std::numeric_limits<std::size_t>::max();
+    }
+    else if (event == ftxui::Event::PageUp)
+    {
+        mSelected = mSelected < pageSize ? 0U : mSelected - pageSize;
+    }
+    else if (event == ftxui::Event::PageDown)
+    {
+        mSelected += pageSize;
     }
 
-    mSelected = std::min(mSelected, mRecords.size());
+    mSelected
+            = std::min(mSelected, mRecords.size() ? mRecords.size() - 1U : 0U);
     return mSelected != prev;
 }
 
