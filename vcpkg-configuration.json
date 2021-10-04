@@ -7,7 +7,7 @@
         {
             "kind": "git",
             "repository": "https://github.com/deeplex-net/vcpkg-registry",
-            "baseline": "828bdc5b332134264a3496da71b2ebec32003f60",
+            "baseline": "fde2be196d0bae613e8265f86499cbe821a7b50b",
             "packages": [
                 "deeppack",
                 "ftxui",
