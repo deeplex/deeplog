@@ -202,10 +202,10 @@ public:
 
         if (auto parseRx = parse::map_finite(
                     inStream, store.mAttributes,
-                    [this, &alloc](Stream &inStream,
-                                   record_attribute_container::map_type &store,
+                    [this, &alloc](Stream &linStream,
+                                   record_attribute_container::map_type &lstore,
                                    std::size_t const)
-                    { return decode_attr(inStream, store, alloc); });
+                    { return decode_attr(linStream, lstore, alloc); });
             parseRx.has_failure())
         {
             return std::move(parseRx).as_failure();
@@ -244,8 +244,8 @@ private:
 
         if (auto it = mKnownTypes.find(key); it != mKnownTypes.end())
         {
-            revive_fn revive = it->second;
-            DPLX_TRY(auto attr, revive(inStream, alloc));
+            revive_fn reviveAttribute = it->second;
+            DPLX_TRY(auto attr, reviveAttribute(inStream, alloc));
 
             try
             {

@@ -11,6 +11,9 @@
 #include <deque>
 #include <string>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 #include <parallel_hashmap/phmap.h>
 
 #include <dplx/dp/concepts.hpp>
@@ -81,9 +84,9 @@ public:
 
         if (auto parseRx = parse::array_finite(
                     inStream, store,
-                    [this](Stream &inStream, dynamic_arg_store &store,
+                    [this](Stream &linStream, dynamic_arg_store &lstore,
                            std::size_t const)
-                    { return decode_arg(inStream, store); });
+                    { return decode_arg(linStream, lstore); });
             parseRx.has_failure())
         {
             return std::move(parseRx).as_failure();

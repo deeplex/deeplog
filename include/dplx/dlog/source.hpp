@@ -105,10 +105,10 @@ public:
 
     logger() noexcept = default;
 
-    logger(T &targetBus, severity threshold = default_threshold) noexcept
+    logger(T &targetBus, severity thresholdInit = default_threshold) noexcept
         : mBus(&targetBus)
         , mToken{}
-        , threshold(threshold)
+        , threshold(thresholdInit)
     {
     }
 

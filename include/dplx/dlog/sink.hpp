@@ -167,7 +167,7 @@ public:
 
         self.mRotateBackingFile = std::move(rotate);
 
-        return std::move(self);
+        return self;
     }
 
     static inline constexpr llfio::file_handle::mode file_mode

@@ -79,7 +79,7 @@ auto file_database_handle::file_database(
         }
     }
 
-    return std::move(db);
+    return db;
 }
 
 auto file_database_handle::fetch_content() noexcept -> result<void>
@@ -238,7 +238,7 @@ auto file_database_handle::create_record_container(
     }
 
     mContents = std::move(contents);
-    return std::move(file);
+    return file;
 }
 
 auto file_database_handle::open_record_container(

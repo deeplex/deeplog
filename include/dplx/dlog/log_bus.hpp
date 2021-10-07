@@ -52,9 +52,9 @@ public:
     }
 
     explicit bufferbus_handle(llfio::mapped_file_handle buffer,
-                              unsigned int bufferCap)
+                              unsigned bufferCap)
         : mBackingFile(std::move(buffer))
-        , mBuffer(mBackingFile.address(), static_cast<int>(bufferCap), 0)
+        , mBuffer(mBackingFile.address(), bufferCap, 0)
     {
     }
 
@@ -81,7 +81,7 @@ public:
         return bufferbus(std::move(backingFile), bufferSize);
     }
     static auto bufferbus(llfio::mapped_file_handle &&backingFile,
-                          unsigned int bufferSize) noexcept
+                          unsigned bufferSize) noexcept
             -> result<bufferbus_handle>
     {
         DPLX_TRY(auto truncatedSize, backingFile.truncate(bufferSize));
@@ -97,7 +97,7 @@ public:
         return bufferbus_handle(std::move(backingFile), bufferSize);
     }
 
-    auto write(logger_token &, unsigned int msgSize) noexcept
+    auto write(logger_token &, unsigned msgSize) noexcept
             -> result<output_stream>
     {
         auto const overhead = dp::detail::var_uint_encoded_size(msgSize);
@@ -108,14 +108,14 @@ public:
             return errc::not_enough_space;
         }
 
-        auto const bufferStart = mBuffer.consume(totalSize);
+        auto const bufferStart = mBuffer.consume(static_cast<int>(totalSize));
         auto const msgStart
                 = bufferStart
                 + dp::detail::store_var_uint(
                           bufferStart, msgSize,
                           static_cast<std::byte>(dp::type_code::binary));
 
-        return dp::memory_buffer(msgStart, static_cast<int>(msgSize), 0);
+        return dp::memory_buffer(msgStart, msgSize, 0);
     }
 
     void commit(logger_token &)
@@ -447,11 +447,12 @@ private:
         }
     }
 
-    auto pop_available_blocks(region_ctrl *ctx, unsigned int readPos) -> int
+    auto pop_available_blocks(region_ctrl *ctx, unsigned int readPos)
+            -> unsigned
     {
         auto bucketIndex = readPos / blocks_per_bucket;
         auto subBucketIndex = readPos % blocks_per_bucket;
-        auto numAvailable = 0;
+        auto numAvailable = 0U;
 
         do
         {
@@ -465,12 +466,14 @@ private:
                 break;
             }
 
-            auto const numAvailableLocal = std::countr_one(mapValue);
+            auto const numAvailableLocal
+                    = static_cast<unsigned>(std::countr_one(mapValue));
             numAvailable += numAvailableLocal;
 
             // use xor to flip the bits to zero
             bucketRef.fetch_xor(detail::make_mask<bucket_type>(
-                                        numAvailableLocal, subBucketIndex),
+                                        static_cast<int>(numAvailableLocal),
+                                        static_cast<int>(subBucketIndex)),
                                 std::memory_order::relaxed);
 
             subBucketIndex += numAvailableLocal;
@@ -546,7 +549,8 @@ public:
         auto firstBucket = logger.msgBegin / blocks_per_bucket;
         auto offset = logger.msgBegin % blocks_per_bucket;
 
-        auto numFirst = std::min(logger.msgBlocks, blocks_per_bucket - offset);
+        auto const numFirst
+                = std::min(logger.msgBlocks, blocks_per_bucket - offset);
 
         if (numFirst != logger.msgBlocks)
         {
@@ -554,14 +558,16 @@ public:
                     ctx->alloc_map[firstBucket + 1]);
 
             auto const numSecond = logger.msgBlocks - numFirst;
-            secondBucketRef.fetch_or(detail::make_mask<bucket_type>(numSecond),
-                                     std::memory_order::relaxed);
+            secondBucketRef.fetch_or(
+                    detail::make_mask<bucket_type>(static_cast<int>(numSecond)),
+                    std::memory_order::relaxed);
         }
 
         std::atomic_ref<bucket_type> const firstBucketRef(
                 ctx->alloc_map[firstBucket]);
         firstBucketRef.fetch_or(
-                detail::make_mask<bucket_type>(numFirst, offset),
+                detail::make_mask<bucket_type>(static_cast<int>(numFirst),
+                                               static_cast<int>(offset)),
                 std::memory_order::release);
     }
 
@@ -683,9 +689,10 @@ struct bus_write_lock
     bus_type &bus;
     token_type &token;
 
-    BOOST_FORCEINLINE explicit bus_write_lock(bus_type &bus, token_type &token)
-        : bus(bus)
-        , token(token)
+    BOOST_FORCEINLINE explicit bus_write_lock(bus_type &busRef,
+                                              token_type &tokenRef)
+        : bus(busRef)
+        , token(tokenRef)
     {
     }
     BOOST_FORCEINLINE ~bus_write_lock()

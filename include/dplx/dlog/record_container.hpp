@@ -13,6 +13,7 @@
 #include <memory_resource>
 #include <string_view>
 
+#include <fmt/core.h>
 #include <fmt/format.h>
 
 #include <dplx/dp/decoder/api.hpp>
@@ -143,8 +144,8 @@ public:
 
         DPLX_TRY(parse::array(
                 inStream, value.records,
-                [this](Stream &inStream, container &records, std::size_t const)
-                { return parse_item(inStream, records); }));
+                [this](Stream &linStream, container &records, std::size_t const)
+                { return parse_item(linStream, records); }));
 
         return oc::success();
     }
