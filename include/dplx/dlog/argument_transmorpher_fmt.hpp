@@ -11,6 +11,7 @@
 #include <deque>
 #include <string>
 
+#include <fmt/args.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
 

@@ -1,20 +1,17 @@
 {
     "default-registry": {
         "kind": "builtin",
-        "baseline": "0dc27b9b672cb9d069cf58c48f3ae3f7395d108b"
+        "baseline": "5bdb9d60123df20c247a1654e6a1def51d6c5140"
     },
     "registries": [
         {
             "kind": "git",
             "repository": "https://github.com/deeplex-net/vcpkg-registry",
-            "baseline": "1d00cc05314bc2aa9299e30fb47ce102c1b066d9",
+            "baseline": "74e458ae4c2071405a62672e0cebe84e41be07cb",
             "packages": [
                 "deeppack",
                 "ftxui",
-                "llfio",
-                "outcome",
-                "quickcpplib-unofficial",
-                "ntkernel-error-category"
+                "llfio"
             ]
         }
     ]

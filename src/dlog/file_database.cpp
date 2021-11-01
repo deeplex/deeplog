@@ -262,7 +262,8 @@ auto file_database_handle::file_name(std::string const &pattern,
     auto const timePoint = std::chrono::system_clock::now();
     auto const iso8601DateTime = detail::iso8601_datetime(timePoint);
 
-    return fmt::format(pattern, fmt::arg("id", detail::to_underlying(sinkId)),
+    return fmt::format(fmt::runtime(pattern),
+                       fmt::arg("id", detail::to_underlying(sinkId)),
                        fmt::arg("iso8601", iso8601DateTime),
                        fmt::arg("ctr", rotationCount));
 }

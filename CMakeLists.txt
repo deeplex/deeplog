@@ -57,6 +57,9 @@ endif()
 ########################################################################
 # options
 
+set(DLOG_LLFIO_TARGET "sl" CACHE STRING "The llfio target to link against, can be 'hl', 'sl' or 'dl'")
+set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
+
 if (BUILD_TESTING)
     enable_testing()
 endif()
@@ -69,9 +72,11 @@ find_package(fmt CONFIG REQUIRED)
 
 find_package(ftxui CONFIG REQUIRED)
 
-find_package(llfio CONFIG REQUIRED)
+find_package(quickcpplib CONFIG REQUIRED PATH_SUFFIXES "share/ned14-internal-quickcpplib")
 
 find_package(outcome CONFIG REQUIRED)
+
+find_package(llfio CONFIG REQUIRED)
 
 find_package(deeppack CONFIG REQUIRED)
 
@@ -118,8 +123,8 @@ target_link_libraries(deeplog PUBLIC
     Deeplex::deeppack
 
     fmt::fmt
-    llfio::llfio
-    outcome::outcome
+    llfio::${DLOG_LLFIO_TARGET}
+    outcome::hl
 )
 
 target_sources(deeplog PRIVATE
