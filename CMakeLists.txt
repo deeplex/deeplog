@@ -41,6 +41,7 @@ project(deeplog VERSION 0.0.0 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake/")
 include(EnforceOutOfSourceBuilds)
+include(CMakeDependentOption)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
     OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
@@ -86,6 +87,12 @@ endif()
 find_package(Boost 1.73 REQUIRED COMPONENTS
     ${DLOG_REQUIRE_UNIT_TEST_FRAMEWORK}
 )
+
+find_package(sphinx)
+cmake_dependent_option(BUILD_DOCS "Build the documentation using sphinx." ON "SPHINX_FOUND" OFF)
+if (BUILD_DOCS)
+    add_subdirectory(docs)
+endif()
 
 ########################################################################
 # warning configuration
