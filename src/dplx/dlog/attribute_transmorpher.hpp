@@ -101,8 +101,8 @@ namespace dplx::dlog
 
 class polymorphic_attribute_deleter
 {
-    using delete_fn = auto (*)(std::pmr::polymorphic_allocator<> &alloc,
-                               record_attribute_base *obj) noexcept -> void;
+    using delete_fn = auto(*)(std::pmr::polymorphic_allocator<> &alloc,
+                              record_attribute_base *obj) noexcept -> void;
 
     std::pmr::polymorphic_allocator<> mAllocator{};
     delete_fn mDelete{};
@@ -184,7 +184,7 @@ class record_attribute_reviver
     using attribute_ptr = typename record_attribute_container::attribute_ptr;
     using attribute_allocator =
             typename record_attribute_container::map_type::allocator_type;
-    using revive_fn = auto (*)(Stream &stream, attribute_allocator &) noexcept
+    using revive_fn = auto(*)(Stream &stream, attribute_allocator &) noexcept
                       -> dp::result<attribute_ptr>;
 
     using reviver_map_type = phmap::flat_hash_map<key_type, revive_fn>;

@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include "boost-test.hpp"
-
 #include <fmt/core.h>
 
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
+
+#include "boost-test.hpp"
 
 namespace dlog_tests
 {

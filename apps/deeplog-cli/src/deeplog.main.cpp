@@ -2,7 +2,10 @@
 #include <ranges>
 
 #include <fmt/format.h>
-
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/dom/node.hpp>
 #include <parallel_hashmap/phmap.h>
 
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
@@ -11,12 +14,6 @@
 #include <dplx/dlog/detail/iso8601.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/record_container.hpp>
-
-#include <ftxui/component/component.hpp>
-#include <ftxui/component/screen_interactive.hpp>
-#include <ftxui/dom/elements.hpp>
-#include <ftxui/dom/node.hpp>
-
 #include <dplx/dlog/tui/log_display_grid.hpp>
 #include <dplx/dlog/tui/theme.hpp>
 
@@ -152,15 +149,14 @@ public:
             }
         }
 
-        auto joined = mClosedContainers | std::views::values
-                    | std::views::transform(
-                              [](record_container &container)
-                                      -> std::pmr::vector<record> & {
-                                  return container.records;
-                              })
-                    | std::views::join
-                    | std::views::transform(
-                              [](record &v) -> record * { return &v; });
+        auto joined
+                = mClosedContainers | std::views::values
+                | std::views::transform([](record_container &container)
+                                                -> std::pmr::vector<record> &
+                                        { return container.records; })
+                | std::views::join
+                | std::views::transform([](record &v) -> record *
+                                        { return &v; });
 
         mDisplayRecords.assign(joined.begin(), joined.end());
         std::ranges::stable_sort(mDisplayRecords, [](record *l, record *r)

@@ -91,6 +91,12 @@ IncludeCategories:
   - Regex:           '^<boost/'
     Priority:        5
     CaseSensitive:   false
+  - Regex:           '^<dplx/dlog[/\.].*'
+    Priority:        29
+    CaseSensitive:   true
+  - Regex:           '^<dplx/.*'
+    Priority:        27
+    CaseSensitive:   true
   - Regex:           '^<.*'
     Priority:        20
     CaseSensitive:   false

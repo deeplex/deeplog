@@ -7,9 +7,8 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include <chrono>
+#include <cstdint>
 
 #include <dplx/dp/concepts.hpp>
 #include <dplx/dp/decoder/api.hpp>

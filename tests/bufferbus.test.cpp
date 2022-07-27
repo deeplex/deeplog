@@ -5,12 +5,12 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <dplx/dlog/log_bus.hpp>
-
 #include <dplx/dp/decoder/api.hpp>
 #include <dplx/dp/decoder/core.hpp>
 #include <dplx/dp/encoder/api.hpp>
 #include <dplx/dp/encoder/core.hpp>
+
+#include <dplx/dlog/log_bus.hpp>
 
 #include "boost-test.hpp"
 #include "test-utils.hpp"
@@ -54,18 +54,19 @@ BOOST_AUTO_TEST_CASE(tmp)
     auto const endId = msgId;
     msgId = 0;
 
-    auto consumeRx
-            = bufferbus.consume_content([&](std::span<std::byte const> msg) {
-                  dp::memory_view msgBuffer(msg);
+    auto consumeRx = bufferbus.consume_content(
+            [&](std::span<std::byte const> msg)
+            {
+                dp::memory_view msgBuffer(msg);
 
-                  auto decodeRx
-                          = dp::decode(dp::as_value<unsigned int>, msgBuffer);
-                  DPLX_REQUIRE_RESULT(decodeRx);
+                auto decodeRx
+                        = dp::decode(dp::as_value<unsigned int>, msgBuffer);
+                DPLX_REQUIRE_RESULT(decodeRx);
 
-                  auto parsedId = decodeRx.assume_value();
-                  BOOST_TEST_REQUIRE(parsedId == msgId);
-                  msgId += 1;
-              });
+                auto parsedId = decodeRx.assume_value();
+                BOOST_TEST_REQUIRE(parsedId == msgId);
+                msgId += 1;
+            });
 
     DPLX_REQUIRE_RESULT(consumeRx);
     BOOST_TEST(endId == msgId);

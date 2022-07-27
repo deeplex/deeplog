@@ -21,16 +21,11 @@ template <typename T, typename... Ts>
 concept none_of = (!std::same_as<T, Ts> && ...);
 
 template <typename T>
-concept integer = std::integral<T> &&detail::none_of<std::remove_cv_t<T>,
-                                                     bool,
-                                                     char,
-                                                     wchar_t,
-                                                     char8_t,
-                                                     char16_t,
-                                                     char32_t>;
+concept integer = std::integral<T> && detail::none_of < std::remove_cv_t<T>,
+bool, char, wchar_t, char8_t, char16_t, char32_t > ;
 
 template <typename T>
-concept signed_integer = integer<T> &&std::is_signed_v<T>;
+concept signed_integer = integer<T> && std::is_signed_v<T>;
 
 template <typename T>
 concept unsigned_integer = integer<T> && !signed_integer<T>;
@@ -54,8 +49,9 @@ template <typename T>
 using remove_cref_t = std::remove_const_t<std::remove_reference_t<T>>;
 
 template <typename Enum>
-requires std::is_enum_v<Enum> constexpr auto to_underlying(Enum value) noexcept
-        -> typename std::underlying_type<Enum>::type
+    requires std::is_enum_v<Enum>
+constexpr auto to_underlying(Enum value) noexcept ->
+        typename std::underlying_type<Enum>::type
 {
     return static_cast<std::underlying_type_t<Enum>>(value);
 }

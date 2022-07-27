@@ -5,13 +5,13 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include "boost-test.hpp"
-#include "test-utils.hpp"
-
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/sink.hpp>
 #include <dplx/dlog/source.hpp>
+
+#include "boost-test.hpp"
+#include "test-utils.hpp"
 
 namespace dlog_tests
 {

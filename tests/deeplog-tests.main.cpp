@@ -7,7 +7,6 @@
 
 #define BOOST_TEST_MODULE deeplog tests
 #include "boost-test.hpp"
-
 #include "test-utils.hpp"
 
 constinit dlog_tests::llfio::directory_handle dlog_tests::test_dir{};

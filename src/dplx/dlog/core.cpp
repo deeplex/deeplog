@@ -5,7 +5,7 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <dplx/dlog/core.hpp>
+#include "dplx/dlog/core.hpp"
 
 #include <boost/predef/compiler.h>
 

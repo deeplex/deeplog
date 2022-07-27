@@ -8,7 +8,6 @@
 #pragma once
 
 #include <cstddef>
-
 #include <span>
 
 #include <dplx/dp/concepts.hpp>

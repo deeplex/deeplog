@@ -5,7 +5,7 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <dplx/dlog/detail/interleaving_stream.hpp>
+#include "dplx/dlog/detail/interleaving_stream.hpp"
 
 #include "boost-test.hpp"
 #include "test-utils.hpp"
@@ -23,4 +23,4 @@ static_assert(dp::lazy_output_stream<dlog::interleaving_output_stream_handle>);
 
 BOOST_AUTO_TEST_SUITE_END()
 
-}
+} // namespace dlog_tests

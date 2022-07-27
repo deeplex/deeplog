@@ -57,17 +57,17 @@ concept tryable = requires(T &&t)
     oc::try_operation_has_value(t);
     {
         oc::try_operation_return_as(static_cast<T &&>(t))
-    }
-    ->std::convertible_to<result<void>>;
+        } -> std::convertible_to<result<void>>;
     oc::try_operation_extract_value(static_cast<T &&>(t));
 };
 
 template <tryable T>
-using result_value_t = std::remove_cvref_t<decltype(
-        oc::try_operation_extract_value(std::declval<T &&>()))>;
+using result_value_t
+        = std::remove_cvref_t<decltype(oc::try_operation_extract_value(
+                std::declval<T &&>()))>;
 
 template <typename T, typename R>
-concept tryable_result = tryable<T> &&std::convertible_to<result_value_t<T>, R>;
-
+concept tryable_result
+        = tryable<T> && std::convertible_to<result_value_t<T>, R>;
 
 } // namespace dplx::dlog::detail

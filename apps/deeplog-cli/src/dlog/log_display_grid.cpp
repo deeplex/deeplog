@@ -5,7 +5,7 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <dplx/dlog/tui/log_display_grid.hpp>
+#include "dplx/dlog/tui/log_display_grid.hpp"
 
 #include <ftxui/dom/elements.hpp>
 
@@ -20,15 +20,15 @@ auto LogDisplayGridComponent::derive_severity_infos(theme const &t)
     using namespace std::string_literals;
 
     return {
-            {"N/A"s, color(t.text_error), ftxui::nothing},
+            {     "N/A"s,                                 color(t.text_error),ftxui::nothing                                                                              },
             {"CRITICAL"s, color(t.inverse_support_01) | bgcolor(t.inverse_02),
-             color(t.text_01)},
-            {"ERROR"s, color(t.support_01), color(t.text_01)},
-            {"WARNING"s, color(t.support_03), ftxui::nothing},
-            {"Info"s, color(t.support_04), ftxui::nothing},
-            {"Debug"s, color(t.text_02), ftxui::nothing},
-            {"Trace"s, color(t.text_03), color(t.text_03)},
-            {"INVALID"s, color(t.text_error), ftxui::nothing},
+             color(t.text_01)                                                                  },
+            {   "ERROR"s,                                 color(t.support_01), color(t.text_01)},
+            { "WARNING"s,                                 color(t.support_03),   ftxui::nothing},
+            {    "Info"s,                                 color(t.support_04),   ftxui::nothing},
+            {   "Debug"s,                                    color(t.text_02),   ftxui::nothing},
+            {   "Trace"s,                                    color(t.text_03), color(t.text_03)},
+            { "INVALID"s,                                 color(t.text_error),   ftxui::nothing},
     };
 }
 
@@ -88,8 +88,8 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
         auto const &record = *mRecords[i];
         auto const focused = i == mSelected;
 
-        auto const normalizedLevel = std::min<unsigned>(
-                cncr::to_underlying(record.severity), 7U);
+        auto const normalizedLevel
+                = std::min<unsigned>(cncr::to_underlying(record.severity), 7U);
 
         auto const &[severityName, severityFormat, lineDecoratorBase]
                 = mSeverities[normalizedLevel];

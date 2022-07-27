@@ -8,7 +8,6 @@
 #pragma once
 
 #include <cstddef>
-
 #include <string>
 #include <vector>
 
@@ -18,7 +17,6 @@
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/log_clock.hpp>
 #include <dplx/dlog/record_container.hpp>
-
 #include <dplx/dlog/tui/theme.hpp>
 
 namespace dplx::dlog::tui

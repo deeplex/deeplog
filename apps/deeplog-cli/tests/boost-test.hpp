@@ -15,13 +15,12 @@
 namespace boost::test_tools::tt_detail::impl
 {
 inline auto boost_test_print_type(std::ostream &s, std::byte b)
-    -> std::ostream &
+        -> std::ostream &
 {
     fmt::print(s, FMT_STRING("{:x}"), static_cast<std::uint8_t>(b));
     return s;
 }
 } // namespace boost::test_tools::tt_detail::impl
-
 
 #include <boost/predef.h>
 
@@ -38,10 +37,9 @@ inline auto boost_test_print_type(std::ostream &s, std::byte b)
 #pragma warning(disable : 4702)
 #endif
 
-#include <boost/test/unit_test.hpp>
-
 #include <boost/test/data/monomorphic.hpp>
 #include <boost/test/data/test_case.hpp>
+#include <boost/test/unit_test.hpp>
 
 #if defined BOOST_COMP_MSVC_AVAILABLE
 #pragma warning(pop)

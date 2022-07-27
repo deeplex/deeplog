@@ -10,6 +10,4 @@
 namespace dplx::dlog
 {
 
-
-
 }

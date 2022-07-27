@@ -14,7 +14,6 @@
 #include <fmt/args.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
-
 #include <parallel_hashmap/phmap.h>
 
 #include <dplx/dp/concepts.hpp>
