@@ -1,19 +1,17 @@
-#[=====================================================================[
+# Written in 2019 by Henrik Steffen Gaßmann <henrik@gassmann.onl>
+#
+# To the extent possible under law, the author(s) have dedicated all
+# copyright and related and neighboring rights to this software to the
+# public domain worldwide. This software is distributed without any warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software. If not, see
+#
+#     http://creativecommons.org/publicdomain/zero/1.0/
+#
+########################################################################
 
-Written in 2019, 2021 by Henrik Steffen Gaßmann <henrik@gassmann.onl>
-
-To the extent possible under law, the author(s) have dedicated all
-copyright and related and neighboring rights to this software to the
-public domain worldwide. This software is distributed without any warranty.
-
-You should have received a copy of the CC0 Public Domain Dedication
-along with this software. If not, see
-
-    http://creativecommons.org/publicdomain/zero/1.0/
-
-#]=====================================================================]
-
-set(DOCS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/docs_out")
+set(DOCS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/docs")
 
 add_custom_command(
     OUTPUT "${DOCS_OUTPUT_DIR}/index.html"
@@ -31,4 +29,8 @@ add_custom_command(
 
 add_custom_target(docs ALL DEPENDS "${DOCS_OUTPUT_DIR}/index.html")
 
-install(DIRECTORY "${DOCS_OUTPUT_DIR}" TYPE DOC)
+install(DIRECTORY
+    "${DOCS_OUTPUT_DIR}/"
+
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+)

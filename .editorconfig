@@ -8,12 +8,25 @@ indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{c,h}pp]
-guidelines = 80
-
 [*.md]
 max_line_length = off
 trim_trailing_whitespace = false
 
 [*.rst]
 end_of_line = lf
+max_line_length = off
+trim_trailing_whitespace = false
+
+[*.json]
+max_line_length = off
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+[{*.yml,*.yaml}]
+indent_size = 2
+[*.clang-{format,tidy}]
+indent_size = 2
+
+[*.{c,h}pp]
+guidelines = 80
+max_line_length = 80

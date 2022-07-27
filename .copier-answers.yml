@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier
+_commit: v0.2.1
+_src_path: git@github.com:deeplex/copier-cpp-library.git
+buildver: 0.0.0.0
+email: henrik@gassmann.onl
+full_name: Henrik S. Gaßmann
+header_only: false
+namespace: dlog
+project_name: deeplog
+project_slug: deeplog
+semver: 0.0.0-alpha.1
+year: 2021-2022
+

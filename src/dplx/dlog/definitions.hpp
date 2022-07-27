@@ -7,10 +7,9 @@
 
 #pragma once
 
+#include <compare>
 #include <cstddef>
 #include <cstdint>
-
-#include <compare>
 #include <span>
 
 #include <dplx/dp/decoder/api.hpp>
@@ -74,7 +73,7 @@ public:
     {
         DPLX_TRY(auto parsed,
                  parse::template integer<underlying_type>(
-                         inStream, detail::to_underlying(value_type::trace),
+                         inStream, cncr::to_underlying(value_type::trace),
                          parse_mode::canonical));
 
         value = static_cast<value_type>(parsed);
@@ -92,8 +91,8 @@ public:
 
     auto operator()(Stream &outStream, value_type value) -> result<void>
     {
-        auto bits = detail::to_underlying(value);
-        if (bits > detail::to_underlying(value_type::trace))
+        auto bits = cncr::to_underlying(value);
+        if (bits > cncr::to_underlying(value_type::trace))
         {
             return errc::item_value_out_of_range;
         }

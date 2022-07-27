@@ -1,59 +1,43 @@
-#[=====================================================================[
-
-Written in 2017, 2019-2021 by Henrik Steffen Gaßmann <henrik@gassmann.onl>
-
-To the extent possible under law, the author(s) have dedicated all
-copyright and related and neighboring rights to this software to the
-public domain worldwide. This software is distributed without any warranty.
-
-You should have received a copy of the CC0 Public Domain Dedication
-along with this software. If not, see
-
-    http://creativecommons.org/publicdomain/zero/1.0/
-
-#]=====================================================================]
-cmake_minimum_required(VERSION 3.16)
+# Written in 2017, 2019 by Henrik Steffen Gaßmann <henrik@gassmann.onl>
+#
+# To the extent possible under law, the author(s) have dedicated all
+# copyright and related and neighboring rights to this software to the
+# public domain worldwide. This software is distributed without any warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software. If not, see
+#
+#     http://creativecommons.org/publicdomain/zero/1.0/
+#
+########################################################################
+cmake_minimum_required(VERSION 3.20)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake/")
 
 ########################################################################
 # configure vcpkg from environment vars if possible
-include("${CMAKE_SOURCE_DIR}/options.cmake")
+include(VcpkgDefaults)
 
-if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-            CACHE STRING "")
-endif()
-
-if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
-    set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}" CACHE STRING "")
-endif()
-
-if(NOT DEFINED VCPKG_FEATURE_FLAGS)
-    set(VCPKG_FEATURE_FLAGS "registries" CACHE STRING "")
-endif()
-
-option(BUILD_TESTING "Add test targets" OFF)
-if (BUILD_TESTING)
+if (BUILD_TESTING OR NOT DEFINED BUILD_TESTING)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
 
 ########################################################################
-project(deeplog VERSION 0.0.0 LANGUAGES CXX)
+project(deeplog
+    VERSION 0.0.0.0
+    LANGUAGES CXX
+)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake/")
 include(EnforceOutOfSourceBuilds)
 include(CMakeDependentOption)
+include(CMakePackageConfigHelpers)
+include(FeatureSummary)
+include(GNUInstallDirs)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
-    OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
-        AND NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
-    set(GXX_FRONTEND 1)
-endif()
+include(SourceHelpers)
 
-if (MSVC
-    OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
-        AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
-    set(CL_FRONTEND 1)
-endif()
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+enable_testing()
+
 
 ########################################################################
 # options
@@ -79,6 +63,7 @@ find_package(outcome CONFIG REQUIRED)
 
 find_package(llfio CONFIG REQUIRED)
 
+find_package(concrete CONFIG REQUIRED)
 find_package(deeppack CONFIG REQUIRED)
 
 if (BUILD_TESTING)
@@ -88,45 +73,60 @@ find_package(Boost 1.73 REQUIRED COMPONENTS
     ${DLOG_REQUIRE_UNIT_TEST_FRAMEWORK}
 )
 
-find_package(sphinx)
-cmake_dependent_option(BUILD_DOCS "Build the documentation using sphinx." ON "SPHINX_FOUND" OFF)
-if (BUILD_DOCS)
-    add_subdirectory(docs)
-endif()
+find_package(Catch2 CONFIG)
+cmake_dependent_option(BUILD_TESTING "Build the documentation using sphinx" ON Catch2_FOUND OFF)
+set_package_properties(Catch2 PROPERTIES
+    TYPE OPTIONAL
+    PURPOSE "Allows to build the test suite"
+)
+
+find_package(Sphinx)
+cmake_dependent_option(BUILD_DOCS "Build the documentation using sphinx" ON Sphinx_FOUND OFF)
+set_package_properties(Sphinx PROPERTIES
+    TYPE OPTIONAL
+    PURPOSE "Allows to build the documentation"
+)
+
 
 ########################################################################
 # warning configuration
 include(CompilerWarnings)
 
+
 ########################################################################
-# targets
+# additional compiler options
+set(CMAKE_CXX_EXTENSIONS OFF CACHE STRING "" FORCE)
+
 add_library(compiler_settings INTERFACE)
 add_library(Deeplex::deeplog_compiler_settings ALIAS compiler_settings)
+set_target_properties(compiler_settings PROPERTIES
+    EXPORT_NAME deeplog_compiler_settings
+)
 
-if (CMAKE_CXX_EXTENSIONS)
-    set(CMAKE_CXX_EXTENSIONS OFF CACHE STRING "" FORCE)
-endif()
 target_compile_features(compiler_settings INTERFACE cxx_std_20)
-if (MSVC)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(compiler_settings INTERFACE
         /utf-8 # all sources are utf-8 encoded
-        /permissive- # TPL, disables many MSVC leniencies
         /Zc:__cplusplus # correctly define the __cplusplus macro
     )
 endif()
 
-# deeplog library
+
+########################################################################
+# library
 add_library(deeplog)
 add_library(Deeplex::deeplog ALIAS deeplog)
-target_include_directories(deeplog
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${PARALLEL_HASHMAP_INCLUDE_DIRS}
+
+target_link_libraries(deeplog PUBLIC Deeplex::deeplog_compiler_settings)
+
+target_include_directories(deeplog PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+
+    $<BUILD_INTERFACE:${PARALLEL_HASHMAP_INCLUDE_DIRS}>
 )
+
 target_link_libraries(deeplog PUBLIC
-    Deeplex::deeplog_compiler_settings
     Deeplex::deeppack
 
     fmt::fmt
@@ -134,54 +134,37 @@ target_link_libraries(deeplog PUBLIC
     outcome::hl
 )
 
-target_sources(deeplog PRIVATE
-    "include/dplx/dlog.hpp"
-
-    "include/dplx/dlog/disappointment.hpp"
-    "src/dlog/disappointment.cpp"
-
-    "include/dplx/dlog/concepts.hpp"
-    "include/dplx/dlog/definitions.hpp"
-
-    "include/dplx/dlog/arguments.hpp"
-    "include/dplx/dlog/argument_transmorpher_fmt.hpp"
-    "include/dplx/dlog/attribute_transmorpher.hpp"
-    "include/dplx/dlog/attributes.hpp"
-    "include/dplx/dlog/core.hpp"
-    "src/dlog/core.cpp"
-    "src/dlog/file_sink_backend.cpp"
-    "include/dplx/dlog/log_bus.hpp"
-    "include/dplx/dlog/log_clock.hpp"
-    "src/dlog/log_clock.cpp"
-    "include/dplx/dlog/sink.hpp"
-
-    "include/dplx/dlog/record_container.hpp"
-    "src/dlog/record_container.cpp"
-
-    "include/dplx/dlog/file_database.hpp"
-    "src/dlog/file_database.cpp"
-
-    "include/dplx/dlog/detail/codec_dummy.hpp"
-    "include/dplx/dlog/detail/iso8601.hpp"
-    "include/dplx/dlog/detail/utils.hpp"
-
-    "include/dplx/dlog/detail/file_stream.hpp"
-    "include/dplx/dlog/detail/interleaving_stream.hpp"
-    "src/dlog/interleaving_stream.cpp"
-)
-
 ########################################################################
-# test target
+# library test project
 if (BUILD_TESTING)
     add_executable(deeplog-tests)
+    source_group(TREE dlog_tests PREFIX test_utils)
+
     target_link_libraries(deeplog-tests PRIVATE
+        Deeplex::deeplog
+
+        Catch2::Catch2 Catch2::Catch2WithMain
+    )
+
+    target_include_directories(deeplog-tests PRIVATE
+        scr/dlog_tests
+    )
+
+    add_test(NAME deeplog-tests COMMAND deeplog-tests)
+endif()
+
+########################################################################
+# legacy test target
+if (BUILD_TESTING)
+    add_executable(deeplog-tests-legacy)
+    target_link_libraries(deeplog-tests-legacy PRIVATE
         Deeplex::deeplog
 
         Boost::unit_test_framework
         fmt::fmt
     )
 
-    target_sources(deeplog-tests PRIVATE
+    target_sources(deeplog-tests-legacy PRIVATE
         "tests/deeplog-tests.main.cpp"
         "tests/boost-test.hpp"
         "tests/test-utils.hpp"
@@ -196,7 +179,55 @@ if (BUILD_TESTING)
         "tests/interleaving_stream.test.cpp"
     )
 
-    add_test(NAME deeplog-tests COMMAND deeplog-tests)
+    add_test(NAME deeplog-tests-legacy COMMAND deeplog-tests-legacy)
 endif()
 
+########################################################################
+# cli projects
 add_subdirectory(apps/deeplog-cli)
+
+########################################################################
+# source files
+include(sources.cmake)
+source_group(TREE src/dplx)
+
+
+########################################################################
+# docs
+if (BUILD_DOCS)
+    add_subdirectory(docs)
+endif()
+
+
+########################################################################
+# cmake install
+install(DIRECTORY src/dplx
+    TYPE INCLUDE
+    FILES_MATCHING
+    REGEX ".*\\.h(pp)?"
+)
+
+install(TARGETS deeplog compiler_settings EXPORT deeplog-targets)
+install(EXPORT deeplog-targets
+    NAMESPACE Deeplex::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/deeplog"
+)
+
+configure_package_config_file(tools/deeplog-config.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/deeplog-config.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/deeplog"
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/deeplog-config-version.cmake"
+    COMPATIBILITY SameMinorVersion
+)
+
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/deeplog-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/deeplog-config-version.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/deeplog"
+)
+
+
+########################################################################
+feature_summary(WHAT PACKAGES_FOUND PACKAGES_NOT_FOUND)

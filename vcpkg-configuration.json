@@ -1,17 +1,16 @@
 {
     "default-registry": {
         "kind": "builtin",
-        "baseline": "5bdb9d60123df20c247a1654e6a1def51d6c5140"
+        "baseline": "8b62d95a81afcb9efe74bebeb62f04c1e0e2a003"
     },
     "registries": [
         {
             "kind": "git",
             "repository": "https://github.com/deeplex-net/vcpkg-registry",
-            "baseline": "74e458ae4c2071405a62672e0cebe84e41be07cb",
+            "baseline": "a0ed21745944ca42c2ce623e42f64fcd00250afd",
             "packages": [
-                "deeppack",
-                "ftxui",
-                "llfio"
+                "concrete",
+                "deeppack"
             ]
         }
     ]

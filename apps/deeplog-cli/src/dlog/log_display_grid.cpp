@@ -89,7 +89,7 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
         auto const focused = i == mSelected;
 
         auto const normalizedLevel = std::min<unsigned>(
-                detail::to_underlying(record.severity), 7U);
+                cncr::to_underlying(record.severity), 7U);
 
         auto const &[severityName, severityFormat, lineDecoratorBase]
                 = mSeverities[normalizedLevel];

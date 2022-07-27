@@ -2,8 +2,8 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: status:undecided, type:task
-assignees: BurningEnlightenment
+labels: type:task
+assignees: ''
 
 ---
 

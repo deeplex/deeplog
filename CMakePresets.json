@@ -1,19 +1,22 @@
 {
-    "version": 2,
+    "version": 3,
     "cmakeMinimumRequired": {
         "major": 3,
-        "minor": 20,
+        "minor": 22,
         "patch": 0
     },
     "configurePresets": [
         {
             "name": "base",
             "hidden": true,
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/bin/${presetName}",
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "BUILD_TESTING": true,
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+                "WARNINGS_AS_ERRORS": false,
+                "CMAKE_DEBUG_POSTFIX": "-dbg",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/zinstall"
             }
         },
         {
@@ -30,6 +33,8 @@
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static"
             },
+            "environment": {
+            },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
                     "hostOS": [
@@ -40,60 +45,35 @@
         },
         {
             "name": "x64-windows-msvc",
-            "hidden": true,
             "inherits": [
                 "x64-windows"
             ],
             "cacheVariables": {
-                "CMAKE_CXX_STANDARD": "23",
-                "CMAKE_C_COMPILER": "cl",
                 "CMAKE_CXX_COMPILER": "cl"
             }
         },
         {
-            "name": "x64-windows-msvc-debug",
-            "displayName": "x64 Windows MSVC Debug",
-            "inherits": [
-                "x64-windows-msvc"
-            ],
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_DEBUG_POSTFIX": "-Debug"
-            }
-        },
-        {
-            "name": "x64-windows-msvc-release",
-            "displayName": "x64 Windows MSVC Release",
-            "inherits": [
-                "x64-windows-msvc"
-            ],
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-            }
-        },
-        {
             "name": "x64-windows-msvc-lto",
-            "displayName": "x64 Windows MSVC Release LTO",
             "inherits": [
                 "x64-windows-msvc"
             ],
+            "generator": "Ninja",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true,
-                "VCPKG_TARGET_TRIPLET": "x64-windows-ltcg-static",
-                "CMAKE_CXX_FLAGS_RELEASE": "/Zi /O2 /Ob3 /DNDEBUG",
-                "CMAKE_EXE_LINKER_FLAGS_RELEASE": "/INCREMENTAL:NO"
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-lto",
+                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "/Zi /O2 /Ob3 /DNDEBUG",
+                "CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO": "/INCREMENTAL:NO /DEBUG"
             }
         },
         {
-            "name": "x64-windows-clang-debug",
+            "name": "x64-windows-clang",
             "inherits": [
                 "x64-windows"
             ],
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_DEBUG_POSTFIX": "-ClangDebug",
-                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_RELWITHDEBINFO_POSTFIX": "-Clang",
                 "CMAKE_CXX_COMPILER": "clang-cl"
             },
             "vendor": {
@@ -113,10 +93,6 @@
                 "base"
             ],
             "cacheVariables": {
-                "CMAKE_TOOLCHAIN_FILE": {
-                    "value": "~/.vs/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                    "type": "FILEPATH"
-                },
                 "VCPKG_TARGET_TRIPLET": "x64-linux"
             },
             "vendor": {
@@ -133,38 +109,129 @@
                             ".git",
                             ".vs",
                             ".vscode",
+                            "build",
                             "out",
                             "vcpkg_installed"
                         ]
                     },
                     "copyAdditionalIncludeDirectoriesList": [
-                        "${sourceDir}/out/build/${presetName}/vcpkg_installed/x64-linux/include"
+                        "${sourceDir}/build/${presetName}/vcpkg_installed/x64-linux/include"
                     ]
                 }
             }
         },
         {
-            "name": "x64-linux-clang-debug",
+            "name": "x64-linux-clang",
             "inherits": [
                 "x64-linux"
             ],
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++"
             }
         },
         {
-            "name": "x64-linux-gcc-debug",
+            "name": "x64-linux-gcc",
             "inherits": [
                 "x64-linux"
             ],
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_FLAGS_DEBUG": "-g -fconcepts-diagnostics-depth=3 -fsanitize=leak",
-                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_FLAGS": "-fconcepts-diagnostics-depth=3 -fsanitize=address,leak,undefined -g -fno-omit-frame-pointer",
+                "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,leak,undefined",
                 "CMAKE_CXX_COMPILER": "g++"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "x64-windows-msvc",
+            "configurePreset": "x64-windows-msvc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-msvc-release",
+            "inherits": "x64-windows-msvc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-windows-clang",
+            "configurePreset": "x64-windows-clang",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-clang-release",
+            "inherits": "x64-windows-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-linux-clang",
+            "configurePreset": "x64-linux-clang",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-clang-release",
+            "inherits": "x64-linux-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-linux-gcc",
+            "configurePreset": "x64-linux-gcc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-gcc-release",
+            "inherits": "x64-linux-gcc",
+            "configuration": "RelWithDebInfo"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "sanitizer_env",
+            "hidden": true,
+            "environment": {
+                "UBSAN_OPTIONS": "print_stacktrace=1",
+                "LSAN_OPTIONS": "verbosity=1:log_threads=1"
+            }
+        },
+        {
+            "name": "x64-windows-msvc",
+            "configurePreset": "x64-windows-msvc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-msvc-release",
+            "inherits": "x64-windows-msvc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-windows-clang",
+            "configurePreset": "x64-windows-clang",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-clang-release",
+            "inherits": "x64-windows-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-linux-clang",
+            "configurePreset": "x64-linux-clang",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-clang-release",
+            "inherits": "x64-linux-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-linux-gcc",
+            "inherits": "sanitizer_env",
+            "configurePreset": "x64-linux-gcc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-gcc-release",
+            "inherits": "x64-linux-gcc",
+            "configuration": "RelWithDebInfo"
         }
     ]
 }

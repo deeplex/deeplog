@@ -13,6 +13,9 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/format.h>
+
+#include <dplx/cncr/misc.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
@@ -85,9 +88,10 @@ public:
             -> result<file_database_handle>;
 
     static inline constexpr std::string_view extension{".drot"};
-    static inline constexpr auto magic = detail::make_byte_array<17>(
+    static inline constexpr auto magic = cncr::make_byte_array<17>(
             {0x82, 0x4E, 0x0D, 0x0A, 0xAB, 0x7E, 0x7B, 0x64, 0x72, 0x6F, 0x74,
-             0x7D, 0x7E, 0xBB, 0x0A, 0x1A, 0xA0});
+             0x7D, 0x7E, 0xBB, 0x0A, 0x1A, 0xA0},
+            0);
 
     auto fetch_content() noexcept -> result<void>;
     auto unlink_all() noexcept -> result<void>;
@@ -130,3 +134,24 @@ private:
 };
 
 } // namespace dplx::dlog
+
+template <typename Char>
+struct fmt::formatter<dplx::dlog::file_sink_id, Char>
+    : private fmt::formatter<std::underlying_type_t<dplx::dlog::file_sink_id>,
+                             Char>
+{
+private:
+    using value_type = dplx::dlog::file_sink_id;
+    using underlying_type = std::underlying_type_t<value_type>;
+    using base_type = fmt::formatter<underlying_type, Char>;
+
+public:
+    using base_type::base_type;
+    using base_type::parse;
+
+    template <typename FormatContext>
+    auto format(value_type value, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        return base_type::format(static_cast<underlying_type>(value), ctx);
+    }
+};
