@@ -51,13 +51,14 @@ endif()
 
 ########################################################################
 # dependencies
+
+set(Boost_NO_WARN_NEW_VERSIONS ON)
+
 find_path(PARALLEL_HASHMAP_INCLUDE_DIRS "parallel_hashmap/phmap.h")
 
 find_package(fmt CONFIG REQUIRED)
 
 find_package(ftxui CONFIG REQUIRED)
-
-find_package(quickcpplib CONFIG REQUIRED PATH_SUFFIXES "share/ned14-internal-quickcpplib")
 
 find_package(outcome CONFIG REQUIRED)
 
@@ -147,7 +148,7 @@ if (BUILD_TESTING)
     )
 
     target_include_directories(deeplog-tests PRIVATE
-        scr/dlog_tests
+        src/dlog_tests
     )
 
     add_test(NAME deeplog-tests COMMAND deeplog-tests)

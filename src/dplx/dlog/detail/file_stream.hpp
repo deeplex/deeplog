@@ -33,11 +33,11 @@ class os_input_stream_handle
             = dp::memory_allocation<llfio::utils::page_allocator<std::byte>>;
 
     page_allocation mBufferAllocation;
-    llfio::io_handle *mDataSource;
+    llfio::byte_io_handle *mDataSource;
     std::uint64_t mReadOffset;
 
 public:
-    using extent_type = llfio::io_handle::extent_type;
+    using extent_type = llfio::byte_io_handle::extent_type;
     static constexpr extent_type max_stream_size
             = std::numeric_limits<extent_type>::max();
 
@@ -49,7 +49,7 @@ public:
     {
     }
 
-    explicit os_input_stream_handle(llfio::io_handle &dataSource,
+    explicit os_input_stream_handle(llfio::byte_io_handle &dataSource,
                                     extent_type maxSize
                                     = max_stream_size) noexcept
         : base_t({}, maxSize)
@@ -61,7 +61,7 @@ public:
 
 private:
     explicit os_input_stream_handle(
-            llfio::io_handle &dataSource,
+            llfio::byte_io_handle &dataSource,
             extent_type maxSize,
             page_allocation &&buffer,
             std::span<std::byte const> initialReadArea) noexcept
@@ -76,7 +76,7 @@ private:
     static constexpr unsigned buffer_size = page_size * 16;
 
 public:
-    static auto os_input_stream(llfio::io_handle &dataSource,
+    static auto os_input_stream(llfio::byte_io_handle &dataSource,
                                 extent_type maxSize = max_stream_size) noexcept
             -> result<os_input_stream_handle>
     {
@@ -102,7 +102,7 @@ public:
 
 private:
     static auto os_input_stream(page_allocation &&pages,
-                                llfio::io_handle &dataSource,
+                                llfio::byte_io_handle &dataSource,
                                 extent_type maxSize) noexcept
             -> result<os_input_stream_handle>
     {
@@ -135,7 +135,7 @@ private:
         return read_chunk(mBufferAllocation, mDataSource, mReadOffset);
     }
     static auto read_chunk(page_allocation &bufferAlloc,
-                           llfio::io_handle *const dataSource,
+                           llfio::byte_io_handle *const dataSource,
                            extent_type const readPos) noexcept
             -> dp::result<std::span<std::byte const>>
     {
@@ -143,7 +143,7 @@ private:
         auto const realReadPos = readPos & ~offsetMask;
         auto const discard = readPos & offsetMask;
 
-        llfio::io_handle::buffer_type ioBuffers[] = {bufferAlloc.as_span()};
+        llfio::byte_io_handle::buffer_type ioBuffers[] = {bufferAlloc.as_span()};
 
         if (auto readRx = dataSource->read({ioBuffers, realReadPos});
             readRx.has_failure())
