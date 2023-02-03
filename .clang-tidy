@@ -23,7 +23,7 @@ Checks: >
     -readability-redundant-member-init,
     -readability-static-accessed-through-instance
 WarningsAsErrors: true
-HeaderFilterRegex: ".*"
+HeaderFilterRegex: ".*/src/dp(lx|_tests)/.*"
 FormatStyle: file
 CheckOptions:
   - key: modernize-use-override.AllowOverrideAndFinal
