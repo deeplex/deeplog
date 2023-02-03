@@ -95,8 +95,9 @@ public:
     }
 
     template <typename T>
-        requires loggable_argument<T, Stream> && dp::decodable<T, Stream>
-    auto register_type() -> result<void>
+        requires loggable_argument<T, Stream>
+              && dp::decodable<T, Stream>
+                 auto register_type() -> result<void>
     {
         try
         {

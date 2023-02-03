@@ -120,11 +120,9 @@ private:
 
 public:
     template <typename... Args>
-        requires(
-                ...
-                && (loggable_attribute<
-                            Args,
-                            output_stream> || loggable_argument<Args, output_stream>))
+        requires(...
+                 && (loggable_attribute<Args, output_stream>
+                     || loggable_argument<Args, output_stream>))
     auto operator()(severity sev,
                     std::u8string_view message,
                     Args const &...args) -> result<void>

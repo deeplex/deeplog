@@ -133,14 +133,13 @@ public:
         {
             DPLX_TRY(auto msgInfo, dp::detail::parse_item(content));
             if (msgInfo.type != dp::type_code::binary || msgInfo.indefinite()
-                || content.remaining_size() < msgInfo.value)
-                DPLX_ATTR_UNLIKELY
-                {
-                    // we ignore bad blocks
-                    // TODO: maybe do something more sensible
-                    // OTOH the log buffer is corrupted, so...
-                    break;
-                }
+                || content.remaining_size() < msgInfo.value) [[unlikely]]
+            {
+                // we ignore bad blocks
+                // TODO: maybe do something more sensible
+                // OTOH the log buffer is corrupted, so...
+                break;
+            }
 
             std::span<std::byte const> const msg(
                     content.consume(static_cast<int>(msgInfo.value)),
@@ -412,12 +411,12 @@ private:
                     msgInfo.type != dp::type_code::binary
                     || msgInfo.indefinite()
                     || space < msgInfo.encoded_length + msgInfo.value)
-                    DPLX_ATTR_UNLIKELY
-                    {
-                        // we ignore bad blocks
-                        blockIt += 1;
-                        continue;
-                    }
+                        [[unlikely]]
+                {
+                    // we ignore bad blocks
+                    blockIt += 1;
+                    continue;
+                }
 
                 blockIt += detail::div_ceil(
                         static_cast<std::uint32_t>(msgInfo.encoded_length
@@ -507,11 +506,10 @@ public:
         do
         {
             ctx = region(regionId);
-            if (auto reserveRx = write_to(ctx, numBlocks))
-                DPLX_ATTR_LIKELY
-                {
-                    msgStart = reserveRx.assume_value();
-                }
+            if (auto reserveRx = write_to(ctx, numBlocks)) [[likely]]
+            {
+                msgStart = reserveRx.assume_value();
+            }
             else if (reserveRx.assume_error() == errc::not_enough_space)
             {
                 regionId += 1;

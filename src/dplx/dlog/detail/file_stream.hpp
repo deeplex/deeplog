@@ -143,7 +143,8 @@ private:
         auto const realReadPos = readPos & ~offsetMask;
         auto const discard = readPos & offsetMask;
 
-        llfio::byte_io_handle::buffer_type ioBuffers[] = {bufferAlloc.as_span()};
+        llfio::byte_io_handle::buffer_type ioBuffers[]
+                = {bufferAlloc.as_span()};
 
         if (auto readRx = dataSource->read({ioBuffers, realReadPos});
             readRx.has_failure())

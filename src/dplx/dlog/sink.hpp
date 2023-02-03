@@ -31,23 +31,22 @@ namespace dplx::dlog
 {
 
 template <typename T>
-concept sink_backend = std::movable<T> && requires(T &sinkBackend,
-                                                   unsigned msgSize,
-                                                   std::u8string_view text)
-{
-    {
-        sinkBackend.write(msgSize)
-        } -> detail::tryable_result<dp::memory_buffer>;
-    //{
-    //    sinkBackend.write_static_string(text)
-    //    } -> detail::tryable;
-    {
-        sinkBackend.drain_opened()
-        } -> detail::tryable;
-    {
-        sinkBackend.drain_closed()
-        } -> detail::tryable;
-};
+concept sink_backend
+        = std::movable<T>
+       && requires(T &sinkBackend, unsigned msgSize, std::u8string_view text) {
+              {
+                  sinkBackend.write(msgSize)
+                  } -> detail::tryable_result<dp::memory_buffer>;
+              //{
+              //    sinkBackend.write_static_string(text)
+              //    } -> detail::tryable;
+              {
+                  sinkBackend.drain_opened()
+                  } -> detail::tryable;
+              {
+                  sinkBackend.drain_closed()
+                  } -> detail::tryable;
+          };
 
 template <sink_backend Backend>
 class basic_sink_frontend : public sink_frontend_base

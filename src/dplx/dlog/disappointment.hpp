@@ -52,14 +52,13 @@ namespace dplx::dlog::detail
 {
 
 template <typename T>
-concept tryable = requires(T &&t)
-{
-    oc::try_operation_has_value(t);
-    {
-        oc::try_operation_return_as(static_cast<T &&>(t))
-        } -> std::convertible_to<result<void>>;
-    oc::try_operation_extract_value(static_cast<T &&>(t));
-};
+concept tryable = requires(T &&t) {
+                      oc::try_operation_has_value(t);
+                      {
+                          oc::try_operation_return_as(static_cast<T &&>(t))
+                          } -> std::convertible_to<result<void>>;
+                      oc::try_operation_extract_value(static_cast<T &&>(t));
+                  };
 
 template <tryable T>
 using result_value_t

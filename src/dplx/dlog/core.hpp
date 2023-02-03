@@ -79,7 +79,8 @@ private:
     // Microsoft's x64 calling convention
     virtual auto retire(bytes rawMessage,
                         additional_record_info const &additionalInfo) noexcept
-            -> result<void> = 0;
+            -> result<void>
+            = 0;
 
     virtual auto drain_opened_impl() noexcept -> result<void>
     {

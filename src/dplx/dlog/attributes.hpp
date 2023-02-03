@@ -35,14 +35,14 @@ struct basic_attribute
 };
 
 template <typename T, typename Stream>
-concept loggable_attribute = dp::encodable<typename T::type, Stream> && requires
-{
-    typename T::type;
-    typename T::retype;
-    {
-        T::id
-        } -> std::convertible_to<resource_id>;
-};
+concept loggable_attribute = dp::encodable<typename T::type, Stream>
+                          && requires {
+                                 typename T::type;
+                                 typename T::retype;
+                                 {
+                                     T::id
+                                     } -> std::convertible_to<resource_id>;
+                             };
 
 template <resource_id Id, detail::integer T, detail::integer ReType>
 struct basic_attribute<Id, T, ReType>
