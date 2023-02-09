@@ -198,6 +198,9 @@ inline auto bufferbus(llfio::mapped_file_handle &&backingFile,
     return bufferbus_handle::bufferbus(std::move(backingFile), bufferSize);
 }
 
+// this thing is obsolete anyway
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 class ringbus_mt_handle
 {
     // n := block size
@@ -665,6 +668,8 @@ private:
     }
 };
 static_assert(bus<ringbus_mt_handle>);
+// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+// NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
 inline auto ringbus(llfio::path_handle const &base,
                     llfio::path_view path,

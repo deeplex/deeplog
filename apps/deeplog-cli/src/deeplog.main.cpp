@@ -260,12 +260,14 @@ try
     using namespace dplx;
     namespace llfio = dlog::llfio;
 
-    if (argc < 2)
+    std::span<char *> args(static_cast<char **>(argv),
+                           static_cast<std::size_t>(argc));
+    if (args.size() < 2)
     {
         return -3;
     }
 
-    llfio::path_view dbPath(argv[1]);
+    llfio::path_view dbPath(args[1]);
     auto db = dlog::file_database_handle::file_database({}, dbPath, "").value();
 
     auto screen = ScreenInteractive::Fullscreen();
