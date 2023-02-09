@@ -153,7 +153,8 @@ if (BUILD_TESTING)
         src/dlog_tests
     )
 
-    add_test(NAME deeplog-tests COMMAND deeplog-tests)
+    # TODO: uncomment this as soon as some tests have been migrated to catch2
+    # add_test(NAME deeplog-tests COMMAND deeplog-tests)
 endif()
 
 ########################################################################
