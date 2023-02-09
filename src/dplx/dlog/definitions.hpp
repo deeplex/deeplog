@@ -12,12 +12,7 @@
 #include <cstdint>
 #include <span>
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/core.hpp>
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/core.hpp>
-#include <dplx/dp/item_emitter.hpp>
-#include <dplx/dp/item_parser.hpp>
+#include <dplx/dp.hpp>
 
 // span aliasse
 namespace dplx::dlog
@@ -57,59 +52,34 @@ inline constexpr severity default_threshold = severity::warn;
 
 } // namespace dplx::dlog
 
-namespace dplx::dp
+template <>
+class dplx::dp::codec<dplx::dlog::severity>
 {
-
-template <input_stream Stream>
-class basic_decoder<dlog::severity, Stream>
-{
-    using parse = item_parser<Stream>;
     using underlying_type = std::underlying_type_t<dlog::severity>;
 
 public:
-    using value_type = dlog::severity;
-
-    auto operator()(Stream &inStream, value_type &value) -> result<void>
+    static inline auto size_of(emit_context const &,
+                               dplx::dlog::severity) noexcept -> std::uint64_t
     {
-        DPLX_TRY(auto parsed,
-                 parse::template integer<underlying_type>(
-                         inStream, cncr::to_underlying(value_type::trace),
-                         parse_mode::canonical));
-
-        value = static_cast<value_type>(parsed);
-        return oc::success();
+        return 1U;
     }
+    static auto encode(emit_context const &ctx,
+                       dplx::dlog::severity value) noexcept -> result<void>;
+    static auto decode(parse_context &ctx,
+                       dplx::dlog::severity &outValue) noexcept -> result<void>;
 };
 
-template <output_stream Stream>
-class basic_encoder<dlog::severity, Stream>
+template <>
+class dplx::dp::codec<dplx::dlog::resource_id>
 {
-    using emit = item_emitter<Stream>;
+    using underlying_type = std::underlying_type_t<dlog::resource_id>;
 
 public:
-    using value_type = dlog::severity;
-
-    auto operator()(Stream &outStream, value_type value) -> result<void>
-    {
-        auto bits = cncr::to_underlying(value);
-        if (bits > cncr::to_underlying(value_type::trace))
-        {
-            return errc::item_value_out_of_range;
-        }
-        DPLX_TRY(auto &&proxy, write(outStream, 1));
-        // single byte posint encoding
-        std::ranges::data(proxy)[0] = static_cast<std::byte>(bits);
-        if constexpr (lazy_output_stream<Stream>)
-        {
-            DPLX_TRY(commit(outStream, proxy));
-        }
-        return oc::success();
-    }
+    static auto size_of(emit_context const &, dplx::dlog::resource_id) noexcept
+            -> std::uint64_t;
+    static auto encode(emit_context const &ctx,
+                       dplx::dlog::resource_id value) noexcept -> result<void>;
+    static auto decode(parse_context &ctx,
+                       dplx::dlog::resource_id &outValue) noexcept
+            -> result<void>;
 };
-
-constexpr auto tag_invoke(encoded_size_of_fn, dlog::severity) -> unsigned
-{
-    return 1U;
-}
-
-} // namespace dplx::dp

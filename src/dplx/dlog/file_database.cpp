@@ -13,17 +13,15 @@
 
 #include <fmt/format.h>
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/object_utils.hpp>
-#include <dplx/dp/decoder/std_container.hpp>
-#include <dplx/dp/decoder/std_path.hpp>
-#include <dplx/dp/decoder/tuple_utils.hpp>
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/core.hpp>
-#include <dplx/dp/encoder/object_utils.hpp>
-#include <dplx/dp/encoder/std_path.hpp>
-#include <dplx/dp/encoder/tuple_utils.hpp>
-#include <dplx/dp/memory_buffer.hpp>
+#include <dplx/dp.hpp>
+#include <dplx/dp/api.hpp>
+#include <dplx/dp/codecs/auto_enum.hpp>
+#include <dplx/dp/codecs/auto_object.hpp>
+#include <dplx/dp/codecs/auto_tuple.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-container.hpp>
+#include <dplx/dp/codecs/std-filesystem.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
 
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
@@ -121,7 +119,7 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
 
     if (!mContents.record_containers.empty())
     {
-        return std::errc::directory_not_empty;
+        return system_error::errc::directory_not_empty;
     }
 
     rootLock.unlock();
@@ -212,7 +210,7 @@ auto file_database_handle::create_record_container(
         {
             file = std::move(openRx).assume_value();
         }
-        else if (openRx.assume_error() == std::errc::file_exists)
+        else if (openRx.assume_error() == system_error::errc::file_exists)
         {
             // 5 retries hoping that the user chose a file name pattern which
             // disambiguates by timestamp or rotation count
@@ -273,7 +271,9 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>> readBuffer;
     DPLX_TRY(readBuffer.resize(8 * 1024));
 
-    llfio::file_handle::buffer_type readBuffers[] = {readBuffer.as_span()};
+    llfio::file_handle::buffer_type readBuffers[] = {
+            {readBuffer.as_span().data(), readBuffer.size()}
+    };
     if (auto readRx = mRootHandle.read({readBuffers, 0U}); readRx.has_failure())
     {
         return std::move(readRx).as_failure();
@@ -320,7 +320,9 @@ auto file_database_handle::initialize_storage() noexcept -> result<void>
 {
     DPLX_TRY(mRootHandle.truncate(4u << 12)); // 16KiB aka 4 pages
 
-    llfio::file_handle::const_buffer_type writeBuffers[] = {bytes(magic)};
+    llfio::file_handle::const_buffer_type writeBuffers[] = {
+            {magic.data(), magic.size()}
+    };
     DPLX_TRY(mRootHandle.write({writeBuffers, 0}));
 
     DPLX_TRY(retire_to_storage(mContents));
@@ -339,3 +341,10 @@ auto file_database_handle::retire_to_storage(
 }
 
 } // namespace dplx::dlog
+
+DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(
+        ::dplx::dlog::file_database_handle::record_container_meta)
+
+DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(
+        ::dplx::dlog::file_database_handle::contents_t)
+

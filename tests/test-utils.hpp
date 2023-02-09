@@ -8,6 +8,7 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -30,12 +31,13 @@ inline auto check_result(dlog::result<R> const &rx)
     boost::test_tools::predicate_result prx{succeeded};
     if (!succeeded)
     {
-        auto error = rx.assume_error();
-        auto const &cat = error.category();
+        auto &&code = rx.assume_error();
+        auto const &cat = code.domain();
 
         fmt::print(prx.message().stream(),
-                   "[category: {}; value: {}; message: {}]", cat.name(),
-                   error.value(), error.message());
+                   "[domain: {}; value: {}; message: {}]", cat.name().c_str(),
+                   static_cast<std::intptr_t>(code.value()),
+                   code.message().c_str());
     }
     return prx;
 }

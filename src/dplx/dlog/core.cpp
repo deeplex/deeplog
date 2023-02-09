@@ -9,10 +9,9 @@
 
 #include <boost/predef/compiler.h>
 
-#include <dplx/dp/decoder/tuple_utils.hpp>
-#include <dplx/dp/item_parser.hpp>
-#include <dplx/dp/skip_item.hpp>
-#include <dplx/dp/streams/memory_input_stream.hpp>
+#include <dplx/dp/codecs/auto_tuple.hpp>
+#include <dplx/dp/items/skip_item.hpp>
+#include <dplx/dp/legacy/memory_input_stream.hpp>
 
 #if defined BOOST_COMP_MSVC_AVAILABLE
 
@@ -56,46 +55,50 @@ auto consume_record_fn::multicast(
         std::span<std::unique_ptr<sink_frontend_base> const> sinks) noexcept
         -> result<void>
 {
-    using parse = dp::item_parser<dp::memory_view>;
+    dp::memory_view messageView(message);
+    auto &&buffer = dp::get_input_buffer(messageView);
+    dp::parse_context ctx{buffer};
 
-    dp::memory_view inStream(message);
-    DPLX_TRY(auto &&tupleInfo, dp::parse_tuple_head(inStream));
+    DPLX_TRY(auto &&tupleInfo, dp::decode_tuple_head(ctx));
 
     additional_record_info addInfo{};
-    DPLX_TRY(addInfo.message_severity,
-             dp::decode(dp::as_value<severity>, inStream));
+    DPLX_TRY(addInfo.message_severity, dp::decode(dp::as_value<severity>, ctx));
 
-    DPLX_TRY(dp::decode(inStream, addInfo.timestamp));
+    DPLX_TRY(dp::decode(ctx, addInfo.timestamp));
 
-    DPLX_TRY(auto messageInfo, parse::generic(inStream));
+    DPLX_TRY(auto messageInfo, dp::parse_item_head(ctx));
     if (messageInfo.type != dp::type_code::text || messageInfo.indefinite())
     {
         return dp::errc::item_type_mismatch;
     }
-    if (messageInfo.value > inStream.remaining_size())
+    if (messageInfo.value > buffer.input_size())
     {
         return dp::errc::missing_data;
     }
 
-    inStream.move_consumer(static_cast<int>(messageInfo.value));
+    buffer.discard_buffered(messageInfo.value);
     addInfo.message_size = messageInfo.encoded_length
                          + static_cast<unsigned>(messageInfo.value);
 
     if (tupleInfo.num_properties > 3)
     {
-        addInfo.attributes_size = -inStream.consumed_size();
+        DPLX_TRY(buffer.sync_input());
+        addInfo.attributes_size = -messageView.consumed_size();
 
-        DPLX_TRY(dp::skip_item(inStream));
+        DPLX_TRY(dp::skip_item(ctx));
 
-        addInfo.attributes_size += inStream.consumed_size();
+        DPLX_TRY(buffer.sync_input());
+        addInfo.attributes_size += messageView.consumed_size();
     }
     if (tupleInfo.num_properties > 4)
     {
-        addInfo.format_args_size = -inStream.consumed_size();
+        DPLX_TRY(buffer.sync_input());
+        addInfo.format_args_size = -messageView.consumed_size();
 
-        DPLX_TRY(dp::skip_item(inStream));
+        DPLX_TRY(dp::skip_item(ctx));
 
-        addInfo.format_args_size += inStream.consumed_size();
+        DPLX_TRY(buffer.sync_input());
+        addInfo.format_args_size += messageView.consumed_size();
     }
 
     for (auto &sink : sinks)

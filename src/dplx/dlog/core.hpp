@@ -58,10 +58,11 @@ public:
     virtual ~sink_frontend_base() = default;
 
 protected:
+    /*
     sink_frontend_base(sink_frontend_base const &) = default;
     auto operator=(sink_frontend_base const &)
             -> sink_frontend_base & = default;
-
+            */
     sink_frontend_base(sink_frontend_base &&) noexcept = default;
     auto operator=(sink_frontend_base &&) noexcept
             -> sink_frontend_base & = default;
@@ -101,7 +102,7 @@ public:
         {
             mLastRx = drain_opened_impl();
         }
-        return mLastRx;
+        return oc::success(); // FIXME: think about lazy error passing
     }
     auto drain_closed() noexcept -> result<void>
     {
@@ -109,12 +110,12 @@ public:
         {
             mLastRx = drain_closed_impl();
         }
-        return mLastRx;
+        return oc::success(); // FIXME: think about lazy error passing
     }
 
     auto last_rx() const noexcept -> result<void>
     {
-        return mLastRx;
+        return oc::success(); // FIXME: think about lazy error passing
     }
 };
 

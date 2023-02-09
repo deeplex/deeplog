@@ -14,10 +14,10 @@
 
 #include <parallel_hashmap/phmap.h>
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/core.hpp>
-#include <dplx/dp/item_parser.hpp>
-#include <dplx/dp/stream.hpp>
+#include <dplx/dp.hpp>
+#include <dplx/dp/api.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/items/parse_ranges.hpp>
 
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/detail/utils.hpp>
@@ -36,7 +36,6 @@ public:
 template <typename ReType>
 class basic_record_attribute;
 
-template <dp::input_stream Stream>
 class record_attribute_reviver;
 
 template <detail::integer ReType>
@@ -65,7 +64,7 @@ public:
             }
             catch (std::bad_alloc const &)
             {
-                return std::errc::not_enough_memory;
+                return system_error::errc::not_enough_memory;
             }
         }
         return mStringified;
@@ -154,12 +153,10 @@ using pmr_flat_hash_map = phmap::flat_hash_map<
         EqualTo,
         std::pmr::polymorphic_allocator<std::pair<K const, V>>>;
 
-template <dp::input_stream Stream>
 class record_attribute_reviver;
 
 class record_attribute_container
 {
-    template <dp::input_stream Stream>
     friend class record_attribute_reviver;
 
     using attribute_ptr = std::unique_ptr<record_attribute_base,
@@ -177,35 +174,33 @@ public:
     }
 };
 
-template <dp::input_stream Stream>
 class record_attribute_reviver
 {
     using key_type = resource_id;
     using attribute_ptr = typename record_attribute_container::attribute_ptr;
     using attribute_allocator =
             typename record_attribute_container::map_type::allocator_type;
-    using revive_fn = auto(*)(Stream &stream, attribute_allocator &) noexcept
-                      -> dp::result<attribute_ptr>;
+    using revive_fn
+            = auto(*)(dp::parse_context &ctx, attribute_allocator &) noexcept
+              -> dp::result<attribute_ptr>;
 
     using reviver_map_type = phmap::flat_hash_map<key_type, revive_fn>;
 
     reviver_map_type mKnownTypes;
 
-    using parse = dp::item_parser<Stream>;
-
 public:
-    auto operator()(Stream &inStream, record_attribute_container &store)
+    auto operator()(dp::parse_context &ctx, record_attribute_container &store)
             -> dp::result<void>
     {
         store.mAttributes.clear();
         auto alloc = store.mAttributes.get_allocator();
 
-        if (auto parseRx = parse::map_finite(
-                    inStream, store.mAttributes,
-                    [this, &alloc](Stream &linStream,
+        if (auto parseRx = dp::parse_map_finite(
+                    ctx, store.mAttributes,
+                    [this, &alloc](dp::parse_context &lctx,
                                    record_attribute_container::map_type &lstore,
-                                   std::size_t const)
-                    { return decode_attr(linStream, lstore, alloc); });
+                                   std::size_t const) noexcept
+                    { return decode_attr(lctx, lstore, alloc); });
             parseRx.has_failure())
         {
             return std::move(parseRx).as_failure();
@@ -229,23 +224,22 @@ public:
         }
         catch (std::bad_alloc const &)
         {
-            return std::errc::not_enough_memory;
+            return system_error::errc::not_enough_memory;
         }
     }
 
 private:
-    auto
-    decode_attr(Stream &inStream,
-                record_attribute_container::map_type &store,
-                record_attribute_container::map_type::allocator_type &alloc)
-            -> dp::result<void>
+    auto decode_attr(dp::parse_context &ctx,
+                     record_attribute_container::map_type &store,
+                     record_attribute_container::map_type::allocator_type
+                             &alloc) noexcept -> dp::result<void>
     {
-        DPLX_TRY(auto key, dp::decode(dp::as_value<key_type>, inStream));
+        DPLX_TRY(auto key, dp::decode(dp::as_value<key_type>, ctx));
 
         if (auto it = mKnownTypes.find(key); it != mKnownTypes.end())
         {
             revive_fn reviveAttribute = it->second;
-            DPLX_TRY(auto attr, reviveAttribute(inStream, alloc));
+            DPLX_TRY(auto &&attr, reviveAttribute(ctx, alloc));
 
             try
             {
@@ -257,7 +251,7 @@ private:
             }
             catch (std::bad_alloc const &)
             {
-                return std::errc::not_enough_memory;
+                return system_error::errc::not_enough_memory;
             }
 
             return dp::oc::success();
@@ -267,7 +261,7 @@ private:
     }
 
     template <typename ReType>
-    static auto revive(Stream &inStream,
+    static auto revive(dp::parse_context &ctx,
                        attribute_allocator &allocator) noexcept
             -> dp::result<attribute_ptr>
     {
@@ -278,7 +272,7 @@ private:
                     std::in_place_type<attribute_ptr>, rawAttr,
                     polymorphic_attribute_deleter::bind<ReType>(allocator));
 
-            if (auto &&decodeRx = dp::decode(inStream, rawAttr->value());
+            if (auto &&decodeRx = dp::decode(ctx, rawAttr->value());
                 !oc::try_operation_has_value(decodeRx))
             {
                 return oc::try_operation_return_as(std::move(decodeRx));
@@ -287,7 +281,7 @@ private:
         }
         catch (std::bad_alloc const &)
         {
-            return std::errc::not_enough_memory;
+            return system_error::errc::not_enough_memory;
         }
     }
 };

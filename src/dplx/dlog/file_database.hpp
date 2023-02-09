@@ -64,6 +64,7 @@ private:
                         .allow_versioned_auto_decoder = true,
                 };
     };
+    friend class dplx::dp::codec<contents_t>;
 
     llfio::file_handle mRootHandle;
     llfio::path_handle mRootDirHandle;
@@ -155,3 +156,7 @@ public:
         return base_type::format(static_cast<underlying_type>(value), ctx);
     }
 };
+
+DPLX_DLOG_DECLARE_CODEC(
+        ::dplx::dlog::file_database_handle::record_container_meta);
+DPLX_DLOG_DECLARE_CODEC(::dplx::dlog::file_database_handle::contents_t);

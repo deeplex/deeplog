@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <span>
 
-#include <dplx/dp/concepts.hpp>
+#include <dplx/dp/api.hpp>
 
 #include <dplx/dlog/detail/codec_dummy.hpp>
 #include <dplx/dlog/detail/utils.hpp>
@@ -36,7 +36,7 @@ concept source
 // clang-format off
 template <typename T>
 concept bus
-        = dp::output_stream<typename T::output_stream>
+        = dp::output_stream<typename T::output_stream &>
         && requires(T &&t,
                     typename T::logger_token logger,
                     unsigned int const size,

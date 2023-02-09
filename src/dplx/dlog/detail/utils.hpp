@@ -78,4 +78,58 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
     }
     return bs;
 }
+
 } // namespace dplx::dlog::detail
+
+#define DPLX_DLOG_DECLARE_CODEC(_fq_type)                                      \
+    template <>                                                                \
+    class dplx::dp::codec<_fq_type>                                            \
+    {                                                                          \
+    public:                                                                    \
+        static auto size_of(emit_context const &ctx,                           \
+                            _fq_type const &value) noexcept -> std::uint64_t;  \
+        static auto encode(emit_context const &ctx,                            \
+                           _fq_type const &value) noexcept -> result<void>;    \
+        static auto decode(parse_context &ctx, _fq_type &outValue) noexcept    \
+                -> result<void>;                                               \
+    }
+
+#define DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(_fq_type)                            \
+    auto ::dplx::dp::codec<_fq_type>::size_of(emit_context const &ctx,         \
+                                              _fq_type const &value) noexcept  \
+            -> std::uint64_t                                                   \
+    {                                                                          \
+        static_assert(packable_tuple<_fq_type>);                               \
+        return dp::size_of_tuple(ctx, value);                                  \
+    }                                                                          \
+    auto ::dplx::dp::codec<_fq_type>::encode(emit_context const &ctx,          \
+                                             _fq_type const &value) noexcept   \
+            -> result<void>                                                    \
+    {                                                                          \
+        return dp::encode_tuple(ctx, value);                                   \
+    }                                                                          \
+    auto ::dplx::dp::codec<_fq_type>::decode(                                  \
+            parse_context &ctx, _fq_type &outValue) noexcept -> result<void>   \
+    {                                                                          \
+        return dp::decode_tuple(ctx, outValue);                                \
+    }
+
+#define DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(_fq_type)                           \
+    auto ::dplx::dp::codec<_fq_type>::size_of(emit_context const &ctx,         \
+                                              _fq_type const &value) noexcept  \
+            -> std::uint64_t                                                   \
+    {                                                                          \
+        static_assert(packable_object<_fq_type>);                              \
+        return dp::size_of_object(ctx, value);                                 \
+    }                                                                          \
+    auto ::dplx::dp::codec<_fq_type>::encode(emit_context const &ctx,          \
+                                             _fq_type const &value) noexcept   \
+            -> result<void>                                                    \
+    {                                                                          \
+        return dp::encode_object(ctx, value);                                  \
+    }                                                                          \
+    auto ::dplx::dp::codec<_fq_type>::decode(                                  \
+            parse_context &ctx, _fq_type &outValue) noexcept -> result<void>   \
+    {                                                                          \
+        return dp::decode_object(ctx, outValue);                               \
+    }

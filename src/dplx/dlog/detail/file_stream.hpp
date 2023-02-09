@@ -13,9 +13,8 @@
 
 #include <boost/predef/os.h>
 
-#include <dplx/dp/memory_buffer.hpp>
-#include <dplx/dp/stream.hpp>
-#include <dplx/dp/streams/chunked_input_stream.hpp>
+#include <dplx/dp/legacy/chunked_input_stream.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
 
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -23,12 +22,18 @@
 namespace dplx::dlog::detail
 {
 
-class os_input_stream_handle
-    : public dp::chunked_input_stream_base<os_input_stream_handle>
+class os_input_stream final : public dp::input_buffer
 {
-    friend class dp::chunked_input_stream_base<os_input_stream_handle>;
+    friend class oc::basic_result<
+            os_input_stream,
+            system_error::errored_status_code<system_error::erased<
+                    system_error::system_code::value_type>>,
+            oc::experimental::policy::default_status_result_policy<
+                    os_input_stream,
+                    system_error::errored_status_code<system_error::erased<
+                            system_error::system_code::value_type>>>>;
 
-    using base_t = dp::chunked_input_stream_base<os_input_stream_handle>;
+    using byte_io_handle = llfio::byte_io_handle;
     using page_allocation
             = dp::memory_allocation<llfio::utils::page_allocator<std::byte>>;
 
@@ -37,134 +42,194 @@ class os_input_stream_handle
     std::uint64_t mReadOffset;
 
 public:
-    using extent_type = llfio::byte_io_handle::extent_type;
-    static constexpr extent_type max_stream_size
-            = std::numeric_limits<extent_type>::max();
+    static constexpr std::uint64_t max_stream_size
+            = std::numeric_limits<byte_io_handle::extent_type>::max();
 
-    explicit os_input_stream_handle() noexcept
-        : base_t({}, 0u)
+    ~os_input_stream() noexcept = default;
+    explicit os_input_stream() noexcept
+        : input_buffer(nullptr, 0U, 0U)
         , mBufferAllocation()
         , mDataSource(nullptr)
-        , mReadOffset(0)
+        , mReadOffset(0U)
     {
     }
 
-    explicit os_input_stream_handle(llfio::byte_io_handle &dataSource,
-                                    extent_type maxSize
-                                    = max_stream_size) noexcept
-        : base_t({}, maxSize)
+    explicit os_input_stream(byte_io_handle &dataSource,
+                             std::uint64_t maxSize = max_stream_size) noexcept
+        : input_buffer(nullptr, 0U, maxSize)
         , mBufferAllocation()
         , mDataSource(&dataSource)
         , mReadOffset(maxSize)
     {
     }
 
-private:
-    explicit os_input_stream_handle(
-            llfio::byte_io_handle &dataSource,
-            extent_type maxSize,
-            page_allocation &&buffer,
-            std::span<std::byte const> initialReadArea) noexcept
-        : base_t(initialReadArea, maxSize)
-        , mBufferAllocation(std::move(buffer))
+    explicit os_input_stream(byte_io_handle &dataSource,
+                             std::uint64_t maxSize,
+                             page_allocation &&buffer,
+                             std::byte const *initialReadArea,
+                             std::size_t initialReadAreaSize) noexcept
+        : input_buffer(initialReadArea, initialReadAreaSize, maxSize)
+        , mBufferAllocation(static_cast<page_allocation &&>(buffer))
         , mDataSource(&dataSource)
-        , mReadOffset(initialReadArea.size())
+        , mReadOffset(initialReadAreaSize)
     {
     }
 
-    static constexpr unsigned page_size = 1u << 12;
+private:
+    static constexpr unsigned page_size = 1U << 12;
     static constexpr unsigned buffer_size = page_size * 16;
 
 public:
-    static auto os_input_stream(llfio::byte_io_handle &dataSource,
-                                extent_type maxSize = max_stream_size) noexcept
-            -> result<os_input_stream_handle>
+    static auto create(llfio::byte_io_handle &dataSource,
+                       std::uint64_t maxSize) noexcept
+            -> result<os_input_stream>
     {
-        return os_input_stream(page_allocation{}, dataSource, maxSize);
-    }
-
-    auto reset(std::uint64_t maxSize = max_stream_size) noexcept -> result<void>
-    {
-        if (mDataSource == nullptr)
-        {
-            return oc::success();
-        }
-        auto pages = std::move(mBufferAllocation);
-        auto const dataSource = mDataSource;
-
-        *this = os_input_stream_handle();
-
-        DPLX_TRY(*this,
-                 os_input_stream(std::move(pages), *dataSource, maxSize));
-
-        return oc::success();
+        return create(page_allocation{}, dataSource, maxSize);
     }
 
 private:
-    static auto os_input_stream(page_allocation &&pages,
-                                llfio::byte_io_handle &dataSource,
-                                extent_type maxSize) noexcept
-            -> result<os_input_stream_handle>
+    static auto create(page_allocation &&pages,
+                       llfio::byte_io_handle &dataSource,
+                       std::uint64_t maxSize) noexcept
+            -> result<os_input_stream>
     {
+        if (!dataSource.is_readable() || !dataSource.is_seekable())
+        {
+            return system_error::errc::invalid_seek;
+        }
+
         DPLX_TRY(pages.resize(buffer_size));
+        auto const buffer = pages.as_span();
 
-        DPLX_TRY(auto initialReadArea, read_chunk(pages, &dataSource, 0u));
-        auto const initialUsage = std::min<extent_type>(maxSize, buffer_size);
-        initialReadArea = initialReadArea.first(initialUsage);
+        DPLX_TRY(auto initialReadArea,
+                 read_chunk(&dataSource, 0U, buffer.data(), buffer.size()));
+        auto const initialUsage = std::min<std::uint64_t>(maxSize, buffer_size);
 
-        return os_input_stream_handle(dataSource, maxSize, std::move(pages),
-                                      initialReadArea);
+        return result<os_input_stream>(std::in_place_type<os_input_stream>,
+                                       dataSource, maxSize,
+                                       static_cast<page_allocation &&>(pages),
+                                       initialReadArea.data(), initialUsage);
     }
 
-    auto acquire_next_chunk_impl(
-            [[maybe_unused]] std::uint64_t const remaining) noexcept
-            -> dp::result<dp::memory_view>
+    auto do_require_input(size_type const requiredSize) noexcept
+            -> dp::result<void> override
     {
-        if (mBufferAllocation.size() == 0)
+        DPLX_TRY(read_next_chunk());
+        if (input_buffer::size() < requiredSize)
+        {
+            return requiredSize > dp::minimum_input_buffer_size
+                         ? dp::errc::buffer_size_exceeded
+                         : dp::errc::end_of_stream;
+        }
+        return oc::success();
+    }
+    auto do_discard_input(size_type const amount) noexcept
+            -> dp::result<void> override
+    {
+        mReadOffset += amount;
+        auto const remainingInput = input_size() - amount;
+        reset(nullptr, 0U, remainingInput);
+        if (remainingInput > 0U)
+        {
+            return read_next_chunk();
+        }
+        return oc::success();
+    }
+    auto do_bulk_read(std::byte *const dest,
+                      std::size_t const destSize) noexcept
+            -> dp::result<void> override
+    {
+        std::span<std::byte> destinationBuffer(dest, destSize);
+        if (mDataSource->requires_aligned_io())
+        {
+            return dp::errc::bad;
+        }
+
+        while (destinationBuffer.size() > buffer_size)
+        {
+            DPLX_TRY(auto &&ioBuffer, read_chunk(mDataSource, mReadOffset,
+                                                 destinationBuffer.data(),
+                                                 destinationBuffer.size()));
+
+            if (ioBuffer.data() != destinationBuffer.data())
+            {
+                std::memcpy(destinationBuffer.data(), ioBuffer.data(),
+                            ioBuffer.size());
+            }
+
+            destinationBuffer = destinationBuffer.subspan(ioBuffer.size());
+            mReadOffset += ioBuffer.size();
+            reset(nullptr, 0U, input_size() - ioBuffer.size());
+        }
+        while (empty() && input_size() > 0U)
+        {
+            DPLX_TRY(read_next_chunk());
+
+            auto const transferAmount
+                    = std::min(size(), destinationBuffer.size());
+            std::memcpy(destinationBuffer.data(), data(), transferAmount);
+
+            destinationBuffer = destinationBuffer.subspan(transferAmount);
+            discard_buffered(transferAmount);
+        }
+        if (!destinationBuffer.empty())
+        {
+            return dp::errc::end_of_stream;
+        }
+        return dp::oc::success();
+    }
+
+    auto read_next_chunk() -> result<void>
+    {
+        if (mBufferAllocation.size() == 0U)
         {
             DPLX_TRY(mBufferAllocation.resize(buffer_size));
         }
-        DPLX_TRY(auto const nextReadArea, read_current_chunk());
-        mReadOffset += nextReadArea.size();
 
-        return dp::memory_view{nextReadArea};
+        DPLX_TRY(auto nextChunk, read_chunk(mDataSource, mReadOffset - size(),
+                                            mBufferAllocation.as_span().data(),
+                                            mBufferAllocation.size()));
+
+        reset(nextChunk.data(), nextChunk.size(), input_size());
+        mReadOffset += nextChunk.size();
+        return dp::oc::success();
     }
 
-    auto read_current_chunk() noexcept -> dp::result<std::span<std::byte const>>
-    {
-        return read_chunk(mBufferAllocation, mDataSource, mReadOffset);
-    }
-    static auto read_chunk(page_allocation &bufferAlloc,
-                           llfio::byte_io_handle *const dataSource,
-                           extent_type const readPos) noexcept
+    static auto read_chunk(llfio::byte_io_handle *const dataSource,
+                           std::uint64_t const readPos,
+                           std::byte *readBuffer,
+                           std::size_t readBufferSize) noexcept
             -> dp::result<std::span<std::byte const>>
     {
-        constexpr auto offsetMask = extent_type{page_size - 1};
-        auto const realReadPos = readPos & ~offsetMask;
-        auto const discard = readPos & offsetMask;
+        constexpr auto pageMask = std::uint64_t{page_size - 1};
+        auto const alignMask
+                = dataSource->requires_aligned_io() ? pageMask : 0U;
+        auto const realReadPos = readPos & ~alignMask;
+        auto const discard = readPos & alignMask;
 
-        llfio::byte_io_handle::buffer_type ioBuffers[]
-                = {bufferAlloc.as_span()};
+        llfio::byte_io_handle::buffer_type ioBuffers[] = {
+                {readBuffer, readBufferSize}
+        };
 
         if (auto readRx = dataSource->read({ioBuffers, realReadPos});
             readRx.has_failure())
         {
-            auto ec = make_error_code(readRx.error());
-
-#if defined BOOST_OS_WINDOWS_AVAILABLE
-            if (ec == std::error_code{38, std::system_category()})
-            { // ERROR_HANDLE_EOF
+#if defined(BOOST_OS_WINDOWS_AVAILABLE)
+            if (readRx.assume_error() == system_error::win32_code{0x00000026}
+                || readRx.assume_error()
+                           == system_error::nt_code{
+                                   static_cast<long>(0xc0000011U)})
+            { // ERROR_HANDLE_EOF || STATUS_END_OF_FILE
                 return dp::errc::end_of_stream;
             }
 #endif
-
-            return oc::failure(std::move(ec));
+            return static_cast<decltype(readRx) &&>(readRx).as_failure();
         }
         else if (readRx.bytes_transferred() <= discard)
         {
             return dp::errc::end_of_stream;
         }
-        else if (readRx.assume_value().size() == 1u) [[likely]]
+        else if (readRx.assume_value().size() == 1U) [[likely]]
         {
             return std::span<std::byte const>{readRx.assume_value()[0]}.subspan(
                     discard);

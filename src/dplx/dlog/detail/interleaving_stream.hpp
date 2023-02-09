@@ -12,10 +12,9 @@
 #include <limits>
 #include <span>
 
-#include <dplx/dp/memory_buffer.hpp>
-#include <dplx/dp/stream.hpp>
-#include <dplx/dp/streams/chunked_input_stream.hpp>
-#include <dplx/dp/streams/chunked_output_stream.hpp>
+#include <dplx/dp/legacy/chunked_input_stream.hpp>
+#include <dplx/dp/legacy/chunked_output_stream.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
 
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -39,8 +38,10 @@ protected:
             -> std::uint64_t
     {
         constexpr std::uint64_t two = 2u;
-        auto const twodd = two | static_cast<unsigned>(odd);
-        return (idx < 5u ? (twodd) << idx : (two << 4) * (idx - 3) + (odd << 4))
+        auto const uodd = static_cast<unsigned>(odd);
+        auto const twodd = two | uodd;
+        return (idx < 5u ? (twodd) << idx
+                         : (two << 4) * (idx - 3U) + (uodd << 4))
              * page_size;
     }
     static constexpr auto index_to_file_size(unsigned idx) noexcept
@@ -59,14 +60,15 @@ protected:
             * page_size;
 };
 
-class interleaving_input_stream_handle
-    : public dp::chunked_input_stream_base<interleaving_input_stream_handle>
+class interleaving_input_stream_handle final
+    : public dp::legacy::chunked_input_stream_base<
+              interleaving_input_stream_handle>
     , interleaving_stream_base
 {
-    friend class dp::chunked_input_stream_base<
+    friend class dp::legacy::chunked_input_stream_base<
             interleaving_input_stream_handle>;
-    using base_t
-            = dp::chunked_input_stream_base<interleaving_input_stream_handle>;
+    using base_t = dp::legacy::chunked_input_stream_base<
+            interleaving_input_stream_handle>;
 
     page_allocation mBufferAllocation;
     llfio::byte_io_handle *mDataSource;
@@ -184,7 +186,7 @@ private:
         auto const readSpan
                 = bufferAlloc.as_span().first(index_to_block_size(index));
 
-        llfio::byte_io_handle::buffer_type ioBuffers[] = {readSpan};
+        llfio::byte_io_handle::buffer_type ioBuffers[] = {{readSpan}};
         DPLX_TRY(llfio::byte_io_handle::buffers_type const buffers,
                  dataSource->read({ioBuffers, readPos}));
         if (buffers.size() != 1 || buffers[0].size() != readSpan.size())
@@ -197,13 +199,14 @@ private:
 };
 
 class interleaving_output_stream_handle final
-    : public dp::chunked_output_stream_base<interleaving_output_stream_handle>
+    : public dp::legacy::chunked_output_stream_base<
+              interleaving_output_stream_handle>
     , interleaving_stream_base
 {
-    friend class dp::chunked_output_stream_base<
+    friend class dp::legacy::chunked_output_stream_base<
             interleaving_output_stream_handle>;
-    using base_t
-            = dp::chunked_output_stream_base<interleaving_output_stream_handle>;
+    using base_t = dp::legacy::chunked_output_stream_base<
+            interleaving_output_stream_handle>;
 
     page_allocation mBufferAllocation;
     llfio::byte_io_handle *mDataSink;
@@ -323,7 +326,9 @@ private:
         auto const writeSpan = mBufferAllocation.as_span().first(
                 index_to_block_size(mIndexPosition));
 
-        llfio::byte_io_handle::const_buffer_type ioBuffers[] = {writeSpan};
+        llfio::byte_io_handle::const_buffer_type ioBuffers[] = {
+                {writeSpan.data(), writeSpan.size()}
+        };
         DPLX_TRY(mDataSink->write({ioBuffers, writePos}));
 
         return dp::oc::success();

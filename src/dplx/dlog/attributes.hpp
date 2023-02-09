@@ -34,8 +34,8 @@ struct basic_attribute
     type const &value;
 };
 
-template <typename T, typename Stream>
-concept loggable_attribute = dp::encodable<typename T::type, Stream>
+template <typename T>
+concept loggable_attribute = dp::encodable<typename T::type>
                           && requires {
                                  typename T::type;
                                  typename T::retype;

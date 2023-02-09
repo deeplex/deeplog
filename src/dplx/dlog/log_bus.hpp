@@ -12,11 +12,11 @@
 #include <concepts>
 #include <type_traits>
 
-#include <dplx/dp/item_emitter.hpp>
-#include <dplx/dp/item_parser.hpp>
-#include <dplx/dp/memory_buffer.hpp>
-#include <dplx/dp/streams/memory_input_stream.hpp>
-#include <dplx/dp/streams/memory_output_stream.hpp>
+#include <dplx/dp/items/emit_core.hpp>
+#include <dplx/dp/items/parse_core.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
+#include <dplx/dp/legacy/memory_input_stream.hpp>
+#include <dplx/dp/legacy/memory_output_stream.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/detail/utils.hpp>
@@ -108,14 +108,15 @@ public:
             return errc::not_enough_space;
         }
 
-        auto const bufferStart = mBuffer.consume(static_cast<int>(totalSize));
-        auto const msgStart
-                = bufferStart
-                + dp::detail::store_var_uint(
-                          bufferStart, msgSize,
-                          static_cast<std::byte>(dp::type_code::binary));
+        dp::memory_buffer msgBuffer(
+                mBuffer.consume(static_cast<int>(totalSize)), totalSize, 0);
 
-        return dp::memory_buffer(msgStart, msgSize, 0);
+        auto &&outStream = dp::get_output_buffer(msgBuffer);
+        DPLX_TRY(dp::detail::store_var_uint(outStream, msgSize,
+                                            dp::type_code::binary));
+        DPLX_TRY(outStream.sync_output());
+
+        return dp::memory_buffer{msgBuffer.remaining()};
     }
 
     void commit(logger_token &)
@@ -128,10 +129,12 @@ public:
     {
         dp::memory_view content(mBuffer.consumed_begin(),
                                 mBuffer.consumed_size(), 0);
+        auto &&contentStream = dp::get_input_buffer(content);
+        dp::parse_context ctx{contentStream};
 
         while (content.remaining_size() > 0)
         {
-            DPLX_TRY(auto msgInfo, dp::detail::parse_item(content));
+            DPLX_TRY(dp::item_head msgInfo, dp::parse_item_head(ctx));
             if (msgInfo.type != dp::type_code::binary || msgInfo.indefinite()
                 || content.remaining_size() < msgInfo.value) [[unlikely]]
             {
@@ -141,9 +144,11 @@ public:
                 break;
             }
 
+            DPLX_TRY(contentStream.sync_input());
             std::span<std::byte const> const msg(
                     content.consume(static_cast<int>(msgInfo.value)),
                     static_cast<std::size_t>(msgInfo.value));
+            contentStream.discard_buffered(msgInfo.value);
 
             static_cast<ConsumeFn &&>(consume)(msg);
         }
@@ -404,8 +409,12 @@ private:
             {
                 auto blockStart = firstBlock + blockIt * block_size;
 
-                DPLX_TRY(dp::item_info const msgInfo,
-                         dp::detail::parse_item_speculative(blockStart));
+                dp::memory_view headBuffer(blockStart, block_size, 0);
+                auto &&headBufferStream = dp::get_input_buffer(headBuffer);
+                dp::parse_context pctx{headBufferStream};
+
+                DPLX_TRY(dp::item_head const msgInfo,
+                         dp::parse_item_head(pctx));
 
                 if (auto const space = (readEnd - blockIt) * block_size;
                     msgInfo.type != dp::type_code::binary
@@ -533,11 +542,14 @@ public:
         logger.msgBlocks = numBlocks;
 
         auto bufferStart = region_data(regionId) + msgStart * block_size;
-        auto encodedSize = dp::detail::store_var_uint(
-                bufferStart, msgSize,
-                static_cast<std::byte>(dp::type_code::binary));
+        dp::memory_buffer msgBuffer(bufferStart, totalSize, 0);
 
-        return dp::memory_buffer{bufferStart + encodedSize, msgSize, 0};
+        auto &&outStream = dp::get_output_buffer(msgBuffer);
+        DPLX_TRY(dp::detail::store_var_uint(outStream, msgSize,
+                                            dp::type_code::binary));
+        DPLX_TRY(outStream.sync_output());
+
+        return dp::memory_buffer{msgBuffer.remaining()};
     }
 
     void commit(logger_token &logger)

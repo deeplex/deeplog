@@ -1,5 +1,5 @@
 
-// Copyright Henrik Steffen Gaßmann 2021
+// Copyright Henrik Steffen Gaßmann 2021, 2023
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/encoder/api.hpp>
+#include <dplx/dp.hpp>
 
 namespace dplx::dlog::detail
 {
@@ -27,32 +26,45 @@ struct codec_dummy
 
 } // namespace dplx::dlog::detail
 
-namespace dplx::dp
-{
-
-template <input_stream Stream>
-class basic_decoder<dplx::dlog::detail::decodable_dummy, Stream>
+template <>
+class dplx::dp::codec<dplx::dlog::detail::decodable_dummy>
 {
 public:
-    using value_type = dplx::dlog::detail::decodable_dummy;
-
-    auto operator()(Stream &stream, value_type &) const noexcept -> result<void>
-    {
-        return oc::success();
-    }
+    static auto size_of(emit_context const &,
+                        dplx::dlog::detail::decodable_dummy) noexcept
+            -> std::uint64_t;
+    static auto encode(emit_context const &,
+                       dplx::dlog::detail::decodable_dummy) noexcept
+            -> result<void>;
+    static auto decode(parse_context &,
+                       dplx::dlog::detail::decodable_dummy &) noexcept
+            -> result<void>;
 };
-
-template <output_stream Stream>
-class basic_encoder<dplx::dlog::detail::encodable_dummy, Stream>
+template <>
+class dplx::dp::codec<dplx::dlog::detail::encodable_dummy>
 {
 public:
-    using value_type = dplx::dlog::detail::encodable_dummy;
-
-    auto operator()(Stream &stream, value_type const &) const noexcept
-            -> result<void>
-    {
-        return oc::success();
-    }
+    static auto size_of(emit_context const &,
+                        dplx::dlog::detail::encodable_dummy) noexcept
+            -> std::uint64_t;
+    static auto encode(emit_context const &,
+                       dplx::dlog::detail::encodable_dummy) noexcept
+            -> result<void>;
+    static auto decode(parse_context &,
+                       dplx::dlog::detail::encodable_dummy &) noexcept
+            -> result<void>;
 };
-
-} // namespace dplx::dp
+template <>
+class dplx::dp::codec<dplx::dlog::detail::codec_dummy>
+{
+public:
+    static auto size_of(emit_context const &,
+                        dplx::dlog::detail::codec_dummy) noexcept
+            -> std::uint64_t;
+    static auto encode(emit_context const &,
+                       dplx::dlog::detail::codec_dummy) noexcept
+            -> result<void>;
+    static auto decode(parse_context &,
+                       dplx::dlog::detail::codec_dummy &) noexcept
+            -> result<void>;
+};

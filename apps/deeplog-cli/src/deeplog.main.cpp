@@ -173,26 +173,24 @@ private:
     LoadClosedContainer(file_database_handle::record_container_meta const &meta)
             -> result<record_container>
     {
-        using input_stream = detail::os_input_stream_handle;
-
         DPLX_TRY(auto &&containerFile, mFileDb.open_record_container(meta));
         DPLX_TRY(auto const maxExtent, containerFile.maximum_extent());
 
         DPLX_TRY(auto &&inStream,
-                 detail::os_input_stream_handle::os_input_stream(containerFile,
-                                                                 maxExtent));
+                 detail::os_input_stream::create(containerFile, maxExtent));
 
-        dlog::argument_transmorpher<input_stream> argumentTransmorpher;
-        dlog::record_attribute_reviver<input_stream> parseAttrs;
+        dlog::argument_transmorpher argumentTransmorpher;
+        dlog::record_attribute_reviver parseAttrs;
         (void)parseAttrs.register_attribute<attr::file>();
         (void)parseAttrs.register_attribute<attr::line>();
 
-        dp::basic_decoder<record, input_stream> decode_record(
-                argumentTransmorpher, parseAttrs);
-        dp::basic_decoder<record_container, input_stream> decode(decode_record);
+        dp::basic_decoder<record> decode_record{argumentTransmorpher,
+                                                parseAttrs};
+        dp::basic_decoder<record_container> decode{decode_record};
 
         record_container value;
-        DPLX_TRY(decode(inStream, value));
+        dp::parse_context ctx{inStream};
+        DPLX_TRY(decode(ctx, value));
 
         return value;
     }

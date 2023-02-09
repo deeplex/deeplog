@@ -5,10 +5,9 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/core.hpp>
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/core.hpp>
+#include <dplx/dp.hpp>
+#include <dplx/dp/api.hpp>
+#include <dplx/dp/codecs/core.hpp>
 
 #include <dplx/dlog/log_bus.hpp>
 
@@ -31,7 +30,7 @@ BOOST_AUTO_TEST_CASE(tmp)
     dlog::ringbus_mt_handle::logger_token token{};
     for (;;)
     {
-        auto size = dp::encoded_size_of(msgId);
+        auto size = static_cast<unsigned>(dp::encoded_size_of(msgId));
         if (auto writeRx = bufferbus.write(token, size); writeRx.has_value())
         {
             auto encodeRx = dp::encode(writeRx.assume_value(), msgId);
