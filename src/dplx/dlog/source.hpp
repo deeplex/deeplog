@@ -123,6 +123,7 @@ private:
 public:
     template <typename... Args>
         requires(... && (loggable_attribute<Args> || loggable_argument<Args>))
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     auto operator()(severity sev,
                     std::u8string_view message,
                     Args const &...args) -> result<void>

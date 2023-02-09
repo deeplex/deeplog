@@ -31,6 +31,7 @@
 namespace dplx::dlog
 {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto file_database_handle::file_database(
         llfio::path_handle const &base,
         llfio::path_view const path,

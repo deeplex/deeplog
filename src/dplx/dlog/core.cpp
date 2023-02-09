@@ -50,6 +50,7 @@ void sink_frontend_base::push(
 namespace dplx::dlog::detail
 {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto consume_record_fn::multicast(
         bytes const message,
         std::span<std::unique_ptr<sink_frontend_base> const> sinks) noexcept
