@@ -36,7 +36,7 @@ struct dlog_test_dir_fixtures
                         .string());
     }
 
-    void teardown()
+    static void teardown()
     {
         using namespace dlog_tests;
 

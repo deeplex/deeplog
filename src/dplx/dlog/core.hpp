@@ -113,7 +113,7 @@ public:
         return oc::success(); // FIXME: think about lazy error passing
     }
 
-    [[nodiscard]] auto last_rx() const noexcept -> result<void>
+    [[nodiscard]] static auto last_rx() noexcept -> result<void>
     {
         return oc::success(); // FIXME: think about lazy error passing
     }

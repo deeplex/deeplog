@@ -206,7 +206,7 @@ public:
         return dp::memory_buffer(mWriteBuffer.consume(static_cast<int>(size)),
                                  size, 0);
     }
-    auto drain_opened() noexcept -> result<void>
+    static auto drain_opened() noexcept -> result<void>
     {
         return oc::success();
     }

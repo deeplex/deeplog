@@ -455,7 +455,7 @@ private:
         }
     }
 
-    auto pop_available_blocks(region_ctrl *ctx, unsigned int readPos)
+    static auto pop_available_blocks(region_ctrl *ctx, unsigned int readPos)
             -> unsigned
     {
         auto bucketIndex = readPos / blocks_per_bucket;
@@ -582,7 +582,7 @@ public:
     }
 
 private:
-    auto write_to(region_ctrl *ctx, unsigned int numBlocks) noexcept
+    static auto write_to(region_ctrl *ctx, unsigned int numBlocks) noexcept
             -> result<unsigned int>
     {
         std::atomic_ref<std::uint32_t> const readPtr(ctx->read_ptr);
