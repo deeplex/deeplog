@@ -38,7 +38,7 @@ public:
         }
 
         template <typename Duration>
-        auto to_sys(std::uint64_t nanoseconds) const noexcept
+        [[nodiscard]] auto to_sys(std::uint64_t nanoseconds) const noexcept
                 -> std::chrono::time_point<
                         std::chrono::system_clock,
                         std::common_type_t<

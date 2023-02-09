@@ -32,11 +32,11 @@ struct additional_record_info
     {
         return 1 + 1 + 9;
     }
-    constexpr auto attributes_offset() const noexcept -> int
+    [[nodiscard]] constexpr auto attributes_offset() const noexcept -> int
     {
         return 1 + 1 + 9 + static_cast<int>(message_size);
     }
-    constexpr auto format_args_offset() const noexcept -> int
+    [[nodiscard]] constexpr auto format_args_offset() const noexcept -> int
     {
         return 1 + 1 + 9 + static_cast<int>(message_size)
              + static_cast<int>(attributes_size);
@@ -113,7 +113,7 @@ public:
         return oc::success(); // FIXME: think about lazy error passing
     }
 
-    auto last_rx() const noexcept -> result<void>
+    [[nodiscard]] auto last_rx() const noexcept -> result<void>
     {
         return oc::success(); // FIXME: think about lazy error passing
     }
