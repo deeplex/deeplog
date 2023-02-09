@@ -215,11 +215,12 @@ private:
         if (readRx.has_failure())
         {
 #if defined(BOOST_OS_WINDOWS_AVAILABLE)
-            if (readRx.assume_error() == system_error::win32_code{0x00000026}
-                || readRx.assume_error()
-                           == system_error::nt_code{
-                                   static_cast<long>(0xc0000011U)})
-            { // ERROR_HANDLE_EOF || STATUS_END_OF_FILE
+            constexpr system_error::win32_code error_handle_eof{0x00000026};
+            constexpr system_error::nt_code status_end_of_file{
+                    static_cast<long>(0xc0000011U)};
+            if (readRx.assume_error() == error_handle_eof
+                || readRx.assume_error() == status_end_of_file)
+            {
                 return dp::errc::end_of_stream;
             }
 #endif

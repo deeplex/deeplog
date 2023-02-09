@@ -171,6 +171,7 @@ public:
         mBuffer = dp::memory_buffer{};
         return std::move(mBackingFile);
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
     auto unlink(llfio::deadline deadline = std::chrono::seconds(30)) noexcept
             -> result<void>
     {
@@ -300,8 +301,8 @@ public:
             ::new (static_cast<void *>(begin))
                     region_ctrl{0, 0, blocks_per_region, {}, {}};
 
-            std::memset(begin + region_ctrl_overhead,
-                        0xfe, // invalid cbor item coding
+            constexpr int invalidCborItem = 0xfe;
+            std::memset(begin + region_ctrl_overhead, invalidCborItem,
                         region_size - region_ctrl_overhead);
         }
 
@@ -362,6 +363,7 @@ public:
         mNumRegions = 0;
         return std::move(mBackingFile);
     }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
     auto unlink(llfio::deadline deadline = std::chrono::seconds(30)) noexcept
             -> result<void>
     {
@@ -631,6 +633,7 @@ private:
         alignas(std::atomic_ref<std::uint32_t>::required_alignment)
                 std::uint32_t end_ptr;
 
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
         std::uint32_t padding[5];
 
         alignas(std::atomic_ref<bucket_type>::required_alignment)

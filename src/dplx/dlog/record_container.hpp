@@ -63,7 +63,10 @@ public:
         {
             return dp::errc::item_type_mismatch;
         }
-        if (tupleHead.indefinite() || tupleHead.value < 3
+        // TODO: refactor record layout description into compile time constants
+        if (tupleHead.indefinite()
+            || tupleHead.value < 3
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
             || 5 < tupleHead.value)
         {
             return dp::errc::tuple_size_mismatch;

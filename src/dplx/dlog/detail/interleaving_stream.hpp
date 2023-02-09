@@ -32,6 +32,7 @@ protected:
 
     static constexpr auto index_to_block_size(unsigned idx) noexcept -> unsigned
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
         return (idx < 5U ? 1U << idx : 1U << 4) * page_size;
     }
     static constexpr auto index_to_block_offset(unsigned idx, bool odd) noexcept
@@ -40,6 +41,7 @@ protected:
         constexpr std::uint64_t two = 2U;
         auto const uodd = static_cast<unsigned>(odd);
         auto const twodd = two | uodd;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
         return (idx < 5U ? (twodd) << idx
                          : (two << 4) * (idx - 3U) + (uodd << 4))
              * page_size;
@@ -52,6 +54,7 @@ protected:
 
     static constexpr auto max_block_size() noexcept -> unsigned
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
         return index_to_block_size(5U);
     }
 

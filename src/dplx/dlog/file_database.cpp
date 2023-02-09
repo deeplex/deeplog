@@ -215,6 +215,7 @@ auto file_database_handle::create_record_container(
         {
             // 5 retries hoping that the user chose a file name pattern which
             // disambiguates by timestamp or rotation count
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
             if (meta.rotation - 10 < lastRotation)
             {
                 meta.rotation += 2; // preserve oddness

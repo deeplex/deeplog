@@ -30,17 +30,19 @@ struct additional_record_info
 
     static constexpr auto message_offset() noexcept -> int
     {
-        return 1 + 1 + 9;
+        return 1 + 1 + encoded_timestamp_size;
     }
     [[nodiscard]] constexpr auto attributes_offset() const noexcept -> int
     {
-        return 1 + 1 + 9 + static_cast<int>(message_size);
+        return 1 + 1 + encoded_timestamp_size + static_cast<int>(message_size);
     }
     [[nodiscard]] constexpr auto format_args_offset() const noexcept -> int
     {
-        return 1 + 1 + 9 + static_cast<int>(message_size)
+        return 1 + 1 + encoded_timestamp_size + static_cast<int>(message_size)
              + static_cast<int>(attributes_size);
     }
+
+    static constexpr int encoded_timestamp_size = 9;
 };
 
 class sink_frontend_base

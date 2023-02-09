@@ -13,6 +13,8 @@
 #include "boost-test.hpp"
 #include "test-utils.hpp"
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
+
 namespace dlog_tests
 {
 
@@ -58,3 +60,5 @@ BOOST_AUTO_TEST_CASE(tmp)
 BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace dlog_tests
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
