@@ -242,7 +242,7 @@ public:
             -> interleaving_output_stream_handle &
     {
         base_t::operator=(std::move(other));
-        mBufferAllocation = std::move(other.mBufferAllocation);
+        mBufferAllocation = std::move(other.mBufferAllocation); // NOLINT
         mDataSink = std::exchange(other.mDataSink, nullptr);
         mIndexPosition = other.mIndexPosition;
         mStreamSelector = other.mStreamSelector;
