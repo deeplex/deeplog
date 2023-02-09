@@ -84,7 +84,7 @@ public:
     }
 
     static auto file_database(llfio::path_handle const &base,
-                              llfio::path_view const path,
+                              llfio::path_view path,
                               std::string sinkFileNamePattern) noexcept
             -> result<file_database_handle>;
 
