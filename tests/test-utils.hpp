@@ -42,9 +42,13 @@ inline auto check_result(dlog::result<R> const &rx)
     return prx;
 }
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #define DPLX_TEST_RESULT(...)                                                  \
     BOOST_TEST((::dlog_tests::check_result((__VA_ARGS__))))
 #define DPLX_REQUIRE_RESULT(...)                                               \
     BOOST_TEST_REQUIRE((::dlog_tests::check_result((__VA_ARGS__))))
+
+// NOLINTEND(cppcoreguidelines-macro-usage)
 
 } // namespace dlog_tests

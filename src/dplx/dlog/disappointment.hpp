@@ -73,9 +73,13 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
     // static_cast<std::size_t>(code::LIMIT));
 };
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #ifndef DPLX_TRY
 #define DPLX_TRY(...) OUTCOME_TRY(__VA_ARGS__)
 #endif
+
+// NOLINTEND(cppcoreguidelines-macro-usage)
 
 namespace dplx::dlog::detail
 {

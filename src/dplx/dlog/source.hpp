@@ -212,6 +212,8 @@ public:
 
 } // namespace dplx::dlog
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #define DLOG_GENERIC(log, severity, message, ...)                              \
     do                                                                         \
     { /* due to shadowing this name isn't required to be unique */             \
@@ -234,3 +236,5 @@ public:
     DLOG_GENERIC(log, ::dplx::dlog::severity::debug, message, __VA_ARGS__)
 #define DLOG_TRACE(log, message, ...)                                          \
     DLOG_GENERIC(log, ::dplx::dlog::severity::trace, message, __VA_ARGS__)
+
+// NOLINTEND(cppcoreguidelines-macro-usage)

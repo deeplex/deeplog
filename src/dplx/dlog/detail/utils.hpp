@@ -81,6 +81,8 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
 
 } // namespace dplx::dlog::detail
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #define DPLX_DLOG_DECLARE_CODEC(_fq_type)                                      \
     template <>                                                                \
     class dplx::dp::codec<_fq_type>                                            \
@@ -133,3 +135,5 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
     {                                                                          \
         return dp::decode_object(ctx, outValue);                               \
     }
+
+// NOLINTEND(cppcoreguidelines-macro-usage)
