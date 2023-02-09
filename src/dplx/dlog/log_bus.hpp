@@ -345,7 +345,7 @@ public:
         unsigned int msgBegin;
         unsigned int msgBlocks;
     };
-    auto create_token() noexcept -> result<logger_token>
+    auto create_token() const noexcept -> result<logger_token>
     {
         auto const threadId = std::this_thread::get_id();
         auto const hashed = std::hash<std::thread::id>()(threadId);
