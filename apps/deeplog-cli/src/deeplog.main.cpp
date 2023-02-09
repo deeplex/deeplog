@@ -254,6 +254,7 @@ public:
 } // namespace dplx::dlog::tui
 
 auto main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) -> int
+try
 {
     using namespace ftxui;
     using namespace dplx;
@@ -261,7 +262,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) -> int
 
     if (argc < 2)
     {
-        return -1;
+        return -3;
     }
 
     llfio::path_view dbPath(argv[1]);
@@ -271,4 +272,14 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) -> int
     auto mainComponent
             = std::make_shared<dlog::tui::MainComponent>(std::move(db));
     screen.Loop(mainComponent);
+}
+catch (std::exception const &exc)
+{
+    fmt::print(stderr, "Unhandled exception: {}", exc.what());
+    return -2;
+}
+catch (...)
+{
+    fmt::print(stderr, "The application failed due to an unknown exception");
+    return -1;
 }
