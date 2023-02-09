@@ -288,7 +288,7 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
     bytes header;
     if (read.size() != 1U) [[unlikely]]
     {
-        auto out = readBuffer.as_span().data();
+        auto *out = readBuffer.as_span().data();
         for (auto buf : read)
         {
             out = std::ranges::copy(buf, out).out;

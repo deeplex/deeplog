@@ -127,7 +127,7 @@ public:
                std::uint64_t maxSize = max_stream_size) noexcept -> result<void>
     {
         auto pages = std::move(mBufferAllocation);
-        auto dataSource = mDataSource;
+        auto *dataSource = mDataSource;
 
         *this = interleaving_input_stream_handle();
 

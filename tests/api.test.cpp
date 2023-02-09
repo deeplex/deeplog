@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(tmp)
 
     auto sinkOwner = std::make_unique<sink_type>(
             dlog::severity::info, std::move(sinkBackendOpenRx).assume_value());
-    auto sink = sinkOwner.get();
+    auto *sink = sinkOwner.get();
 
     dlog::core core{dlog::ringbus(test_dir, "tmp", 1 << 10).value()};
     core.attach_sink(std::move(sinkOwner));

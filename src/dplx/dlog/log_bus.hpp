@@ -386,7 +386,7 @@ private:
             -> result<void>
     {
         auto *const ctx = region(regionId);
-        auto *const firstBlock = block(regionId, 0);
+        auto const *const firstBlock = block(regionId, 0);
 
         std::atomic_ref<std::uint32_t> const readPtr(ctx->read_ptr);
         std::atomic_ref<std::uint32_t> const allocPtr(ctx->alloc_ptr);
@@ -407,7 +407,7 @@ private:
             auto blockIt = readPos;
             while (blockIt < readEnd)
             {
-                auto blockStart = firstBlock + blockIt * block_size;
+                auto const *blockStart = firstBlock + blockIt * block_size;
 
                 dp::memory_view headBuffer(blockStart, block_size, 0);
                 auto &&headBufferStream = dp::get_input_buffer(headBuffer);
@@ -539,7 +539,7 @@ public:
         logger.msgBegin = msgStart;
         logger.msgBlocks = numBlocks;
 
-        auto bufferStart = region_data(regionId) + msgStart * block_size;
+        auto *bufferStart = region_data(regionId) + msgStart * block_size;
         dp::memory_buffer msgBuffer(bufferStart, totalSize, 0);
 
         auto &&outStream = dp::get_output_buffer(msgBuffer);
@@ -552,7 +552,7 @@ public:
 
     void commit(logger_token &logger)
     {
-        auto const ctx = region(logger.msgRegion);
+        auto *const ctx = region(logger.msgRegion);
 
         auto firstBucket = logger.msgBegin / blocks_per_bucket;
         auto offset = logger.msgBegin % blocks_per_bucket;

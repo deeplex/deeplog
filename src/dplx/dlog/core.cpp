@@ -101,7 +101,7 @@ auto consume_record_fn::multicast(
         addInfo.format_args_size += messageView.consumed_size();
     }
 
-    for (auto &sink : sinks)
+    for (auto const &sink : sinks)
     {
         sink->push(message, addInfo);
     }
