@@ -63,8 +63,8 @@ public:
         {
             return dp::errc::item_type_mismatch;
         }
-        if (tupleHead.indefinite()
-            || !(3 <= tupleHead.value && tupleHead.value <= 5))
+        if (tupleHead.indefinite() || tupleHead.value < 3
+            || 5 < tupleHead.value)
         {
             return dp::errc::tuple_size_mismatch;
         }
