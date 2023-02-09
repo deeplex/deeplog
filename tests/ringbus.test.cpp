@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(tmp)
 
     auto bufferbus = std::move(createRx).assume_value();
 
-    auto msgId = 0u;
+    auto msgId = 0U;
     dlog::ringbus_mt_handle::logger_token token{};
     for (;;)
     {

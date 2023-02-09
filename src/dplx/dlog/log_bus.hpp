@@ -239,13 +239,13 @@ public:
     }
 
 private:
-    static constexpr unsigned int block_size = 64u;
+    static constexpr unsigned int block_size = 64U;
     using bucket_type = std::uint64_t;
     static constexpr int blocks_per_bucket
             = std::numeric_limits<bucket_type>::digits;
 
-    static constexpr unsigned int region_ctrl_overhead = 512u;
-    static constexpr unsigned int region_alloc_buckets = 60u;
+    static constexpr unsigned int region_ctrl_overhead = 512U;
+    static constexpr unsigned int region_alloc_buckets = 60U;
 
     static constexpr unsigned int alloc_map_size
             = region_alloc_buckets * sizeof(bucket_type);
@@ -262,7 +262,7 @@ public:
             llfio::path_view path,
             unsigned int const numBlocksPerWriter,
             unsigned int const expectedWriters
-            = std::min(16u, std::thread::hardware_concurrency())) noexcept
+            = std::min(16U, std::thread::hardware_concurrency())) noexcept
             -> result<ringbus_mt_handle>
     {
         DPLX_TRY(
@@ -277,7 +277,7 @@ public:
     ringbus(llfio::mapped_file_handle &&backingFile,
             unsigned int const numBlocksPerWriter,
             unsigned int const expectedWriters
-            = std::min(16u, std::thread::hardware_concurrency())) noexcept
+            = std::min(16U, std::thread::hardware_concurrency())) noexcept
             -> result<ringbus_mt_handle>
     {
         auto const regionsPerWriter
@@ -616,7 +616,7 @@ private:
             {
                 // we did the wrap around => update watermark
                 endPtr.store(endPos, std::memory_order::relaxed);
-                return 0u;
+                return 0U;
             }
         }
     }
@@ -662,7 +662,7 @@ inline auto ringbus(llfio::path_handle const &base,
                     llfio::path_view path,
                     unsigned int const numBlocksPerWriter,
                     unsigned int const expectedWriters
-                    = std::min(16u,
+                    = std::min(16U,
                                std::thread::hardware_concurrency())) noexcept
         -> result<ringbus_mt_handle>
 {
@@ -672,7 +672,7 @@ inline auto ringbus(llfio::path_handle const &base,
 inline auto ringbus(llfio::mapped_file_handle &&backingFile,
                     unsigned int const numBlocksPerWriter,
                     unsigned int const expectedWriters
-                    = std::min(16u,
+                    = std::min(16U,
                                std::thread::hardware_concurrency())) noexcept
         -> result<ringbus_mt_handle>
 {

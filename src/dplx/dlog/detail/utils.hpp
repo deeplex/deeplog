@@ -48,7 +48,7 @@ template <unsigned_integer T>
 constexpr auto make_mask(int num, int off = 0) noexcept -> T
 {
     constexpr auto digits = std::numeric_limits<T>::digits;
-    return (((static_cast<T>(num < digits)) << (num & (digits - 1))) - 1u)
+    return (((static_cast<T>(num < digits)) << (num & (digits - 1))) - 1U)
         << off;
 }
 

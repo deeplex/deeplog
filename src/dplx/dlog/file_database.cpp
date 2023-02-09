@@ -109,7 +109,7 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
         {
             continue;
         }
-        recordContainer.rotation = 0u;
+        recordContainer.rotation = 0U;
     }
 
     erase_if(mContents.record_containers,
@@ -145,7 +145,7 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
         if (mContents.revision < decodeRx.assume_value().revision)
         {
             mContents = std::move(decodeRx).assume_value();
-            odd = 0u;
+            odd = 0U;
         }
     }
 
@@ -156,7 +156,7 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
         if (mContents.revision < decodeRx.assume_value().revision)
         {
             mContents = std::move(decodeRx).assume_value();
-            odd = 1u;
+            odd = 1U;
         }
     }
     else if (!firstValid)
@@ -185,14 +185,14 @@ auto file_database_handle::create_record_container(
     contents.revision += 1;
 
     contents.record_containers.push_back(
-            {.path = {}, .byte_size = 0u, .sink_id = sinkId, .rotation = 0u});
+            {.path = {}, .byte_size = 0U, .sink_id = sinkId, .rotation = 0U});
     auto &meta = contents.record_containers.back();
 
     auto lastRotation = std::ranges::max(contents.record_containers, {},
                                          [sinkId](auto const &rcm) {
                                              return rcm.sink_id == sinkId
                                                           ? rcm.rotation
-                                                          : 0u;
+                                                          : 0U;
                                          })
                                 .rotation;
     meta.rotation = lastRotation + 1;
@@ -318,7 +318,7 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
 
 auto file_database_handle::initialize_storage() noexcept -> result<void>
 {
-    DPLX_TRY(mRootHandle.truncate(4u << 12)); // 16KiB aka 4 pages
+    DPLX_TRY(mRootHandle.truncate(4U << 12)); // 16KiB aka 4 pages
 
     llfio::file_handle::const_buffer_type writeBuffers[] = {
             {magic.data(), magic.size()}

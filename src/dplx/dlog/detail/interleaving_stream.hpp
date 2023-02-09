@@ -28,19 +28,19 @@ protected:
     using page_allocation
             = dp::memory_allocation<llfio::utils::page_allocator<std::byte>>;
 
-    static constexpr unsigned page_size = 1u << 12;
+    static constexpr unsigned page_size = 1U << 12;
 
     static constexpr auto index_to_block_size(unsigned idx) noexcept -> unsigned
     {
-        return (idx < 5u ? 1u << idx : 1u << 4) * page_size;
+        return (idx < 5U ? 1U << idx : 1U << 4) * page_size;
     }
     static constexpr auto index_to_block_offset(unsigned idx, bool odd) noexcept
             -> std::uint64_t
     {
-        constexpr std::uint64_t two = 2u;
+        constexpr std::uint64_t two = 2U;
         auto const uodd = static_cast<unsigned>(odd);
         auto const twodd = two | uodd;
-        return (idx < 5u ? (twodd) << idx
+        return (idx < 5U ? (twodd) << idx
                          : (two << 4) * (idx - 3U) + (uodd << 4))
              * page_size;
     }
@@ -52,7 +52,7 @@ protected:
 
     static constexpr auto max_block_size() noexcept -> unsigned
     {
-        return index_to_block_size(5u);
+        return index_to_block_size(5U);
     }
 
     static constexpr std::uint64_t max_stream_size
@@ -77,7 +77,7 @@ class interleaving_input_stream_handle final
 
 public:
     explicit interleaving_input_stream_handle() noexcept
-        : base_t({}, 0u)
+        : base_t({}, 0U)
         , mBufferAllocation()
         , mDataSource()
         , mIndexPosition()
@@ -92,7 +92,7 @@ public:
         : base_t({}, maxSize)
         , mBufferAllocation()
         , mDataSource(&dataSource)
-        , mIndexPosition(0u)
+        , mIndexPosition(0U)
         , mStreamSelector(streamSelector)
     {
     }
@@ -107,7 +107,7 @@ private:
         : base_t(initialReadArea, maxSize)
         , mBufferAllocation(std::move(buffer))
         , mDataSource(&dataSource)
-        , mIndexPosition(1u)
+        , mIndexPosition(1U)
         , mStreamSelector(streamSelector)
     {
     }
@@ -147,9 +147,9 @@ private:
         DPLX_TRY(pages.resize(max_block_size()));
 
         DPLX_TRY(auto initialReadArea,
-                 read_chunk(pages, &dataSource, 0u, streamSelector));
+                 read_chunk(pages, &dataSource, 0U, streamSelector));
         auto initialUsage
-                = std::min<std::uint64_t>(maxSize, index_to_block_size(0u));
+                = std::min<std::uint64_t>(maxSize, index_to_block_size(0U));
         initialReadArea = initialReadArea.first(initialUsage);
 
         return interleaving_input_stream_handle(dataSource, streamSelector,
@@ -222,7 +222,7 @@ public:
         }
     }
     explicit interleaving_output_stream_handle() noexcept
-        : base_t({}, 0u)
+        : base_t({}, 0U)
         , mBufferAllocation()
         , mDataSink()
         , mIndexPosition()
@@ -256,7 +256,7 @@ public:
         : base_t({}, maxSize)
         , mBufferAllocation()
         , mDataSink(&dataSink)
-        , mIndexPosition(0u)
+        , mIndexPosition(0U)
         , mStreamSelector(streamSelector)
     {
     }
@@ -274,7 +274,7 @@ private:
                                                    index_to_block_size(0)))
         , mBufferAllocation(std::move(buffer))
         , mDataSink(&dataSink)
-        , mIndexPosition(0u)
+        , mIndexPosition(0U)
         , mStreamSelector(streamSelector)
     {
     }

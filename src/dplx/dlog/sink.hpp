@@ -161,7 +161,7 @@ public:
 
         DPLX_TRY(auto const maxExtent, self.mBackingFile.maximum_extent());
         // if created
-        if (maxExtent == 0u)
+        if (maxExtent == 0U)
         {
             llfio::file_handle::const_buffer_type writeBuffers[] = {
                     {self.mWriteBuffer.consumed_begin(),

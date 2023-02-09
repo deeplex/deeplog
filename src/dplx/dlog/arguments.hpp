@@ -49,7 +49,7 @@ struct argument<T>
     using type = T;
     type value;
 
-    static constexpr resource_id type_id{std::is_unsigned_v<T> ? 0u : 1u};
+    static constexpr resource_id type_id{std::is_unsigned_v<T> ? 0U : 1U};
 };
 
 template <typename Char, typename T>
