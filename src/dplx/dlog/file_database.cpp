@@ -274,43 +274,42 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
     llfio::file_handle::buffer_type readBuffers[] = {
             {readBuffer.as_span().data(), readBuffer.size()}
     };
-    if (auto readRx = mRootHandle.read({readBuffers, 0U}); readRx.has_failure())
+    auto readRx = mRootHandle.read({readBuffers, 0U});
+    if (readRx.has_failure())
     {
         return std::move(readRx).as_failure();
     }
-    else if (readRx.bytes_transferred() != readBuffer.size())
+    if (readRx.bytes_transferred() != readBuffer.size())
     {
         return errc::missing_data;
     }
+
+    auto read = std::move(readRx).assume_value();
+    bytes header;
+    if (read.size() != 1U) [[unlikely]]
+    {
+        auto out = readBuffer.as_span().data();
+        for (auto buf : read)
+        {
+            out = std::ranges::copy(buf, out).out;
+        }
+        header = readBuffer.as_span();
+    }
     else
     {
-        auto read = std::move(readRx).assume_value();
-        bytes header;
-        if (read.size() != 1U) [[unlikely]]
-        {
-            auto out = readBuffer.as_span().data();
-            for (auto buf : read)
-            {
-                out = std::ranges::copy(buf, out).out;
-            }
-            header = readBuffer.as_span();
-        }
-        else
-        {
-            header = read[0];
-        }
+        header = read[0];
+    }
 
-        if (!std::ranges::equal(header.first(magic.size()), magic))
-        {
-            return errc::invalid_file_database_header;
-        }
-        else if (auto areaZero = header.subspan(magic.size());
-                 std::ranges::find_if(areaZero, [](std::byte v)
-                                      { return v != std::byte{}; })
-                 != areaZero.end())
-        {
-            return errc::invalid_file_database_header;
-        }
+    if (!std::ranges::equal(header.first(magic.size()), magic))
+    {
+        return errc::invalid_file_database_header;
+    }
+    if (auto areaZero = header.subspan(magic.size());
+        std::ranges::find_if(areaZero,
+                             [](std::byte v) { return v != std::byte{}; })
+        != areaZero.end())
+    {
+        return errc::invalid_file_database_header;
     }
 
     return oc::success();
@@ -347,4 +346,3 @@ DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(
 
 DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(
         ::dplx::dlog::file_database_handle::contents_t)
-

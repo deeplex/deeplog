@@ -46,14 +46,11 @@ static auto compute_render_window(std::size_t selected,
     {
         return {0U, lines};
     }
-    else if (lineSplit >= numElements - selected)
+    if (lineSplit >= numElements - selected)
     {
         return {numElements - lines, numElements};
     }
-    else
-    {
-        return {selected - lineSplit, selected + lineSplit};
-    }
+    return {selected - lineSplit, selected + lineSplit};
 }
 
 auto LogDisplayGridComponent::Render() -> ftxui::Element

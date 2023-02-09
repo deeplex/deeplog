@@ -445,14 +445,12 @@ private:
             readPtr.store(readEnd, std::memory_order::release);
             return oc::success();
         }
-        else
-        {
-            // wrap around
-            endPtr.store(blocks_per_region, std::memory_order::relaxed);
-            readPtr.store(0, std::memory_order::release);
-            return dequeue<ConsumeFn>(static_cast<ConsumeFn &&>(consumeFn),
-                                      regionId);
-        }
+
+        // wrap around
+        endPtr.store(blocks_per_region, std::memory_order::relaxed);
+        readPtr.store(0, std::memory_order::release);
+        return dequeue<ConsumeFn>(static_cast<ConsumeFn &&>(consumeFn),
+                                  regionId);
     }
 
     static auto pop_available_blocks(region_ctrl *ctx, unsigned int readPos)

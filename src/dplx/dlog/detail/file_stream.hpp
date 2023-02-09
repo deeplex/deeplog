@@ -211,8 +211,8 @@ private:
                 {readBuffer, readBufferSize}
         };
 
-        if (auto readRx = dataSource->read({ioBuffers, realReadPos});
-            readRx.has_failure())
+        auto readRx = dataSource->read({ioBuffers, realReadPos});
+        if (readRx.has_failure())
         {
 #if defined(BOOST_OS_WINDOWS_AVAILABLE)
             if (readRx.assume_error() == system_error::win32_code{0x00000026}
@@ -225,29 +225,27 @@ private:
 #endif
             return static_cast<decltype(readRx) &&>(readRx).as_failure();
         }
-        else if (readRx.bytes_transferred() <= discard)
+        if (readRx.bytes_transferred() <= discard)
         {
             return dp::errc::end_of_stream;
         }
-        else if (readRx.assume_value().size() == 1U) [[likely]]
+        if (readRx.assume_value().size() == 1U) [[likely]]
         {
             return std::span<std::byte const>{readRx.assume_value()[0]}.subspan(
                     discard);
         }
-        else
-        {
-            auto rdisc = discard;
-            for (auto const buffer : readRx.assume_value())
-            {
-                if (buffer.size() > rdisc)
-                {
-                    return std::span<std::byte const>{buffer}.subspan(rdisc);
-                }
-                rdisc -= buffer.size();
-            }
 
-            return dp::errc::end_of_stream;
+        auto rdisc = discard;
+        for (auto const buffer : readRx.assume_value())
+        {
+            if (buffer.size() > rdisc)
+            {
+                return std::span<std::byte const>{buffer}.subspan(rdisc);
+            }
+            rdisc -= buffer.size();
         }
+
+        return dp::errc::end_of_stream;
     }
 };
 
