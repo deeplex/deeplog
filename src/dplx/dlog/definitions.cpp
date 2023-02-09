@@ -26,7 +26,7 @@ auto dplx::dp::codec<dplx::dlog::severity>::encode(
     {
         return errc::item_value_out_of_range;
     }
-    if (ctx.out.size() < 1U)
+    if (ctx.out.empty())
     {
         DPLX_TRY(ctx.out.ensure_size(1U));
     }

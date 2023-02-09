@@ -204,8 +204,8 @@ auto LogDisplayGridComponent::OnEvent(ftxui::Event event) -> bool
         mSelected += pageSize;
     }
 
-    mSelected
-            = std::min(mSelected, mRecords.size() ? mRecords.size() - 1U : 0U);
+    mSelected = std::min(mSelected,
+                         !mRecords.empty() ? mRecords.size() - 1U : 0U);
     return mSelected != prev;
 }
 
