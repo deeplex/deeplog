@@ -9,6 +9,8 @@
 #include "boost-test.hpp"
 #include "test-utils.hpp"
 
+// we don't want to throw from within an initializer
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 constinit dlog_tests::llfio::directory_handle dlog_tests::test_dir{};
 struct dlog_test_dir_fixtures
 {

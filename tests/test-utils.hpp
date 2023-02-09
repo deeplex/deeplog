@@ -21,6 +21,8 @@ namespace dlog_tests
 using namespace dplx;
 namespace llfio = dlog::llfio;
 
+// we don't want to throw from within an initializer
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern llfio::directory_handle test_dir;
 
 template <typename R>

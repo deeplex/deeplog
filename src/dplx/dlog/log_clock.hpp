@@ -59,7 +59,7 @@ public:
     };
 
 private:
-    static epoch_info epoch_;
+    static epoch_info const epoch_;
 
 public:
     using rep = std::uint64_t;

@@ -20,7 +20,7 @@
 namespace dplx::dlog::tui
 {
 
-auto current_theme = theme_carbon_grey90();
+auto const current_theme = theme_carbon_grey90();
 
 struct options
 {
