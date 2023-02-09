@@ -57,19 +57,5 @@ target_sources(deeplog-cli-main PRIVATE
 
 ########################################################################
 # test target
-if (BUILD_TESTING)
-    add_executable(deeplog-cli-tests)
-    target_link_libraries(deeplog-cli-tests PRIVATE
-        Deeplex::deeplog-cli
 
-        Boost::unit_test_framework
-        fmt::fmt
-    )
-
-    target_sources(deeplog-cli-tests PRIVATE
-        "tests/deeplog-cli-tests.main.cpp"
-        "tests/boost-test.hpp"
-    )
-
-    add_test(NAME deeplog-cli-tests COMMAND deeplog-cli-tests)
-endif()
+# TODO add a catch2 test suite
