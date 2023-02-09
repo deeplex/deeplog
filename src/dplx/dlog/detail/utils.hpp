@@ -82,6 +82,8 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
 } // namespace dplx::dlog::detail
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
+// type arguments can't be enclosed in parentheses
+// NOLINTBEGIN(bugprone-macro-parentheses)
 
 #define DPLX_DLOG_DECLARE_CODEC(_fq_type)                                      \
     template <>                                                                \
@@ -136,4 +138,5 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
         return dp::decode_object(ctx, outValue);                               \
     }
 
+// NOLINTEND(bugprone-macro-parentheses)
 // NOLINTEND(cppcoreguidelines-macro-usage)
