@@ -407,7 +407,9 @@ private:
             auto blockIt = readPos;
             while (blockIt < readEnd)
             {
-                auto const *blockStart = firstBlock + blockIt * block_size;
+                auto const *blockStart
+                        = firstBlock
+                        + static_cast<std::size_t>(blockIt) * block_size;
 
                 dp::memory_view headBuffer(blockStart, block_size, 0);
                 auto &&headBufferStream = dp::get_input_buffer(headBuffer);
@@ -539,7 +541,8 @@ public:
         logger.msgBegin = msgStart;
         logger.msgBlocks = numBlocks;
 
-        auto *bufferStart = region_data(regionId) + msgStart * block_size;
+        auto *bufferStart = region_data(regionId)
+                          + static_cast<std::size_t>(msgStart) * block_size;
         dp::memory_buffer msgBuffer(bufferStart, totalSize, 0);
 
         auto &&outStream = dp::get_output_buffer(msgBuffer);
@@ -640,18 +643,22 @@ private:
     auto region(unsigned which) noexcept -> region_ctrl *
     {
         return std::launder(reinterpret_cast<region_ctrl *>(
-                mBackingFile.address() + which * region_size));
+                mBackingFile.address()
+                + static_cast<std::size_t>(which) * region_size));
     }
     auto region_data(unsigned which) noexcept -> std::byte *
     {
-        return mBackingFile.address() + which * region_size
+        return mBackingFile.address()
+             + static_cast<std::size_t>(which) * region_size
              + region_ctrl_overhead;
     }
 
     auto block(unsigned int regionId, unsigned int blockId) -> std::byte const *
     {
-        return mBackingFile.address() + regionId * region_size
-             + region_ctrl_overhead + blockId * block_size;
+        return mBackingFile.address()
+             + static_cast<std::size_t>(regionId) * region_size
+             + region_ctrl_overhead
+             + static_cast<std::size_t>(blockId) * block_size;
     }
 };
 static_assert(bus<ringbus_mt_handle>);
