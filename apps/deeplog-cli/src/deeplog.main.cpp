@@ -253,7 +253,7 @@ public:
 
 } // namespace dplx::dlog::tui
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[])
+auto main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) -> int
 {
     using namespace ftxui;
     using namespace dplx;
