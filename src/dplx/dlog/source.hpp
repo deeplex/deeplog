@@ -103,6 +103,7 @@ class logger
     /*[[no_unique_address]]*/ typename T::logger_token mToken{};
 
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-non-private-member-variables-in-classes)
     severity threshold{};
 
     logger() noexcept = default;
