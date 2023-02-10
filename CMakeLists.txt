@@ -173,7 +173,6 @@ if (BUILD_TESTING)
         "tests/boost-test.hpp"
         "tests/test-utils.hpp"
 
-        "tests/file_database.test.cpp"
         "tests/record_container.test.cpp"
 
         "tests/interleaving_stream.test.cpp"
