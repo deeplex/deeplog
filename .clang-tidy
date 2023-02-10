@@ -2,6 +2,8 @@
 # cppcoreguidelines-avoid-magic-numbers aliases readability-magic-numbers
 # cppcoreguidelines-avoid-c-arrays aliases modernize-avoid-c-arrays
 # cppcoreguidelines-special-member-functions is overly explicit and verbose
+# clang-analyzer-core.uninitialized.Assign is currently violated by status-code
+# clang-analyzer-optin.cplusplus.VirtualCall is currently violated by llfio
 Checks: >
   boost-*,
   bugprone-*,
@@ -21,7 +23,9 @@ Checks: >
     -readability-magic-numbers,
     -readability-named-parameter,
     -readability-redundant-member-init,
-    -readability-static-accessed-through-instance
+    -readability-static-accessed-through-instance,
+  -clang-analyzer-core.uninitialized.Assign,
+  -clang-analyzer-optin.cplusplus.VirtualCall
 WarningsAsErrors: true
 HeaderFilterRegex: ".*/src/dp(lx|_tests)/.*"
 FormatStyle: file
