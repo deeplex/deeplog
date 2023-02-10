@@ -206,7 +206,7 @@ public:
             = std::ranges::find(mSinks, which, &sink_owner::get);
             where != mSinks.end())
         {
-            where->release();
+            (void)where->release();
             mSinks.erase(where);
         }
     }
