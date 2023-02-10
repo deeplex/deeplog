@@ -69,12 +69,7 @@ find_package(llfio CONFIG REQUIRED)
 find_package(concrete CONFIG REQUIRED)
 find_package(deeppack CONFIG REQUIRED)
 
-if (BUILD_TESTING)
-    set(DLOG_REQUIRE_UNIT_TEST_FRAMEWORK unit_test_framework)
-endif()
-find_package(Boost 1.73 REQUIRED COMPONENTS
-    ${DLOG_REQUIRE_UNIT_TEST_FRAMEWORK}
-)
+find_package(Boost 1.73 REQUIRED)
 
 find_package(Catch2 CONFIG)
 set_package_properties(Catch2 PROPERTIES
@@ -155,35 +150,6 @@ if (BUILD_TESTING)
 
     # TODO: uncomment this as soon as some tests have been migrated to catch2
     # add_test(NAME deeplog-tests COMMAND deeplog-tests)
-endif()
-
-########################################################################
-# legacy test target
-if (BUILD_TESTING)
-    add_executable(deeplog-tests-legacy)
-    target_link_libraries(deeplog-tests-legacy PRIVATE
-        Deeplex::deeplog
-
-        Boost::unit_test_framework
-        fmt::fmt
-    )
-
-    target_sources(deeplog-tests-legacy PRIVATE
-        "tests/deeplog-tests.main.cpp"
-        "tests/boost-test.hpp"
-        "tests/test-utils.hpp"
-
-        "tests/api.test.cpp"
-        "tests/bufferbus.test.cpp"
-        "tests/ringbus.test.cpp"
-
-        "tests/file_database.test.cpp"
-        "tests/record_container.test.cpp"
-
-        "tests/interleaving_stream.test.cpp"
-    )
-
-    add_test(NAME deeplog-tests-legacy COMMAND deeplog-tests-legacy)
 endif()
 
 ########################################################################
