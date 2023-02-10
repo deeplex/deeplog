@@ -10,6 +10,7 @@
 #include <bit>
 #include <chrono>
 #include <shared_mutex>
+#include <utility>
 
 #include <fmt/format.h>
 
@@ -60,7 +61,7 @@ auto file_database_handle::file_database(
     }
 
     file_database_handle db(std::move(root), std::move(rootDirHandle),
-                            sinkFileNamePattern);
+                            std::move(sinkFileNamePattern));
 
     {
         llfio::unique_file_lock dbLock{db.mRootHandle,
