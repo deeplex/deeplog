@@ -648,6 +648,7 @@ private:
 
     auto region(unsigned which) noexcept -> region_ctrl *
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         return std::launder(reinterpret_cast<region_ctrl *>(
                 mBackingFile.address()
                 + static_cast<std::size_t>(which) * region_size));

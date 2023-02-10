@@ -89,6 +89,7 @@ public:
 
     auto stringify() noexcept -> result<std::string_view> override
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         return std::string_view(reinterpret_cast<char const *>(mValue.data()),
                                 mValue.size());
     }
