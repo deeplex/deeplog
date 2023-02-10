@@ -18,6 +18,7 @@ add_library(deeplog-cli)
 add_library(Deeplex::deeplog-cli ALIAS deeplog-cli)
 target_include_directories(deeplog-cli
     PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
@@ -58,4 +59,30 @@ target_sources(deeplog-cli-main PRIVATE
 ########################################################################
 # test target
 
+if (BUILD_TESTING)
+    add_executable(deeplog-cli-tests)
+    source_group(TREE src/dlog_cli_tests PREFIX test_utils)
+
+    target_link_libraries(deeplog-cli-tests PRIVATE
+        Deeplex::deeplog-cli
+
+        Catch2::Catch2 Catch2::Catch2WithMain
+    )
+
+    target_include_directories(deeplog-cli-tests PRIVATE
+        src/dlog_cli_tests
+    )
+endif()
 # TODO add a catch2 test suite
+
+########################################################################
+# sources
+
+dplx_target_sources(deeplog-cli
+    TEST_TARGET deeplog-cli-tests
+    MODE SMART_SOURCE MERGED_LAYOUT
+    BASE_DIR dplx/dlog
+
+    PUBLIC
+        tui
+)
