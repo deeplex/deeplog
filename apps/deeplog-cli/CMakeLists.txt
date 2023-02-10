@@ -32,14 +32,6 @@ target_link_libraries(deeplog-cli PUBLIC
     ftxui::screen
 )
 
-target_sources(deeplog-cli PRIVATE
-    "include/dplx/dlog/tui/theme.hpp"
-    "src/dlog/theme.cpp"
-
-    "include/dplx/dlog/tui/log_display_grid.hpp"
-    "src/dlog/log_display_grid.cpp"
-)
-
 # deeplog-cli executable utility
 add_executable(deeplog-cli-main)
 add_executable(Deeplex::deeplog-cli-main ALIAS deeplog-cli-main)
@@ -85,4 +77,7 @@ dplx_target_sources(deeplog-cli
 
     PUBLIC
         tui
+
+        tui/theme
+        tui/log_display_grid
 )
