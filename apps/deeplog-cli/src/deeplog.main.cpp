@@ -84,7 +84,7 @@ private:
                                     .insert({std::move(key), enabled})
                                     .first;
 
-            ftxui::Component *conti;
+            ftxui::Component *conti = nullptr;
             if (auto resIt = resourcesView.find(container.sink_id);
                 resIt != resourcesView.end())
             {

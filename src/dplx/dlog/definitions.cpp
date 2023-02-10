@@ -39,7 +39,7 @@ auto dplx::dp::codec<dplx::dlog::severity>::decode(
         parse_context &ctx, dplx::dlog::severity &outValue) noexcept
         -> result<void>
 {
-    underlying_type underlyingValue;
+    underlying_type underlyingValue; // NOLINT(cppcoreguidelines-init-variables)
     if (result<void> parseRx = dp::parse_integer<underlying_type>(
                 ctx, underlyingValue,
                 cncr::to_underlying(dlog::severity::trace));
@@ -70,7 +70,7 @@ auto dplx::dp::codec<dplx::dlog::resource_id>::decode(
         parse_context &ctx, dplx::dlog::resource_id &outValue) noexcept
         -> result<void>
 {
-    underlying_type underlyingValue;
+    underlying_type underlyingValue; // NOLINT(cppcoreguidelines-init-variables)
     if (result<void> parseRx
         = dp::parse_integer<underlying_type>(ctx, underlyingValue);
         parseRx.has_failure())

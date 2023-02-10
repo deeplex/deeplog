@@ -515,11 +515,10 @@ public:
         auto const numBlocks = detail::div_ceil(totalSize, block_size);
 
         unsigned int regionId = logger.regionId;
-        region_ctrl *ctx;
+        region_ctrl *ctx = region(regionId);
         unsigned int msgStart = std::numeric_limits<unsigned>::max();
         do
         {
-            ctx = region(regionId);
             if (auto reserveRx = write_to(ctx, numBlocks)) [[likely]]
             {
                 msgStart = reserveRx.assume_value();
@@ -535,6 +534,7 @@ public:
                 {
                     return std::move(reserveRx).assume_error();
                 }
+                ctx = region(regionId);
             }
             else
             {
