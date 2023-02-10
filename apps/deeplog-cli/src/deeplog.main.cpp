@@ -1,4 +1,12 @@
 
+// Copyright Henrik Steffen Gaßmann 2022-2023
+//
+// Distributed under the Boost Software License, Version 1.0.
+//         (See accompanying file LICENSE or copy at
+//           https://www.boost.org/LICENSE_1_0.txt)
+
+#include <algorithm>
+#include <numeric>
 #include <ranges>
 
 #include <fmt/format.h>
@@ -149,18 +157,19 @@ public:
             }
         }
 
-        auto joined
-                = mClosedContainers | std::views::values
-                | std::views::transform([](record_container &container)
-                                                -> std::pmr::vector<record> &
-                                        { return container.records; })
-                | std::views::join
-                | std::views::transform([](record &v) -> record *
-                                        { return &v; });
-
-        mDisplayRecords.assign(joined.begin(), joined.end());
-        std::ranges::stable_sort(mDisplayRecords, [](record *l, record *r)
-                                 { return l->timestamp < r->timestamp; });
+        std::size_t const numRecords = std::transform_reduce(
+                mClosedContainers.begin(), mClosedContainers.end(),
+                std::size_t{}, std::plus<>{},
+                [](auto const &pair) { return pair.second.records.size(); });
+        mDisplayRecords.reserve(numRecords);
+        for (auto &container : mClosedContainers)
+        {
+            auto &records = container.second.records;
+            std::ranges::transform(records, std::back_inserter(mDisplayRecords),
+                                   [](record &v) -> record * { return &v; });
+        }
+        std::ranges::stable_sort(mDisplayRecords, std::ranges::less{},
+                                 [](record *r) { return r->timestamp; });
     }
 
     auto Render() -> ftxui::Element override
