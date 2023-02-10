@@ -173,7 +173,6 @@ if (BUILD_TESTING)
         "tests/boost-test.hpp"
         "tests/test-utils.hpp"
 
-        "tests/bufferbus.test.cpp"
         "tests/ringbus.test.cpp"
 
         "tests/file_database.test.cpp"

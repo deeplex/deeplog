@@ -11,6 +11,7 @@ dplx_target_sources(deeplog
         dlog/definitions
 
         dlog/core
+        dlog/log_bus
         dlog/log_clock
         dlog/sink
 
@@ -32,8 +33,6 @@ dplx_target_sources(deeplog
         dlog/argument_transmorpher_fmt.hpp
         dlog/attribute_transmorpher.hpp
         dlog/attributes.hpp
-
-        dlog/log_bus.hpp
 
         dlog/detail/codec_dummy.hpp
         dlog/detail/iso8601.hpp

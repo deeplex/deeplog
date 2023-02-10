@@ -1,31 +1,32 @@
 
-// Copyright Henrik Steffen Gaßmann 2021
+// Copyright Henrik S. Gaßmann 2023.
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
+#include "dplx/dlog/log_bus.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+
 #include <dplx/dp.hpp>
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/core.hpp>
 
-#include <dplx/dlog/log_bus.hpp>
+#include "test_dir.hpp"
+#include "test_utils.hpp"
 
-#include "boost-test.hpp"
-#include "test-utils.hpp"
-
-// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
+// NOLINTBEGIN(readability-function-cognitive-complexity)
 
 namespace dlog_tests
 {
 
-BOOST_AUTO_TEST_SUITE(bufferbus)
-
-BOOST_AUTO_TEST_CASE(tmp)
+TEST_CASE("bufferbus buffers messages and outputs them afterwards")
 {
+    constexpr auto bufferSize = 64 * 1024;
     auto createRx
-            = dlog::bufferbus(llfio::mapped_temp_inode().value(), 64 * 1024);
-    DPLX_REQUIRE_RESULT(createRx);
+            = dlog::bufferbus(llfio::mapped_temp_inode().value(), bufferSize);
+    REQUIRE(createRx);
 
     auto bufferbus = std::move(createRx).assume_value();
 
@@ -37,7 +38,7 @@ BOOST_AUTO_TEST_CASE(tmp)
         if (auto writeRx = bufferbus.write(token, size); writeRx.has_value())
         {
             auto encodeRx = dp::encode(writeRx.assume_value(), msgId);
-            DPLX_REQUIRE_RESULT(encodeRx);
+            REQUIRE(encodeRx);
 
             bufferbus.commit(token);
             msgId += 1;
@@ -48,7 +49,7 @@ BOOST_AUTO_TEST_CASE(tmp)
         }
         else
         {
-            DPLX_REQUIRE_RESULT(writeRx);
+            REQUIRE(writeRx);
         }
     }
 
@@ -62,19 +63,17 @@ BOOST_AUTO_TEST_CASE(tmp)
 
                 auto decodeRx
                         = dp::decode(dp::as_value<unsigned int>, msgBuffer);
-                DPLX_REQUIRE_RESULT(decodeRx);
+                REQUIRE(decodeRx);
 
                 auto parsedId = decodeRx.assume_value();
-                BOOST_TEST_REQUIRE(parsedId == msgId);
+                REQUIRE(parsedId == msgId);
                 msgId += 1;
             });
 
-    DPLX_REQUIRE_RESULT(consumeRx);
-    BOOST_TEST(endId == msgId);
+    REQUIRE(consumeRx);
+    CHECK(endId == msgId);
 }
-
-BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace dlog_tests
 
-// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
+// NOLINTEND(readability-function-cognitive-complexity)
