@@ -9,6 +9,8 @@
 
 using namespace ftxui::literals;
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
+
 namespace dplx::dlog::tui
 {
 
@@ -73,3 +75,5 @@ auto theme_carbon_grey90() -> theme
 }
 
 } // namespace dplx::dlog::tui
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)

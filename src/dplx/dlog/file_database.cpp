@@ -10,20 +10,19 @@
 #include <bit>
 #include <chrono>
 #include <shared_mutex>
+#include <utility>
 
 #include <fmt/format.h>
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/object_utils.hpp>
-#include <dplx/dp/decoder/std_container.hpp>
-#include <dplx/dp/decoder/std_path.hpp>
-#include <dplx/dp/decoder/tuple_utils.hpp>
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/core.hpp>
-#include <dplx/dp/encoder/object_utils.hpp>
-#include <dplx/dp/encoder/std_path.hpp>
-#include <dplx/dp/encoder/tuple_utils.hpp>
-#include <dplx/dp/memory_buffer.hpp>
+#include <dplx/dp.hpp>
+#include <dplx/dp/api.hpp>
+#include <dplx/dp/codecs/auto_enum.hpp>
+#include <dplx/dp/codecs/auto_object.hpp>
+#include <dplx/dp/codecs/auto_tuple.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-container.hpp>
+#include <dplx/dp/codecs/std-filesystem.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
 
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
@@ -33,6 +32,7 @@
 namespace dplx::dlog
 {
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto file_database_handle::file_database(
         llfio::path_handle const &base,
         llfio::path_view const path,
@@ -61,7 +61,7 @@ auto file_database_handle::file_database(
     }
 
     file_database_handle db(std::move(root), std::move(rootDirHandle),
-                            sinkFileNamePattern);
+                            std::move(sinkFileNamePattern));
 
     {
         llfio::unique_file_lock dbLock{db.mRootHandle,
@@ -111,7 +111,7 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
         {
             continue;
         }
-        recordContainer.rotation = 0u;
+        recordContainer.rotation = 0U;
     }
 
     erase_if(mContents.record_containers,
@@ -121,7 +121,7 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
 
     if (!mContents.record_containers.empty())
     {
-        return std::errc::directory_not_empty;
+        return system_error::errc::directory_not_empty;
     }
 
     rootLock.unlock();
@@ -147,7 +147,7 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
         if (mContents.revision < decodeRx.assume_value().revision)
         {
             mContents = std::move(decodeRx).assume_value();
-            odd = 0u;
+            odd = 0U;
         }
     }
 
@@ -158,7 +158,7 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
         if (mContents.revision < decodeRx.assume_value().revision)
         {
             mContents = std::move(decodeRx).assume_value();
-            odd = 1u;
+            odd = 1U;
         }
     }
     else if (!firstValid)
@@ -187,14 +187,14 @@ auto file_database_handle::create_record_container(
     contents.revision += 1;
 
     contents.record_containers.push_back(
-            {.path = {}, .byte_size = 0u, .sink_id = sinkId, .rotation = 0u});
+            {.path = {}, .byte_size = 0U, .sink_id = sinkId, .rotation = 0U});
     auto &meta = contents.record_containers.back();
 
     auto lastRotation = std::ranges::max(contents.record_containers, {},
                                          [sinkId](auto const &rcm) {
                                              return rcm.sink_id == sinkId
                                                           ? rcm.rotation
-                                                          : 0u;
+                                                          : 0U;
                                          })
                                 .rotation;
     meta.rotation = lastRotation + 1;
@@ -212,10 +212,11 @@ auto file_database_handle::create_record_container(
         {
             file = std::move(openRx).assume_value();
         }
-        else if (openRx.assume_error() == std::errc::file_exists)
+        else if (openRx.assume_error() == system_error::errc::file_exists)
         {
             // 5 retries hoping that the user chose a file name pattern which
             // disambiguates by timestamp or rotation count
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
             if (meta.rotation - 10 < lastRotation)
             {
                 meta.rotation += 2; // preserve oddness
@@ -273,44 +274,45 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>> readBuffer;
     DPLX_TRY(readBuffer.resize(8 * 1024));
 
-    llfio::file_handle::buffer_type readBuffers[] = {readBuffer.as_span()};
-    if (auto readRx = mRootHandle.read({readBuffers, 0U}); readRx.has_failure())
+    llfio::file_handle::buffer_type readBuffers[] = {
+            {readBuffer.as_span().data(), readBuffer.size()}
+    };
+    auto readRx = mRootHandle.read({readBuffers, 0U});
+    if (readRx.has_failure())
     {
         return std::move(readRx).as_failure();
     }
-    else if (readRx.bytes_transferred() != readBuffer.size())
+    if (readRx.bytes_transferred() != readBuffer.size())
     {
         return errc::missing_data;
     }
+
+    auto read = std::move(readRx).assume_value();
+    bytes header;
+    if (read.size() != 1U) [[unlikely]]
+    {
+        auto *out = readBuffer.as_span().data();
+        for (auto buf : read)
+        {
+            out = std::ranges::copy(buf, out).out;
+        }
+        header = readBuffer.as_span();
+    }
     else
     {
-        auto read = std::move(readRx).assume_value();
-        bytes header;
-        if (read.size() != 1U) [[unlikely]]
-        {
-            auto out = readBuffer.as_span().data();
-            for (auto buf : read)
-            {
-                out = std::ranges::copy(buf, out).out;
-            }
-            header = readBuffer.as_span();
-        }
-        else
-        {
-            header = read[0];
-        }
+        header = read[0];
+    }
 
-        if (!std::ranges::equal(header.first(magic.size()), magic))
-        {
-            return errc::invalid_file_database_header;
-        }
-        else if (auto areaZero = header.subspan(magic.size());
-                 std::ranges::find_if(areaZero, [](std::byte v)
-                                      { return v != std::byte{}; })
-                 != areaZero.end())
-        {
-            return errc::invalid_file_database_header;
-        }
+    if (!std::ranges::equal(header.first(magic.size()), magic))
+    {
+        return errc::invalid_file_database_header;
+    }
+    if (auto areaZero = header.subspan(magic.size());
+        std::ranges::find_if(areaZero,
+                             [](std::byte v) { return v != std::byte{}; })
+        != areaZero.end())
+    {
+        return errc::invalid_file_database_header;
     }
 
     return oc::success();
@@ -318,9 +320,11 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
 
 auto file_database_handle::initialize_storage() noexcept -> result<void>
 {
-    DPLX_TRY(mRootHandle.truncate(4u << 12)); // 16KiB aka 4 pages
+    DPLX_TRY(mRootHandle.truncate(4U << 12)); // 16KiB aka 4 pages
 
-    llfio::file_handle::const_buffer_type writeBuffers[] = {bytes(magic)};
+    llfio::file_handle::const_buffer_type writeBuffers[] = {
+            {magic.data(), magic.size()}
+    };
     DPLX_TRY(mRootHandle.write({writeBuffers, 0}));
 
     DPLX_TRY(retire_to_storage(mContents));
@@ -339,3 +343,9 @@ auto file_database_handle::retire_to_storage(
 }
 
 } // namespace dplx::dlog
+
+DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(
+        ::dplx::dlog::file_database_handle::record_container_meta)
+
+DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(
+        ::dplx::dlog::file_database_handle::contents_t)

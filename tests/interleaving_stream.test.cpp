@@ -15,11 +15,11 @@ namespace dlog_tests
 
 BOOST_AUTO_TEST_SUITE(interleaving_stream)
 
-static_assert(dp::input_stream<dlog::interleaving_input_stream_handle>);
-static_assert(!dp::lazy_input_stream<dlog::interleaving_input_stream_handle>);
-
-static_assert(dp::output_stream<dlog::interleaving_output_stream_handle>);
-static_assert(dp::lazy_output_stream<dlog::interleaving_output_stream_handle>);
+// static_assert(dp::input_stream<dlog::interleaving_input_stream_handle>);
+// static_assert(!dp::lazy_input_stream<dlog::interleaving_input_stream_handle>);
+//
+// static_assert(dp::output_stream<dlog::interleaving_output_stream_handle>);
+// static_assert(dp::lazy_output_stream<dlog::interleaving_output_stream_handle>);
 
 BOOST_AUTO_TEST_SUITE_END()
 

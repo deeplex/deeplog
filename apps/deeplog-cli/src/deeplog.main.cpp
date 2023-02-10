@@ -1,4 +1,12 @@
 
+// Copyright Henrik Steffen Gaßmann 2022-2023
+//
+// Distributed under the Boost Software License, Version 1.0.
+//         (See accompanying file LICENSE or copy at
+//           https://www.boost.org/LICENSE_1_0.txt)
+
+#include <algorithm>
+#include <numeric>
 #include <ranges>
 
 #include <fmt/format.h>
@@ -20,7 +28,7 @@
 namespace dplx::dlog::tui
 {
 
-auto current_theme = theme_carbon_grey90();
+auto const current_theme = theme_carbon_grey90();
 
 struct options
 {
@@ -84,7 +92,7 @@ private:
                                     .insert({std::move(key), enabled})
                                     .first;
 
-            ftxui::Component *conti;
+            ftxui::Component *conti = nullptr;
             if (auto resIt = resourcesView.find(container.sink_id);
                 resIt != resourcesView.end())
             {
@@ -149,18 +157,19 @@ public:
             }
         }
 
-        auto joined
-                = mClosedContainers | std::views::values
-                | std::views::transform([](record_container &container)
-                                                -> std::pmr::vector<record> &
-                                        { return container.records; })
-                | std::views::join
-                | std::views::transform([](record &v) -> record *
-                                        { return &v; });
-
-        mDisplayRecords.assign(joined.begin(), joined.end());
-        std::ranges::stable_sort(mDisplayRecords, [](record *l, record *r)
-                                 { return l->timestamp < r->timestamp; });
+        std::size_t const numRecords = std::transform_reduce(
+                mClosedContainers.begin(), mClosedContainers.end(),
+                std::size_t{}, std::plus<>{},
+                [](auto const &pair) { return pair.second.records.size(); });
+        mDisplayRecords.reserve(numRecords);
+        for (auto &container : mClosedContainers)
+        {
+            auto &records = container.second.records;
+            std::ranges::transform(records, std::back_inserter(mDisplayRecords),
+                                   [](record &v) -> record * { return &v; });
+        }
+        std::ranges::stable_sort(mDisplayRecords, std::ranges::less{},
+                                 [](record *r) { return r->timestamp; });
     }
 
     auto Render() -> ftxui::Element override
@@ -173,26 +182,24 @@ private:
     LoadClosedContainer(file_database_handle::record_container_meta const &meta)
             -> result<record_container>
     {
-        using input_stream = detail::os_input_stream_handle;
-
         DPLX_TRY(auto &&containerFile, mFileDb.open_record_container(meta));
         DPLX_TRY(auto const maxExtent, containerFile.maximum_extent());
 
         DPLX_TRY(auto &&inStream,
-                 detail::os_input_stream_handle::os_input_stream(containerFile,
-                                                                 maxExtent));
+                 detail::os_input_stream::create(containerFile, maxExtent));
 
-        dlog::argument_transmorpher<input_stream> argumentTransmorpher;
-        dlog::record_attribute_reviver<input_stream> parseAttrs;
+        dlog::argument_transmorpher argumentTransmorpher;
+        dlog::record_attribute_reviver parseAttrs;
         (void)parseAttrs.register_attribute<attr::file>();
         (void)parseAttrs.register_attribute<attr::line>();
 
-        dp::basic_decoder<record, input_stream> decode_record(
-                argumentTransmorpher, parseAttrs);
-        dp::basic_decoder<record_container, input_stream> decode(decode_record);
+        dp::basic_decoder<record> decode_record{argumentTransmorpher,
+                                                parseAttrs};
+        dp::basic_decoder<record_container> decode{decode_record};
 
         record_container value;
-        DPLX_TRY(decode(inStream, value));
+        dp::parse_context ctx{inStream};
+        DPLX_TRY(decode(ctx, value));
 
         return value;
     }
@@ -255,22 +262,35 @@ public:
 
 } // namespace dplx::dlog::tui
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[])
+auto main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) -> int
+try
 {
     using namespace ftxui;
     using namespace dplx;
     namespace llfio = dlog::llfio;
 
-    if (argc < 2)
+    std::span<char *> args(static_cast<char **>(argv),
+                           static_cast<std::size_t>(argc));
+    if (args.size() < 2)
     {
-        return -1;
+        return -3;
     }
 
-    llfio::path_view dbPath(argv[1]);
+    llfio::path_view dbPath(args[1]);
     auto db = dlog::file_database_handle::file_database({}, dbPath, "").value();
 
     auto screen = ScreenInteractive::Fullscreen();
     auto mainComponent
             = std::make_shared<dlog::tui::MainComponent>(std::move(db));
     screen.Loop(mainComponent);
+}
+catch (std::exception const &exc)
+{
+    fmt::print(stderr, "Unhandled exception: {}", exc.what());
+    return -2;
+}
+catch (...)
+{
+    fmt::print(stderr, "The application failed due to an unknown exception");
+    return -1;
 }

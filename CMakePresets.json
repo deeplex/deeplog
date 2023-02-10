@@ -14,7 +14,7 @@
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "BUILD_TESTING": true,
-                "WARNINGS_AS_ERRORS": false,
+                "WARNINGS_AS_ERRORS": true,
                 "CMAKE_DEBUG_POSTFIX": "-dbg",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/zinstall"
             }
@@ -126,7 +126,19 @@
                 "x64-linux"
             ],
             "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "clang++"
+                "VCPKG_TARGET_TRIPLET": "x64-linux-clang",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/clang-x64-linux.cmake"
+            }
+        },
+        {
+            "name": "x64-linux-ci-lint",
+            "inherits": [
+                "x64-linux-clang"
+            ],
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-linux-clang-15",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/clang-15-x64-linux.cmake",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true
             }
         },
         {
@@ -135,7 +147,7 @@
                 "x64-linux"
             ],
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": "-fconcepts-diagnostics-depth=3 -fsanitize=address,leak,undefined -g -fno-omit-frame-pointer",
+                "CMAKE_CXX_FLAGS": "-fconcepts-diagnostics-depth=0 -ftemplate-backtrace-limit=0 -fsanitize=address,leak,undefined -g -fno-omit-frame-pointer",
                 "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,leak,undefined",
                 "CMAKE_CXX_COMPILER": "g++"
             }

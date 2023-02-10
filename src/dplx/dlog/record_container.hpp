@@ -15,12 +15,12 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/core.hpp>
-#include <dplx/dp/decoder/object_utils.hpp>
-#include <dplx/dp/decoder/std_string.hpp>
-#include <dplx/dp/decoder/tuple_utils.hpp>
-#include <dplx/dp/item_parser.hpp>
+#include <dplx/dp.hpp>
+#include <dplx/dp/api.hpp>
+#include <dplx/dp/codecs/auto_object.hpp>
+#include <dplx/dp/codecs/auto_tuple.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-string.hpp>
 
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/attribute_transmorpher.hpp>
@@ -46,26 +46,28 @@ public:
 namespace dplx::dp
 {
 
-template <input_stream Stream>
-class basic_decoder<dlog::record, Stream>
+template <typename T>
+class basic_decoder; // TODO: remove
+
+template <>
+class basic_decoder<dlog::record> // TODO: transform into a codec
 {
-    using parse = item_parser<Stream>;
-
 public:
-    using value_type = dlog::record;
+    dlog::argument_transmorpher &parse_arguments;
+    dlog::record_attribute_reviver &parse_attributes;
 
-    dlog::argument_transmorpher<Stream> &parse_arguments;
-    dlog::record_attribute_reviver<Stream> &parse_attributes;
-
-    auto operator()(Stream &inStream, value_type &value) -> result<void>
+    auto operator()(parse_context &ctx, dlog::record &value) -> result<void>
     {
-        DPLX_TRY(dp::item_info tupleHead, parse::generic(inStream));
+        DPLX_TRY(dp::item_head tupleHead, dp::parse_item_head(ctx));
         if (tupleHead.type != dp::type_code::array)
         {
             return dp::errc::item_type_mismatch;
         }
+        // TODO: refactor record layout description into compile time constants
         if (tupleHead.indefinite()
-            || !(3 <= tupleHead.value && tupleHead.value <= 5))
+            || tupleHead.value < 3
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+            || 5 < tupleHead.value)
         {
             return dp::errc::tuple_size_mismatch;
         }
@@ -76,17 +78,17 @@ public:
         bool const hasAttributes = tupleHead.value > 3;
         bool const hasFmtArgs = tupleHead.value > 4;
 
-        DPLX_TRY(decode(inStream, value.severity));
-        DPLX_TRY(decode(inStream, value.timestamp));
-        DPLX_TRY(parse::u8string_finite(inStream, value.message));
+        DPLX_TRY(decode(ctx, value.severity));
+        DPLX_TRY(decode(ctx, value.timestamp));
+        DPLX_TRY(dp::parse_text_finite(ctx, value.message));
 
         if (hasAttributes)
         {
-            DPLX_TRY(parse_attributes(inStream, value.attributes));
+            DPLX_TRY(parse_attributes(ctx, value.attributes));
         }
         if (hasFmtArgs)
         {
-            DPLX_TRY(parse_arguments(inStream, value.format_arguments));
+            DPLX_TRY(parse_arguments(ctx, value.format_arguments));
         }
         return oc::success();
     }
@@ -110,47 +112,43 @@ public:
 namespace dplx::dp
 {
 
-template <input_stream Stream>
-class basic_decoder<dlog::record_container, Stream>
+template <>
+class basic_decoder<dlog::record_container> // TODO: transform into a codec
 {
     static constexpr std::span magic{dlog::file_sink_backend::magic};
 
-    using parse = item_parser<Stream>;
     using container = std::pmr::vector<dlog::record>;
 
 public:
-    using value_type = dlog::record_container;
+    basic_decoder<dlog::record> &record_decoder;
 
-    basic_decoder<dlog::record, Stream> &record_decoder;
-
-    auto operator()(Stream &inStream, value_type &value) -> result<void>
+    auto operator()(parse_context &ctx, dlog::record_container &value)
+            -> result<void>
     {
         {
-            DPLX_TRY(auto magicProxy, read(inStream, magic.size()));
+            DPLX_TRY(ctx.in.require_input(magic.size()));
 
-            if (!std::ranges::equal(magicProxy, magic))
+            if (!std::ranges::equal(std::span(ctx.in).first(magic.size()),
+                                    magic))
             {
                 return dlog::errc::invalid_record_container_header;
             }
 
-            if constexpr (lazy_input_stream<Stream>)
-            {
-                DPLX_TRY(consume(inStream, magicProxy));
-            }
+            ctx.in.discard_buffered(magic.size());
         }
 
-        DPLX_TRY(decode(inStream, value.info));
+        DPLX_TRY(dp::decode(ctx, value.info));
 
-        DPLX_TRY(parse::array(
-                inStream, value.records,
-                [this](Stream &linStream, container &records, std::size_t const)
-                { return parse_item(linStream, records); }));
+        DPLX_TRY(dp::parse_array(ctx, value.records,
+                                 [this](parse_context &lctx, container &records,
+                                        std::size_t const) noexcept
+                                 { return parse_item(lctx, records); }));
 
         return oc::success();
     }
 
 private:
-    auto parse_item(Stream &inStream, container &records) -> result<void>
+    auto parse_item(parse_context &ctx, container &records) -> result<void>
     {
         auto &record = records.emplace_back(dlog::record{
                 .severity = dlog::severity::none,
@@ -160,12 +158,12 @@ private:
                 = dlog::record_attribute_container(records.get_allocator()),
                 .format_arguments = {}});
 
-        if (auto decodeRx = record_decoder(inStream, record);
-            decodeRx.has_failure())
+        auto decodeRx = record_decoder(ctx, record);
+        if (decodeRx.has_failure())
         {
-            return std::move(decodeRx).as_failure();
+            records.pop_back();
         }
-        return oc::success();
+        return decodeRx;
     }
 };
 

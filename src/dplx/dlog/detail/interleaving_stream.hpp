@@ -12,10 +12,9 @@
 #include <limits>
 #include <span>
 
-#include <dplx/dp/memory_buffer.hpp>
-#include <dplx/dp/stream.hpp>
-#include <dplx/dp/streams/chunked_input_stream.hpp>
-#include <dplx/dp/streams/chunked_output_stream.hpp>
+#include <dplx/dp/legacy/chunked_input_stream.hpp>
+#include <dplx/dp/legacy/chunked_output_stream.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
 
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -29,18 +28,22 @@ protected:
     using page_allocation
             = dp::memory_allocation<llfio::utils::page_allocator<std::byte>>;
 
-    static constexpr unsigned page_size = 1u << 12;
+    static constexpr unsigned page_size = 1U << 12;
 
     static constexpr auto index_to_block_size(unsigned idx) noexcept -> unsigned
     {
-        return (idx < 5u ? 1u << idx : 1u << 4) * page_size;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+        return (idx < 5U ? 1U << idx : 1U << 4) * page_size;
     }
     static constexpr auto index_to_block_offset(unsigned idx, bool odd) noexcept
             -> std::uint64_t
     {
-        constexpr std::uint64_t two = 2u;
-        auto const twodd = two | static_cast<unsigned>(odd);
-        return (idx < 5u ? (twodd) << idx : (two << 4) * (idx - 3) + (odd << 4))
+        constexpr std::uint64_t two = 2U;
+        auto const uodd = static_cast<unsigned>(odd);
+        auto const twodd = two | uodd;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+        return (idx < 5U ? (twodd) << idx
+                         : (two << 4) * (idx - 3U) + (uodd << 4))
              * page_size;
     }
     static constexpr auto index_to_file_size(unsigned idx) noexcept
@@ -51,7 +54,8 @@ protected:
 
     static constexpr auto max_block_size() noexcept -> unsigned
     {
-        return index_to_block_size(5u);
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+        return index_to_block_size(5U);
     }
 
     static constexpr std::uint64_t max_stream_size
@@ -59,23 +63,24 @@ protected:
             * page_size;
 };
 
-class interleaving_input_stream_handle
-    : public dp::chunked_input_stream_base<interleaving_input_stream_handle>
+class interleaving_input_stream_handle final
+    : public dp::legacy::chunked_input_stream_base<
+              interleaving_input_stream_handle>
     , interleaving_stream_base
 {
-    friend class dp::chunked_input_stream_base<
+    friend class dp::legacy::chunked_input_stream_base<
             interleaving_input_stream_handle>;
-    using base_t
-            = dp::chunked_input_stream_base<interleaving_input_stream_handle>;
+    using base_t = dp::legacy::chunked_input_stream_base<
+            interleaving_input_stream_handle>;
 
     page_allocation mBufferAllocation;
-    llfio::io_handle *mDataSource;
+    llfio::byte_io_handle *mDataSource;
     unsigned mIndexPosition;
     bool mStreamSelector;
 
 public:
     explicit interleaving_input_stream_handle() noexcept
-        : base_t({}, 0u)
+        : base_t({}, 0U)
         , mBufferAllocation()
         , mDataSource()
         , mIndexPosition()
@@ -83,21 +88,21 @@ public:
     {
     }
 
-    explicit interleaving_input_stream_handle(llfio::io_handle &dataSource,
+    explicit interleaving_input_stream_handle(llfio::byte_io_handle &dataSource,
                                               bool streamSelector,
                                               std::uint64_t maxSize
                                               = max_stream_size) noexcept
         : base_t({}, maxSize)
         , mBufferAllocation()
         , mDataSource(&dataSource)
-        , mIndexPosition(0u)
+        , mIndexPosition(0U)
         , mStreamSelector(streamSelector)
     {
     }
 
 private:
     explicit interleaving_input_stream_handle(
-            llfio::io_handle &dataSource,
+            llfio::byte_io_handle &dataSource,
             bool streamSelector,
             std::uint64_t maxSize,
             page_allocation &&buffer,
@@ -105,13 +110,13 @@ private:
         : base_t(initialReadArea, maxSize)
         , mBufferAllocation(std::move(buffer))
         , mDataSource(&dataSource)
-        , mIndexPosition(1u)
+        , mIndexPosition(1U)
         , mStreamSelector(streamSelector)
     {
     }
 
 public:
-    static auto interleaving_input_stream(llfio::io_handle &dataSource,
+    static auto interleaving_input_stream(llfio::byte_io_handle &dataSource,
                                           bool streamSelector,
                                           std::uint64_t maxSize
                                           = max_stream_size) noexcept
@@ -125,7 +130,7 @@ public:
                std::uint64_t maxSize = max_stream_size) noexcept -> result<void>
     {
         auto pages = std::move(mBufferAllocation);
-        auto dataSource = mDataSource;
+        auto *dataSource = mDataSource;
 
         *this = interleaving_input_stream_handle();
 
@@ -137,7 +142,7 @@ public:
 
 private:
     static auto interleaving_input_stream(page_allocation &&pages,
-                                          llfio::io_handle &dataSource,
+                                          llfio::byte_io_handle &dataSource,
                                           bool streamSelector,
                                           std::uint64_t maxSize) noexcept
             -> result<interleaving_input_stream_handle>
@@ -145,9 +150,9 @@ private:
         DPLX_TRY(pages.resize(max_block_size()));
 
         DPLX_TRY(auto initialReadArea,
-                 read_chunk(pages, &dataSource, 0u, streamSelector));
+                 read_chunk(pages, &dataSource, 0U, streamSelector));
         auto initialUsage
-                = std::min<std::uint64_t>(maxSize, index_to_block_size(0u));
+                = std::min<std::uint64_t>(maxSize, index_to_block_size(0U));
         initialReadArea = initialReadArea.first(initialUsage);
 
         return interleaving_input_stream_handle(dataSource, streamSelector,
@@ -175,7 +180,7 @@ private:
                           mStreamSelector);
     }
     static auto read_chunk(page_allocation &bufferAlloc,
-                           llfio::io_handle *dataSource,
+                           llfio::byte_io_handle *dataSource,
                            unsigned index,
                            bool streamSelector) noexcept
             -> dp::result<std::span<std::byte const>>
@@ -184,8 +189,8 @@ private:
         auto const readSpan
                 = bufferAlloc.as_span().first(index_to_block_size(index));
 
-        llfio::io_handle::buffer_type ioBuffers[] = {readSpan};
-        DPLX_TRY(llfio::io_handle::buffers_type const buffers,
+        llfio::byte_io_handle::buffer_type ioBuffers[] = {{readSpan}};
+        DPLX_TRY(llfio::byte_io_handle::buffers_type const buffers,
                  dataSource->read({ioBuffers, readPos}));
         if (buffers.size() != 1 || buffers[0].size() != readSpan.size())
         {
@@ -197,16 +202,17 @@ private:
 };
 
 class interleaving_output_stream_handle final
-    : public dp::chunked_output_stream_base<interleaving_output_stream_handle>
+    : public dp::legacy::chunked_output_stream_base<
+              interleaving_output_stream_handle>
     , interleaving_stream_base
 {
-    friend class dp::chunked_output_stream_base<
+    friend class dp::legacy::chunked_output_stream_base<
             interleaving_output_stream_handle>;
-    using base_t
-            = dp::chunked_output_stream_base<interleaving_output_stream_handle>;
+    using base_t = dp::legacy::chunked_output_stream_base<
+            interleaving_output_stream_handle>;
 
     page_allocation mBufferAllocation;
-    llfio::io_handle *mDataSink;
+    llfio::byte_io_handle *mDataSink;
     unsigned mIndexPosition;
     bool mStreamSelector;
 
@@ -219,7 +225,7 @@ public:
         }
     }
     explicit interleaving_output_stream_handle() noexcept
-        : base_t({}, 0u)
+        : base_t({}, 0U)
         , mBufferAllocation()
         , mDataSink()
         , mIndexPosition()
@@ -228,7 +234,7 @@ public:
     }
     interleaving_output_stream_handle(
             interleaving_output_stream_handle &&other) noexcept
-        : base_t(std::move(other))
+        : base_t(other)
         , mBufferAllocation(std::move(other.mBufferAllocation))
         , mDataSink(std::exchange(other.mDataSink, nullptr))
         , mIndexPosition(other.mIndexPosition)
@@ -238,29 +244,29 @@ public:
     auto operator=(interleaving_output_stream_handle &&other) noexcept
             -> interleaving_output_stream_handle &
     {
-        base_t::operator=(std::move(other));
-        mBufferAllocation = std::move(other.mBufferAllocation);
+        base_t::operator=(other);
+        mBufferAllocation = std::move(other.mBufferAllocation); // NOLINT
         mDataSink = std::exchange(other.mDataSink, nullptr);
         mIndexPosition = other.mIndexPosition;
         mStreamSelector = other.mStreamSelector;
         return *this;
     }
 
-    explicit interleaving_output_stream_handle(llfio::io_handle &dataSink,
+    explicit interleaving_output_stream_handle(llfio::byte_io_handle &dataSink,
                                                bool streamSelector,
                                                std::uint64_t maxSize
                                                = max_stream_size) noexcept
         : base_t({}, maxSize)
         , mBufferAllocation()
         , mDataSink(&dataSink)
-        , mIndexPosition(0u)
+        , mIndexPosition(0U)
         , mStreamSelector(streamSelector)
     {
     }
 
 private:
     explicit interleaving_output_stream_handle(
-            llfio::io_handle &dataSink,
+            llfio::byte_io_handle &dataSink,
             bool streamSelector,
             std::uint64_t maxSize,
             page_allocation &&buffer) noexcept
@@ -271,13 +277,13 @@ private:
                                                    index_to_block_size(0)))
         , mBufferAllocation(std::move(buffer))
         , mDataSink(&dataSink)
-        , mIndexPosition(0u)
+        , mIndexPosition(0U)
         , mStreamSelector(streamSelector)
     {
     }
 
 public:
-    static auto interleaving_output_stream(llfio::io_handle &dataSink,
+    static auto interleaving_output_stream(llfio::byte_io_handle &dataSink,
                                            bool streamSelector,
                                            std::uint64_t maxSize
                                            = max_stream_size) noexcept
@@ -323,7 +329,9 @@ private:
         auto const writeSpan = mBufferAllocation.as_span().first(
                 index_to_block_size(mIndexPosition));
 
-        llfio::io_handle::const_buffer_type ioBuffers[] = {writeSpan};
+        llfio::byte_io_handle::const_buffer_type ioBuffers[] = {
+                {writeSpan.data(), writeSpan.size()}
+        };
         DPLX_TRY(mDataSink->write({ioBuffers, writePos}));
 
         return dp::oc::success();

@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_SUITE(file_db)
 
 BOOST_AUTO_TEST_CASE(api)
 {
-    auto const dbName = llfio::utils::random_string(4u);
+    auto const dbName = llfio::utils::random_string(4U);
     auto const dbFullName
             = std::string{dbName}.append(dlog::file_database_handle::extension);
     auto const sinkFilePattern = dbName + ".{ctr}_{iso8601}.blog";
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(api)
 
 BOOST_AUTO_TEST_CASE(reopen)
 {
-    auto const dbName = llfio::utils::random_string(4u);
+    auto const dbName = llfio::utils::random_string(4U);
     auto const dbFullName
             = std::string{dbName}.append(dlog::file_database_handle::extension);
     auto const sinkFilePattern = dbName + ".{ctr}_{iso8601}.blog";

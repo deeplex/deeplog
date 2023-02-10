@@ -64,6 +64,7 @@ struct theme
     color inverse_support_03;
     color inverse_support_04;
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
     std::array<color, 10> monochromatic_palette;
 };
 

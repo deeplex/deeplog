@@ -15,9 +15,10 @@
 
 #include <boost/config.hpp>
 
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/core.hpp>
-#include <dplx/dp/encoder/std_path.hpp>
+#include <dplx/dp/api.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/fwd.hpp>
+#include <dplx/dp/items/emit_core.hpp>
 
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/attributes.hpp>
@@ -33,61 +34,62 @@ namespace dplx::dlog
 namespace detail
 {
 
-template <typename T, typename Stream>
+template <typename T>
 struct log_arg_dispatch
 {
     using xtype = argument<T>;
     static constexpr unsigned is_attribute = 0U;
 
-    using encoded_size_of_t
-            = dp::tag_invoke_result_t<dp::encoded_size_of_fn, xtype &&>;
     static constexpr auto encoded_size_of(T const &value) noexcept
+            -> std::uint64_t
     {
         return dp::encoded_size_of(xtype{value});
     }
 
-    static BOOST_FORCEINLINE auto
-    arg_encode(dp::result<void> &rx, Stream &outStream, T const &value) -> bool
+    static BOOST_FORCEINLINE auto arg_encode(dp::result<void> &rx,
+                                             dp::emit_context &ctx,
+                                             T const &value) -> bool
     {
-        rx = dp::encode(outStream, argument<T>{value});
+        rx = dp::encode(ctx, argument<T>{value});
         return rx.has_value();
     }
-    static BOOST_FORCEINLINE auto
-    attr_encode(dp::result<void> &, Stream &, T const &) noexcept -> bool
+    static BOOST_FORCEINLINE auto attr_encode(dp::result<void> &,
+                                              dp::emit_context &,
+                                              T const &) noexcept -> bool
     {
         return true;
     }
 };
-template <resource_id Id, typename T, typename ReType, typename Stream>
-struct log_arg_dispatch<basic_attribute<Id, T, ReType>, Stream>
+template <resource_id Id, typename T, typename ReType>
+struct log_arg_dispatch<basic_attribute<Id, T, ReType>>
 {
     using xtype = basic_attribute<Id, T, ReType>;
     static constexpr unsigned is_attribute = 1U;
 
-    using encoded_size_of_t
-            = dp::tag_invoke_result_t<dp::encoded_size_of_fn, T const &>;
     static constexpr auto encoded_size_of(xtype const &attr) noexcept
+            -> std::uint64_t
     {
         return dp::encoded_size_of(attr.id) + dp::encoded_size_of(attr.value);
     }
 
-    static BOOST_FORCEINLINE auto
-    arg_encode(dp::result<void> &, Stream &, xtype const &) noexcept -> bool
+    static BOOST_FORCEINLINE auto arg_encode(dp::result<void> &,
+                                             dp::emit_context &,
+                                             xtype const &) noexcept -> bool
     {
         return true;
     }
     static BOOST_FORCEINLINE auto attr_encode(dp::result<void> &rx,
-                                              Stream &outStream,
+                                              dp::emit_context &ctx,
                                               xtype const &attr) -> bool
     {
         // there is no/we don't use an encoder for basic_attribute, because we
         // encode id value pairs inside a map
-        rx = dp::encode(outStream, attr.id);
+        rx = dp::encode(ctx, attr.id);
         if (rx.has_failure())
         {
             return false;
         }
-        rx = dp::encode(outStream, attr.value);
+        rx = dp::encode(ctx, attr.value);
         return rx.has_value();
     }
 };
@@ -97,11 +99,12 @@ struct log_arg_dispatch<basic_attribute<Id, T, ReType>, Stream>
 template <bus T>
 class logger
 {
-    T *mBus;
-    /*[[no_unique_address]]*/ typename T::logger_token mToken;
+    T *mBus{};
+    /*[[no_unique_address]]*/ typename T::logger_token mToken{};
 
 public:
-    severity threshold;
+    // NOLINTNEXTLINE(cppcoreguidelines-non-private-member-variables-in-classes)
+    severity threshold{};
 
     logger() noexcept = default;
 
@@ -114,17 +117,14 @@ public:
 
 private:
     using output_stream = typename T::output_stream;
-    using emit = dp::item_emitter<output_stream>;
     template <typename Arg>
-    using dispatch = detail::log_arg_dispatch<Arg, output_stream>;
+    using dispatch = detail::log_arg_dispatch<Arg>;
+    using encoded_size_type = std::uint64_t;
 
 public:
     template <typename... Args>
-        requires(
-                ...
-                && (loggable_attribute<
-                            Args,
-                            output_stream> || loggable_argument<Args, output_stream>))
+        requires(... && (loggable_attribute<Args> || loggable_argument<Args>))
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     auto operator()(severity sev,
                     std::u8string_view message,
                     Args const &...args) -> result<void>
@@ -137,8 +137,6 @@ public:
         // +  map   attributes
         // +  array format args
 
-        using encoded_size_type = decltype((
-                0U + ... + typename dispatch<Args>::encoded_size_of_t{}));
         constexpr auto numAttrs = (0U + ... + dispatch<Args>::is_attribute);
         constexpr auto hasAttrs = sizeof...(Args) > 0U;
         constexpr auto numFmtArgs = sizeof...(Args) - numAttrs;
@@ -147,44 +145,49 @@ public:
         auto const timeStamp = log_clock::now();
 
         constexpr encoded_size_type encodedArraySize
-                = dp::additional_information_size(5U);
+                = dp::encoded_item_head_size<dp::type_code::posint>(5U);
         encoded_size_type const encodedPrefixSize
                 = dp::encoded_size_of(sev) + dp::encoded_size_of(timeStamp)
                 + dp::encoded_size_of(message);
 
         constexpr encoded_size_type encodedAttrMapSize
-                = hasAttrs ? dp::additional_information_size(numAttrs) : 0U;
+                = hasAttrs ? dp::encoded_item_head_size<dp::type_code::posint>(
+                          numAttrs)
+                           : 0U;
         constexpr encoded_size_type encodedFmtArgsArraySize
-                = hasFmtArgs ? dp::additional_information_size(numFmtArgs) : 0U;
+                = hasFmtArgs
+                        ? dp::encoded_item_head_size<dp::type_code::posint>(
+                                numFmtArgs)
+                        : 0U;
 
-        encoded_size_type const encodedArgsSize
-                = (encoded_size_type{} + ...
-                   + dispatch<Args>::encoded_size_of(args));
+        auto const encodedArgsSize = (encoded_size_type{} + ...
+                                      + dispatch<Args>::encoded_size_of(args));
 
         encoded_size_type const encodedSize
                 = encodedArraySize + encodedPrefixSize + encodedAttrMapSize
                 + encodedFmtArgsArraySize + encodedArgsSize;
 
-        DPLX_TRY(auto &&outStream,
+        DPLX_TRY(auto &&outBuffer,
                  mBus->write(mToken, static_cast<unsigned>(encodedSize)));
         bus_write_lock<T> busLock(*mBus, mToken);
 
-        DPLX_TRY(emit::array(outStream, 3U + (hasAttrs ? 1U : 0U)
-                                                + (hasFmtArgs ? 1U : 0U)));
-        DPLX_TRY(dp::encode(outStream, sev));
-        DPLX_TRY(dp::encode(outStream, timeStamp));
-        DPLX_TRY(dp::encode(outStream, message));
+        auto &&outBufferable = dp::get_output_buffer(outBuffer);
+        dp::emit_context ctx{outBufferable};
+        DPLX_TRY(dp::emit_array(ctx, 3U + (hasAttrs ? 1U : 0U)
+                                             + (hasFmtArgs ? 1U : 0U)));
+        DPLX_TRY(dp::encode(ctx, sev));
+        DPLX_TRY(dp::encode(ctx, timeStamp));
+        DPLX_TRY(dp::encode(ctx, message));
 
         if constexpr (hasAttrs)
         {
-            DPLX_TRY(emit::map(outStream, numAttrs));
+            DPLX_TRY(dp::emit_map(ctx, numAttrs));
 
             if constexpr (numAttrs > 0U)
             {
                 dp::result<void> rx = dp::oc::success();
                 bool succeeded
-                        = (...
-                           && dispatch<Args>::attr_encode(rx, outStream, args));
+                        = (... && dispatch<Args>::attr_encode(rx, ctx, args));
 
                 if (!succeeded)
                 {
@@ -194,11 +197,10 @@ public:
         }
         if constexpr (hasFmtArgs)
         {
-            DPLX_TRY(emit::array(outStream, numFmtArgs));
+            DPLX_TRY(dp::emit_array(ctx, numFmtArgs));
 
             dp::result<void> rx = dp::oc::success();
-            bool succeeded
-                    = (... && dispatch<Args>::arg_encode(rx, outStream, args));
+            bool succeeded = (... && dispatch<Args>::arg_encode(rx, ctx, args));
 
             if (!succeeded)
             {
@@ -211,6 +213,8 @@ public:
 };
 
 } // namespace dplx::dlog
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
 #define DLOG_GENERIC(log, severity, message, ...)                              \
     do                                                                         \
@@ -234,3 +238,5 @@ public:
     DLOG_GENERIC(log, ::dplx::dlog::severity::debug, message, __VA_ARGS__)
 #define DLOG_TRACE(log, message, ...)                                          \
     DLOG_GENERIC(log, ::dplx::dlog::severity::trace, message, __VA_ARGS__)
+
+// NOLINTEND(cppcoreguidelines-macro-usage)

@@ -1,3 +1,4 @@
+
 dplx_target_sources(deeplog
     TEST_TARGET deeplog-tests
     MODE SMART_SOURCE MERGED_LAYOUT
@@ -7,6 +8,7 @@ dplx_target_sources(deeplog
         dlog
 
         dlog/disappointment
+        dlog/definitions
 
         dlog/core
         dlog/log_clock
@@ -25,7 +27,6 @@ dplx_target_sources(deeplog
 
     PUBLIC
         dlog/concepts.hpp
-        dlog/definitions.hpp
 
         dlog/arguments.hpp
         dlog/argument_transmorpher_fmt.hpp

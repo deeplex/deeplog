@@ -34,6 +34,7 @@ enum class file_sink_id : std::uint32_t
 class file_database_handle
 {
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct record_container_meta
     {
         std::filesystem::path path;
@@ -51,6 +52,7 @@ public:
     using record_containers_type = std::vector<record_container_meta>;
 
 private:
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct contents_t
     {
         unsigned revision;
@@ -64,6 +66,7 @@ private:
                         .allow_versioned_auto_decoder = true,
                 };
     };
+    friend class dplx::dp::codec<contents_t>;
 
     llfio::file_handle mRootHandle;
     llfio::path_handle mRootDirHandle;
@@ -83,7 +86,7 @@ public:
     }
 
     static auto file_database(llfio::path_handle const &base,
-                              llfio::path_view const path,
+                              llfio::path_view path,
                               std::string sinkFileNamePattern) noexcept
             -> result<file_database_handle>;
 
@@ -155,3 +158,7 @@ public:
         return base_type::format(static_cast<underlying_type>(value), ctx);
     }
 };
+
+DPLX_DLOG_DECLARE_CODEC(
+        ::dplx::dlog::file_database_handle::record_container_meta);
+DPLX_DLOG_DECLARE_CODEC(::dplx::dlog::file_database_handle::contents_t);

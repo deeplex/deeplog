@@ -16,38 +16,40 @@
 
 #include <fmt/format.h>
 
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/object_utils.hpp>
-#include <dplx/dp/memory_buffer.hpp>
-#include <dplx/dp/skip_item.hpp>
-#include <dplx/dp/streams/memory_output_stream.hpp>
+#include <dplx/dp.hpp>
+#include <dplx/dp/codecs/auto_object.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/items/skip_item.hpp>
+#include <dplx/dp/legacy/memory_buffer.hpp>
+#include <dplx/dp/legacy/memory_output_stream.hpp>
+#include <dplx/dp/object_def.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_clock.hpp>
 
 namespace dplx::dlog
 {
 
 template <typename T>
-concept sink_backend = std::movable<T> && requires(T &sinkBackend,
-                                                   unsigned msgSize,
-                                                   std::u8string_view text)
-{
-    {
-        sinkBackend.write(msgSize)
-        } -> detail::tryable_result<dp::memory_buffer>;
-    //{
-    //    sinkBackend.write_static_string(text)
-    //    } -> detail::tryable;
-    {
-        sinkBackend.drain_opened()
-        } -> detail::tryable;
-    {
-        sinkBackend.drain_closed()
-        } -> detail::tryable;
-};
+concept sink_backend
+        = std::movable<T>
+       && requires(T &sinkBackend, unsigned msgSize, std::u8string_view text) {
+              {
+                  sinkBackend.write(msgSize)
+                  } -> detail::tryable_result<dp::memory_buffer>;
+              //{
+              //    sinkBackend.write_static_string(text)
+              //    } -> detail::tryable;
+              {
+                  sinkBackend.drain_opened()
+                  } -> detail::tryable;
+              {
+                  sinkBackend.drain_closed()
+                  } -> detail::tryable;
+          };
 
 template <sink_backend Backend>
 class basic_sink_frontend : public sink_frontend_base
@@ -94,8 +96,9 @@ private:
     {
         DPLX_TRY(auto &&outBuffer,
                  mBackend.write(static_cast<unsigned>(rawRecord.size())));
+        auto &&outStream = dp::get_output_buffer(outBuffer);
 
-        DPLX_TRY(dp::write(outBuffer, rawRecord.data(), rawRecord.size()));
+        DPLX_TRY(outStream.bulk_write(rawRecord.data(), rawRecord.size()));
         return oc::success();
     }
     auto drain_closed_impl() noexcept -> result<void> override
@@ -125,7 +128,7 @@ class file_sink_backend
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>>
             mBufferAllocation;
     rotate_fn mRotateBackingFile;
-    unsigned mTargetBufferSize;
+    unsigned mTargetBufferSize{};
 
 public:
     file_sink_backend() noexcept = default;
@@ -140,13 +143,15 @@ public:
 
         DPLX_TRY(self.mBufferAllocation.resize(targetBufferSize));
         self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
+        auto &&outBuffer = dp::get_output_buffer(self.mWriteBuffer);
+        dp::emit_context emitCtx{outBuffer};
 
-        DPLX_TRY(dp::write(self.mWriteBuffer, magic.data(), magic.size()));
+        DPLX_TRY(outBuffer.bulk_write(magic.data(), magic.size()));
         file_info info{.epoch = log_clock::epoch()};
-        DPLX_TRY(dp::encode(self.mWriteBuffer, info));
+        DPLX_TRY(dp::encode_object(emitCtx, info));
 
-        DPLX_TRY(dp::item_emitter<dp::memory_buffer>::array_indefinite(
-                self.mWriteBuffer));
+        DPLX_TRY(dp::emit_array_indefinite(emitCtx));
+        DPLX_TRY(outBuffer.sync_output());
 
         if (rotate)
         {
@@ -156,11 +161,13 @@ public:
 
         DPLX_TRY(auto const maxExtent, self.mBackingFile.maximum_extent());
         // if created
-        if (maxExtent == 0u)
+        if (maxExtent == 0U)
         {
-            llfio::file_handle::const_buffer_type writeBuffers[]
-                    = {self.mWriteBuffer.consumed()};
-            DPLX_TRY(self.mBackingFile.write({writeBuffers, 0}));
+            llfio::file_handle::const_buffer_type writeBuffers[] = {
+                    {self.mWriteBuffer.consumed_begin(),
+                     self.mWriteBuffer.consumed_size()}
+            };
+            DPLX_TRY(self.mBackingFile.write({writeBuffers, 0U}));
 
             self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
         }
@@ -179,8 +186,8 @@ public:
 
     static inline constexpr std::string_view extension{".dlog"};
     static inline constexpr auto magic = detail::make_byte_array<16>(
-            {0x83, 0x4E, 0x0D, 0x0A, 0xAB, 0x7E, 0x7B, 0x64, 0x6C, 0x6F, 0x67,
-             0x7D, 0x7E, 0xBB, 0x0A, 0x1A});
+            {0x83, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64, 0x6c, 0x6f, 0x67,
+             0x7d, 0x7e, 0xbb, 0x0a, 0x1a});
 
     auto write(unsigned size) noexcept -> result<dp::memory_buffer>
     {
@@ -199,7 +206,7 @@ public:
         return dp::memory_buffer(mWriteBuffer.consume(static_cast<int>(size)),
                                  size, 0);
     }
-    auto drain_opened() noexcept -> result<void>
+    static auto drain_opened() noexcept -> result<void>
     {
         return oc::success();
     }
@@ -217,8 +224,10 @@ public:
     {
         if (mWriteBuffer.consumed_size() > 0)
         {
-            llfio::file_handle::const_buffer_type writeBuffers[]
-                    = {mWriteBuffer.consumed()};
+            llfio::file_handle::const_buffer_type writeBuffers[] = {
+                    {mWriteBuffer.consumed_begin(),
+                     mWriteBuffer.consumed_size()}
+            };
 
             DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
         }
@@ -236,9 +245,13 @@ public:
         {
             return oc::success();
         }
-        DPLX_TRY(dp::item_emitter<dp::memory_buffer>::break_(mWriteBuffer));
-        llfio::file_handle::const_buffer_type writeBuffers[]
-                = {mWriteBuffer.consumed()};
+        auto &&outBuffer = dp::get_output_buffer(mWriteBuffer);
+        dp::emit_context ctx{outBuffer};
+        DPLX_TRY(dp::emit_break(ctx));
+        DPLX_TRY(outBuffer.sync_output());
+        llfio::file_handle::const_buffer_type writeBuffers[] = {
+                {mWriteBuffer.consumed_begin(), mWriteBuffer.consumed_size()}
+        };
 
         DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
 
@@ -251,3 +264,5 @@ public:
 };
 
 } // namespace dplx::dlog
+
+DPLX_DLOG_DECLARE_CODEC(::dplx::dlog::file_info);

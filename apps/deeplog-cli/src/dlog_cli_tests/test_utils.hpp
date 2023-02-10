@@ -17,7 +17,7 @@ namespace dplx
 {
 }
 
-namespace dlog_tests
+namespace dlog_cli_tests
 {
 
 using namespace dplx;

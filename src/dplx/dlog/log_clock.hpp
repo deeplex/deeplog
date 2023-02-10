@@ -10,15 +10,7 @@
 #include <chrono>
 #include <cstdint>
 
-#include <dplx/dp/concepts.hpp>
-#include <dplx/dp/decoder/api.hpp>
-#include <dplx/dp/decoder/chrono.hpp>
-#include <dplx/dp/encoder/api.hpp>
-#include <dplx/dp/encoder/chrono.hpp>
-#include <dplx/dp/fwd.hpp>
-#include <dplx/dp/item_emitter.hpp>
-#include <dplx/dp/item_parser.hpp>
-#include <dplx/dp/type_code.hpp>
+#include <dplx/dp.hpp>
 
 namespace dplx::dlog
 {
@@ -45,18 +37,8 @@ public:
         {
         }
 
-        friend inline auto tag_invoke(dp::encoded_size_of_fn,
-                                      epoch_info const &value) -> unsigned
-        {
-            return dp::additional_information_size(2U)
-                 + dp::encoded_size_of(
-                           value.system_reference.time_since_epoch())
-                 + dp::encoded_size_of(
-                           value.steady_reference.time_since_epoch());
-        }
-
         template <typename Duration>
-        auto to_sys(std::uint64_t nanoseconds) const noexcept
+        [[nodiscard]] auto to_sys(std::uint64_t nanoseconds) const noexcept
                 -> std::chrono::time_point<
                         std::chrono::system_clock,
                         std::common_type_t<
@@ -77,7 +59,7 @@ public:
     };
 
 private:
-    static epoch_info epoch_;
+    static epoch_info const epoch_;
 
 public:
     using rep = std::uint64_t;
@@ -132,106 +114,32 @@ public:
 
 } // namespace dplx::dlog
 
-namespace dplx::dp
-{
-
-template <output_stream Stream>
-class basic_encoder<dlog::log_clock::time_point, Stream>
+template <>
+class dplx::dp::codec<dplx::dlog::log_clock::time_point>
 {
 public:
-    using value_type = dlog::log_clock::time_point;
-
-    auto operator()(Stream &outStream, value_type value) -> result<void>
-    {
-        DPLX_TRY(auto writeProxy, write(outStream, 9u));
-
-        auto const data = std::ranges::data(writeProxy);
-        *data = to_byte(type_code::posint) | std::byte{27u};
-        detail::store(data + 1, value.time_since_epoch().count());
-
-        if constexpr (lazy_output_stream<Stream>)
-        {
-            DPLX_TRY(commit(outStream, writeProxy));
-        }
-        return oc::success();
-    }
+    static auto size_of(emit_context const &ctx,
+                        dplx::dlog::log_clock::time_point value) noexcept
+            -> std::uint64_t;
+    static auto encode(emit_context const &ctx,
+                       dplx::dlog::log_clock::time_point value) noexcept
+            -> result<void>;
+    static auto decode(parse_context &ctx,
+                       dplx::dlog::log_clock::time_point &outValue) noexcept
+            -> result<void>;
 };
 
-template <input_stream Stream>
-class basic_decoder<dlog::log_clock::time_point, Stream>
+template <>
+class dplx::dp::codec<dplx::dlog::log_clock::epoch_info>
 {
 public:
-    using value_type = dlog::log_clock::time_point;
-
-    auto operator()(Stream &inStream, value_type &value) -> result<void>
-    {
-        DPLX_TRY(auto readProxy, read(inStream, 9u));
-
-        auto const data = std::ranges::data(readProxy);
-        if (*data != (to_byte(type_code::posint) | std::byte{27u}))
-        {
-            return errc::item_type_mismatch;
-        }
-        auto const bits = detail::load<dlog::log_clock::rep>(data + 1);
-        value = dlog::log_clock::time_point(dlog::log_clock::duration(bits));
-
-        if constexpr (lazy_output_stream<Stream>)
-        {
-            DPLX_TRY(consume(inStream, readProxy));
-        }
-        return oc::success();
-    }
+    static auto size_of(emit_context const &ctx,
+                        dplx::dlog::log_clock::epoch_info value) noexcept
+            -> std::uint64_t;
+    static auto encode(emit_context const &ctx,
+                       dplx::dlog::log_clock::epoch_info value) noexcept
+            -> result<void>;
+    static auto decode(parse_context &ctx,
+                       dplx::dlog::log_clock::epoch_info &outValue) noexcept
+            -> result<void>;
 };
-
-constexpr auto tag_invoke(encoded_size_of_fn,
-                          dlog::log_clock::time_point) noexcept -> unsigned
-{
-    return 9U;
-}
-
-template <input_stream Stream>
-class basic_decoder<dlog::log_clock::epoch_info, Stream>
-{
-    using parse = item_parser<Stream>;
-
-public:
-    using value_type = dlog::log_clock::epoch_info;
-
-    auto operator()(Stream &inStream, value_type &value) -> result<void>
-    {
-        DPLX_TRY(parse::expect(inStream, type_code::array, 2U));
-
-        using system_clock = std::chrono::system_clock;
-        using internal_clock = dlog::log_clock::internal_clock;
-
-        DPLX_TRY(auto sysRef,
-                 decode(as_value<system_clock::duration>, inStream));
-        DPLX_TRY(auto steadyRef,
-                 decode(as_value<internal_clock::duration>, inStream));
-
-        value = value_type{system_clock::time_point{sysRef},
-                           internal_clock::time_point{steadyRef}};
-
-        return oc::success();
-    }
-};
-
-template <output_stream Stream>
-class basic_encoder<dlog::log_clock::epoch_info, Stream>
-{
-    using emit = item_emitter<Stream>;
-
-public:
-    using value_type = dlog::log_clock::epoch_info;
-
-    auto operator()(Stream &outStream, value_type value) -> result<void>
-    {
-        DPLX_TRY(emit::array(outStream, 2U));
-
-        DPLX_TRY(encode(outStream, value.system_reference.time_since_epoch()));
-        DPLX_TRY(encode(outStream, value.steady_reference.time_since_epoch()));
-        return oc::success();
-    }
-};
-
-} // namespace dplx::dp

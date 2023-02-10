@@ -1,14 +1,14 @@
 
-// Copyright Henrik Steffen Gaßmann 2021
+// Copyright Henrik Steffen Gaßmann 2023
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <dplx/dlog/sink.hpp>
+#include "dplx/dlog/definitions.hpp"
 
-namespace dplx::dlog
+#include "test_utils.hpp"
+
+namespace dlog_tests
 {
 }
-
-DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(::dplx::dlog::file_info)

@@ -36,11 +36,10 @@ include(GNUInstallDirs)
 include(SourceHelpers)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-enable_testing()
+if (BUILD_TESTING)
+    enable_testing()
+endif()
 
-
-########################################################################
-# options
 
 set(DLOG_LLFIO_TARGET "sl" CACHE STRING "The llfio target to link against, can be 'hl', 'sl' or 'dl'")
 set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
@@ -50,14 +49,18 @@ if (BUILD_TESTING)
 endif()
 
 ########################################################################
+# options
+
+########################################################################
 # dependencies
+
+set(Boost_NO_WARN_NEW_VERSIONS ON)
+
 find_path(PARALLEL_HASHMAP_INCLUDE_DIRS "parallel_hashmap/phmap.h")
 
 find_package(fmt CONFIG REQUIRED)
 
 find_package(ftxui CONFIG REQUIRED)
-
-find_package(quickcpplib CONFIG REQUIRED PATH_SUFFIXES "share/ned14-internal-quickcpplib")
 
 find_package(outcome CONFIG REQUIRED)
 
@@ -74,18 +77,18 @@ find_package(Boost 1.73 REQUIRED COMPONENTS
 )
 
 find_package(Catch2 CONFIG)
-cmake_dependent_option(BUILD_TESTING "Build the documentation using sphinx" ON Catch2_FOUND OFF)
 set_package_properties(Catch2 PROPERTIES
     TYPE OPTIONAL
     PURPOSE "Allows to build the test suite"
 )
+cmake_dependent_option(BUILD_TESTING "Build the documentation using sphinx" ON Catch2_FOUND OFF)
 
 find_package(Sphinx)
-cmake_dependent_option(BUILD_DOCS "Build the documentation using sphinx" ON Sphinx_FOUND OFF)
 set_package_properties(Sphinx PROPERTIES
     TYPE OPTIONAL
     PURPOSE "Allows to build the documentation"
 )
+cmake_dependent_option(BUILD_DOCS "Build the documentation using sphinx" ON Sphinx_FOUND OFF)
 
 
 ########################################################################
@@ -147,10 +150,11 @@ if (BUILD_TESTING)
     )
 
     target_include_directories(deeplog-tests PRIVATE
-        scr/dlog_tests
+        src/dlog_tests
     )
 
-    add_test(NAME deeplog-tests COMMAND deeplog-tests)
+    # TODO: uncomment this as soon as some tests have been migrated to catch2
+    # add_test(NAME deeplog-tests COMMAND deeplog-tests)
 endif()
 
 ########################################################################

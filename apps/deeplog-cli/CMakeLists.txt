@@ -18,6 +18,7 @@ add_library(deeplog-cli)
 add_library(Deeplex::deeplog-cli ALIAS deeplog-cli)
 target_include_directories(deeplog-cli
     PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
@@ -29,14 +30,6 @@ target_link_libraries(deeplog-cli PUBLIC
     ftxui::component
     ftxui::dom
     ftxui::screen
-)
-
-target_sources(deeplog-cli PRIVATE
-    "include/dplx/dlog/tui/theme.hpp"
-    "src/dlog/theme.cpp"
-
-    "include/dplx/dlog/tui/log_display_grid.hpp"
-    "src/dlog/log_display_grid.cpp"
 )
 
 # deeplog-cli executable utility
@@ -57,19 +50,34 @@ target_sources(deeplog-cli-main PRIVATE
 
 ########################################################################
 # test target
+
 if (BUILD_TESTING)
     add_executable(deeplog-cli-tests)
+    source_group(TREE src/dlog_cli_tests PREFIX test_utils)
+
     target_link_libraries(deeplog-cli-tests PRIVATE
         Deeplex::deeplog-cli
 
-        Boost::unit_test_framework
-        fmt::fmt
+        Catch2::Catch2 Catch2::Catch2WithMain
     )
 
-    target_sources(deeplog-cli-tests PRIVATE
-        "tests/deeplog-cli-tests.main.cpp"
-        "tests/boost-test.hpp"
+    target_include_directories(deeplog-cli-tests PRIVATE
+        src/dlog_cli_tests
     )
-
-    add_test(NAME deeplog-cli-tests COMMAND deeplog-cli-tests)
 endif()
+# TODO add a catch2 test suite
+
+########################################################################
+# sources
+
+dplx_target_sources(deeplog-cli
+    TEST_TARGET deeplog-cli-tests
+    MODE SMART_SOURCE MERGED_LAYOUT
+    BASE_DIR dplx/dlog
+
+    PUBLIC
+        tui
+
+        tui/theme
+        tui/log_display_grid
+)

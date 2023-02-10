@@ -1,19 +1,33 @@
 ---
+# cppcoreguidelines-avoid-magic-numbers aliases readability-magic-numbers
+# cppcoreguidelines-avoid-c-arrays aliases modernize-avoid-c-arrays
+# cppcoreguidelines-special-member-functions is overly explicit and verbose
+# clang-analyzer-core.uninitialized.Assign is currently violated by status-code
+# clang-analyzer-optin.cplusplus.VirtualCall is currently violated by llfio
 Checks: >
   boost-*,
   bugprone-*,
+    -bugprone-easily-swappable-parameters,
   clang-analyzer-*,
   clang-diagnostic-*,
   cppcoreguidelines-*,
+    -cppcoreguidelines-avoid-c-arrays,
     -cppcoreguidelines-special-member-functions,
   modernize-*,
+    -modernize-avoid-c-arrays,
+    -modernize-use-default-member-init,
   performance-*,
   portability-*,
   readability-*,
     -readability-identifier-length,
-    -readability-named-parameter
+    -readability-magic-numbers,
+    -readability-named-parameter,
+    -readability-redundant-member-init,
+    -readability-static-accessed-through-instance,
+  -clang-analyzer-core.uninitialized.Assign,
+  -clang-analyzer-optin.cplusplus.VirtualCall
 WarningsAsErrors: true
-HeaderFilterRegex: ""
+HeaderFilterRegex: ".*/src/dp(lx|_tests)/.*"
 FormatStyle: file
 CheckOptions:
   - key: modernize-use-override.AllowOverrideAndFinal

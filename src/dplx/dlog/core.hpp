@@ -20,6 +20,7 @@
 namespace dplx::dlog
 {
 
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct additional_record_info
 {
     log_clock::time_point timestamp;
@@ -30,17 +31,19 @@ struct additional_record_info
 
     static constexpr auto message_offset() noexcept -> int
     {
-        return 1 + 1 + 9;
+        return 1 + 1 + encoded_timestamp_size;
     }
-    constexpr auto attributes_offset() const noexcept -> int
+    [[nodiscard]] constexpr auto attributes_offset() const noexcept -> int
     {
-        return 1 + 1 + 9 + static_cast<int>(message_size);
+        return 1 + 1 + encoded_timestamp_size + static_cast<int>(message_size);
     }
-    constexpr auto format_args_offset() const noexcept -> int
+    [[nodiscard]] constexpr auto format_args_offset() const noexcept -> int
     {
-        return 1 + 1 + 9 + static_cast<int>(message_size)
+        return 1 + 1 + encoded_timestamp_size + static_cast<int>(message_size)
              + static_cast<int>(attributes_size);
     }
+
+    static constexpr int encoded_timestamp_size = 9;
 };
 
 class sink_frontend_base
@@ -58,10 +61,11 @@ public:
     virtual ~sink_frontend_base() = default;
 
 protected:
+    /*
     sink_frontend_base(sink_frontend_base const &) = default;
     auto operator=(sink_frontend_base const &)
             -> sink_frontend_base & = default;
-
+            */
     sink_frontend_base(sink_frontend_base &&) noexcept = default;
     auto operator=(sink_frontend_base &&) noexcept
             -> sink_frontend_base & = default;
@@ -79,7 +83,8 @@ private:
     // Microsoft's x64 calling convention
     virtual auto retire(bytes rawMessage,
                         additional_record_info const &additionalInfo) noexcept
-            -> result<void> = 0;
+            -> result<void>
+            = 0;
 
     virtual auto drain_opened_impl() noexcept -> result<void>
     {
@@ -100,7 +105,7 @@ public:
         {
             mLastRx = drain_opened_impl();
         }
-        return mLastRx;
+        return oc::success(); // FIXME: think about lazy error passing
     }
     auto drain_closed() noexcept -> result<void>
     {
@@ -108,12 +113,12 @@ public:
         {
             mLastRx = drain_closed_impl();
         }
-        return mLastRx;
+        return oc::success(); // FIXME: think about lazy error passing
     }
 
-    auto last_rx() const noexcept -> result<void>
+    [[nodiscard]] static auto last_rx() noexcept -> result<void>
     {
-        return mLastRx;
+        return oc::success(); // FIXME: think about lazy error passing
     }
 };
 
@@ -201,7 +206,7 @@ public:
             = std::ranges::find(mSinks, which, &sink_owner::get);
             where != mSinks.end())
         {
-            where->release();
+            (void)where->release();
             mSinks.erase(where);
         }
     }
