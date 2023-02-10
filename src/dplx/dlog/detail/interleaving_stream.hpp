@@ -234,7 +234,7 @@ public:
     }
     interleaving_output_stream_handle(
             interleaving_output_stream_handle &&other) noexcept
-        : base_t(std::move(other))
+        : base_t(other)
         , mBufferAllocation(std::move(other.mBufferAllocation))
         , mDataSink(std::exchange(other.mDataSink, nullptr))
         , mIndexPosition(other.mIndexPosition)
@@ -244,7 +244,7 @@ public:
     auto operator=(interleaving_output_stream_handle &&other) noexcept
             -> interleaving_output_stream_handle &
     {
-        base_t::operator=(std::move(other));
+        base_t::operator=(other);
         mBufferAllocation = std::move(other.mBufferAllocation); // NOLINT
         mDataSink = std::exchange(other.mDataSink, nullptr);
         mIndexPosition = other.mIndexPosition;

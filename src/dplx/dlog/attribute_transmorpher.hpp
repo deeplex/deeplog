@@ -244,7 +244,7 @@ private:
 
             try
             {
-                if (!store.try_emplace(std::move(key), std::move(attr)).second)
+                if (!store.try_emplace(key, std::move(attr)).second)
                 {
                     // ignore duplicate keys
                     return dp::oc::success();

@@ -189,7 +189,7 @@ inline auto bufferbus(llfio::path_handle const &base,
                       unsigned int bufferSize) noexcept
         -> result<bufferbus_handle>
 {
-    return bufferbus_handle::bufferbus(base, std::move(path), bufferSize);
+    return bufferbus_handle::bufferbus(base, path, bufferSize);
 }
 inline auto bufferbus(llfio::mapped_file_handle &&backingFile,
                       unsigned int bufferSize) noexcept
@@ -679,7 +679,7 @@ inline auto ringbus(llfio::path_handle const &base,
                                std::thread::hardware_concurrency())) noexcept
         -> result<ringbus_mt_handle>
 {
-    return ringbus_mt_handle::ringbus(base, std::move(path), numBlocksPerWriter,
+    return ringbus_mt_handle::ringbus(base, path, numBlocksPerWriter,
                                       expectedWriters);
 }
 inline auto ringbus(llfio::mapped_file_handle &&backingFile,
@@ -695,7 +695,7 @@ inline auto ringbus(llfio::mapped_file_handle &&backingFile,
 inline auto ringbus(llfio::path_handle const &base,
                     llfio::path_view path) noexcept -> result<ringbus_mt_handle>
 {
-    return ringbus_mt_handle::ringbus(base, std::move(path));
+    return ringbus_mt_handle::ringbus(base, path);
 }
 inline auto ringbus(llfio::mapped_file_handle &&existing) noexcept
         -> result<ringbus_mt_handle>
