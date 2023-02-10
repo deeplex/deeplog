@@ -48,6 +48,7 @@ if (BUILD_TESTING)
         BASE_DIR dlog_tests
 
         PRIVATE
+            test_dir.hpp
             test_utils.hpp
     )
 endif ()

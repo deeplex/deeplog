@@ -22,4 +22,4 @@ namespace dlog_tests
 
 using namespace dplx;
 
-}
+} // namespace dlog_tests
