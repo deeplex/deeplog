@@ -128,7 +128,7 @@ class file_sink_backend
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>>
             mBufferAllocation;
     rotate_fn mRotateBackingFile;
-    unsigned mTargetBufferSize;
+    unsigned mTargetBufferSize{};
 
 public:
     file_sink_backend() noexcept = default;

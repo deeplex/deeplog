@@ -20,6 +20,7 @@
 namespace dplx::dlog
 {
 
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct additional_record_info
 {
     log_clock::time_point timestamp;

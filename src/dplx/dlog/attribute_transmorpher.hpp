@@ -39,6 +39,7 @@ class basic_record_attribute;
 class record_attribute_reviver;
 
 template <detail::integer ReType>
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 class basic_record_attribute<ReType> final : public record_attribute_base
 {
 public:

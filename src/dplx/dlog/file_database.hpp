@@ -34,6 +34,7 @@ enum class file_sink_id : std::uint32_t
 class file_database_handle
 {
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct record_container_meta
     {
         std::filesystem::path path;
@@ -51,6 +52,7 @@ public:
     using record_containers_type = std::vector<record_container_meta>;
 
 private:
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct contents_t
     {
         unsigned revision;

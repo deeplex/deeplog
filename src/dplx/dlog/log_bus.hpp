@@ -206,7 +206,7 @@ class ringbus_mt_handle
     // n := block size
     // layout: 1*n ctrl block + 2*(x*n) buffer cap
     llfio::mapped_file_handle mBackingFile;
-    unsigned int mNumRegions;
+    unsigned int mNumRegions{};
 
 public:
     ~ringbus_mt_handle() noexcept

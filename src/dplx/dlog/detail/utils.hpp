@@ -68,6 +68,7 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
                                std::byte const fill = std::byte{0xFE}) noexcept
         -> std::array<std::byte, N>
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     std::array<std::byte, N> bs;
     auto last
             = std::transform(vs.begin(), vs.end(), bs.data(),

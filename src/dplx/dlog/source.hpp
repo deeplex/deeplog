@@ -99,11 +99,11 @@ struct log_arg_dispatch<basic_attribute<Id, T, ReType>>
 template <bus T>
 class logger
 {
-    T *mBus;
-    /*[[no_unique_address]]*/ typename T::logger_token mToken;
+    T *mBus{};
+    /*[[no_unique_address]]*/ typename T::logger_token mToken{};
 
 public:
-    severity threshold;
+    severity threshold{};
 
     logger() noexcept = default;
 
