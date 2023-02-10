@@ -8,6 +8,10 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 

@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 
+#include <fmt/format.h>
 #include <parallel_hashmap/phmap.h>
 
 #include <dplx/dp.hpp>
