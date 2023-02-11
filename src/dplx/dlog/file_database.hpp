@@ -15,7 +15,6 @@
 
 #include <fmt/format.h>
 
-#include <dplx/cncr/misc.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
@@ -91,10 +90,9 @@ public:
             -> result<file_database_handle>;
 
     static inline constexpr std::string_view extension{".drot"};
-    static inline constexpr auto magic = cncr::make_byte_array<17>(
-            {0x82, 0x4E, 0x0D, 0x0A, 0xAB, 0x7E, 0x7B, 0x64, 0x72, 0x6F, 0x74,
-             0x7D, 0x7E, 0xBB, 0x0A, 0x1A, 0xA0},
-            0);
+    static inline constexpr std::uint8_t magic[17]
+            = {0x82, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64, 0x72,
+               0x6f, 0x74, 0x7d, 0x7e, 0xbb, 0x0a, 0x1a, 0xa0};
 
     auto fetch_content() noexcept -> result<void>;
     auto unlink_all() noexcept -> result<void>;
