@@ -36,8 +36,8 @@ concept source
 // clang-format off
 template <typename T>
 concept bus
-        = dp::output_stream<typename T::output_stream &>
-        && requires(T &&t,
+        = /*dp::output_stream<typename T::output_stream &>
+        &&*/ requires(T &&t,
                     typename T::logger_token logger,
                     unsigned int const size,
                     void (&dummy_consumer)(std::span<std::byte const>) noexcept)

@@ -40,6 +40,8 @@ enum class errc
 {
     nothing = 0, // to be removed
     bad = 1,
+    invalid_argument,
+    out_of_memory,
     not_enough_space,
     missing_data,
     invalid_file_database_header,
