@@ -98,7 +98,7 @@ template <typename T>
 class dplx::dp::codec<dplx::dlog::argument<T>>
 {
 public:
-    static inline auto size_of(emit_context const &ctx,
+    static inline auto size_of(emit_context &ctx,
                                dplx::dlog::argument<T> arg) noexcept
             -> std::uint64_t
     {
@@ -107,7 +107,7 @@ public:
                                                 dlog::argument<T>::type_id))
              + dp::encoded_size_of(ctx, arg.value);
     }
-    static inline auto encode(emit_context const &ctx,
+    static inline auto encode(emit_context &ctx,
                               dplx::dlog::argument<T> arg) noexcept
             -> result<void>
     {
@@ -123,7 +123,7 @@ class dplx::dp::codec<dplx::dlog::argument<dplx::dlog::named_arg<Char, T>>>
 {
 public:
     static inline auto
-    size_of(emit_context const &ctx,
+    size_of(emit_context &ctx,
             dplx::dlog::argument<dplx::dlog::named_arg<Char, T>> const
                     &arg) noexcept -> std::uint64_t
     {
@@ -133,7 +133,7 @@ public:
              + dp::encoded_size_of(ctx, arg.value);
     }
     static inline auto
-    encode(emit_context const &ctx,
+    encode(emit_context &ctx,
            dplx::dlog::argument<dplx::dlog::named_arg<Char, T>> const
                    &arg) noexcept -> result<void>
     {

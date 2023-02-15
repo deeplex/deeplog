@@ -17,7 +17,7 @@
 
 #include <dplx/cncr/math_supplement.hpp>
 #include <dplx/dp.hpp>
-#include <dplx/dp/streams/memory_output_stream2.hpp>
+#include <dplx/dp/streams/memory_output_stream.hpp>
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/detail/utils.hpp> // declare_codec

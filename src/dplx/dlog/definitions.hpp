@@ -58,13 +58,13 @@ class dplx::dp::codec<dplx::dlog::severity>
     using underlying_type = std::underlying_type_t<dlog::severity>;
 
 public:
-    static inline auto size_of(emit_context const &,
-                               dplx::dlog::severity) noexcept -> std::uint64_t
+    static inline auto size_of(emit_context &, dplx::dlog::severity) noexcept
+            -> std::uint64_t
     {
         return 1U;
     }
-    static auto encode(emit_context const &ctx,
-                       dplx::dlog::severity value) noexcept -> result<void>;
+    static auto encode(emit_context &ctx, dplx::dlog::severity value) noexcept
+            -> result<void>;
     static auto decode(parse_context &ctx,
                        dplx::dlog::severity &outValue) noexcept -> result<void>;
 };
@@ -75,9 +75,9 @@ class dplx::dp::codec<dplx::dlog::resource_id>
     using underlying_type = std::underlying_type_t<dlog::resource_id>;
 
 public:
-    static auto size_of(emit_context const &, dplx::dlog::resource_id) noexcept
+    static auto size_of(emit_context &, dplx::dlog::resource_id) noexcept
             -> std::uint64_t;
-    static auto encode(emit_context const &ctx,
+    static auto encode(emit_context &ctx,
                        dplx::dlog::resource_id value) noexcept -> result<void>;
     static auto decode(parse_context &ctx,
                        dplx::dlog::resource_id &outValue) noexcept

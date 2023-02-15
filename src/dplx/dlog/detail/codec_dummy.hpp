@@ -30,10 +30,10 @@ template <>
 class dplx::dp::codec<dplx::dlog::detail::decodable_dummy>
 {
 public:
-    static auto size_of(emit_context const &,
+    static auto size_of(emit_context &,
                         dplx::dlog::detail::decodable_dummy) noexcept
             -> std::uint64_t;
-    static auto encode(emit_context const &,
+    static auto encode(emit_context &,
                        dplx::dlog::detail::decodable_dummy) noexcept
             -> result<void>;
     static auto decode(parse_context &,
@@ -44,10 +44,10 @@ template <>
 class dplx::dp::codec<dplx::dlog::detail::encodable_dummy>
 {
 public:
-    static auto size_of(emit_context const &,
+    static auto size_of(emit_context &,
                         dplx::dlog::detail::encodable_dummy) noexcept
             -> std::uint64_t;
-    static auto encode(emit_context const &,
+    static auto encode(emit_context &,
                        dplx::dlog::detail::encodable_dummy) noexcept
             -> result<void>;
     static auto decode(parse_context &,
@@ -58,11 +58,10 @@ template <>
 class dplx::dp::codec<dplx::dlog::detail::codec_dummy>
 {
 public:
-    static auto size_of(emit_context const &,
+    static auto size_of(emit_context &,
                         dplx::dlog::detail::codec_dummy) noexcept
             -> std::uint64_t;
-    static auto encode(emit_context const &,
-                       dplx::dlog::detail::codec_dummy) noexcept
+    static auto encode(emit_context &, dplx::dlog::detail::codec_dummy) noexcept
             -> result<void>;
     static auto decode(parse_context &,
                        dplx::dlog::detail::codec_dummy &) noexcept

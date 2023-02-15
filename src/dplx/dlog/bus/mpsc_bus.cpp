@@ -206,14 +206,14 @@ constexpr dp::object_def<
 } // namespace dplx::dlog
 
 auto ::dplx::dp::codec<dplx::dlog::mpsc_bus_info_v00>::size_of(
-        emit_context const &ctx,
-        dplx::dlog::mpsc_bus_info_v00 const &value) noexcept -> std::uint64_t
+        emit_context &ctx, dplx::dlog::mpsc_bus_info_v00 const &value) noexcept
+        -> std::uint64_t
 {
     return dp::size_of_object<dplx::dlog::info_v00_descriptor>(ctx, value);
 }
 auto ::dplx::dp::codec<dplx::dlog::mpsc_bus_info_v00>::encode(
-        emit_context const &ctx,
-        dplx::dlog::mpsc_bus_info_v00 const &value) noexcept -> result<void>
+        emit_context &ctx, dplx::dlog::mpsc_bus_info_v00 const &value) noexcept
+        -> result<void>
 {
     return dp::encode_object<dplx::dlog::info_v00_descriptor>(ctx, value);
 }
