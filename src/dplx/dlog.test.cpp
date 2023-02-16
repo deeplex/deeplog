@@ -12,6 +12,7 @@
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 #include <fmt/format.h>
 
+#include <dplx/dlog/bus/mpsc_bus.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -46,8 +47,8 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
             dlog::severity::info, std::move(sinkBackendOpenRx).assume_value());
     auto *sink = sinkOwner.get();
 
-    constexpr auto blockPerWriter = 1 << 10;
-    dlog::core core{dlog::ringbus(test_dir, "tmp", blockPerWriter).value()};
+    constexpr auto regionSize = 1 << 14;
+    dlog::core core{dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
     core.attach_sink(std::move(sinkOwner));
 
     dlog::logger xlog{core.connector()};
