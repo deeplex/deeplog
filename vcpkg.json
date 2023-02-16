@@ -1,5 +1,5 @@
 {
-    "$schema": "https://github.com/microsoft/vcpkg-tool/raw/main/docs/vcpkg.schema.json",
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/master/docs/vcpkg.schema.json",
     "name": "deeplog",
     "version-semver": "0.0.0-alpha.1",
     "homepage": "https://github.com/deeplex/deeplog",
