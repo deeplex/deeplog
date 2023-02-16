@@ -45,6 +45,7 @@ enum class errc
     missing_data,
     invalid_file_database_header,
     invalid_record_container_header,
+    container_unlink_failed,
 
     LIMIT,
 };
@@ -80,6 +81,8 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "The .drot file doesn't start with a valid header" },
         { code::invalid_record_container_header, generic_errc::unknown,
             "The .dlog file doesn't start with a valid header" },
+        { code::container_unlink_failed, generic_errc::unknown,
+            "Failed to unlink one or more of the referenced record container(s)" },
   // clang-format on
     };
 };
