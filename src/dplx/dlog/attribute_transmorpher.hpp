@@ -260,7 +260,7 @@ private:
             return dp::oc::success();
         }
 
-        return dp::errc::bad;
+        return errc::unknown_attribute_type_id;
     }
 
     template <typename ReType>

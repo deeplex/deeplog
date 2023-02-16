@@ -161,7 +161,7 @@ private:
             return revive(ctx, store, name);
         }
 
-        return errc::bad; // TODO: proper error code for unknown arg type id
+        return errc::unknown_argument_type_id;
     }
 
     template <typename T>

@@ -46,6 +46,8 @@ enum class errc
     invalid_file_database_header,
     invalid_record_container_header,
     container_unlink_failed,
+    unknown_argument_type_id,
+    unknown_attribute_type_id,
 
     LIMIT,
 };
@@ -83,6 +85,10 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "The .dlog file doesn't start with a valid header" },
         { code::container_unlink_failed, generic_errc::unknown,
             "Failed to unlink one or more of the referenced record container(s)" },
+        { code::unknown_argument_type_id, generic_errc::unknown,
+            "Could not decode the serialized argument due to an unknown type_id" },
+        { code::unknown_attribute_type_id, generic_errc::unknown,
+            "Could not decode the serialized attribute due to an unknown type_id" },
   // clang-format on
     };
 };
