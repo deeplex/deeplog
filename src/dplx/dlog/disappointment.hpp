@@ -38,7 +38,6 @@ namespace oc = OUTCOME_V2_NAMESPACE;
 
 enum class errc
 {
-    nothing = 0, // to be removed
     bad = 1,
     invalid_argument,
     not_enough_memory,
@@ -67,8 +66,6 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
 
     static constexpr value_descriptor values[] = {
   // clang-format off
-        { code::nothing, generic_errc::success,
-            "no error/success" },
         { code::bad, generic_errc::unknown,
             "an external API did not meet its operation contract"},
         { code::invalid_argument, generic_errc::invalid_argument,

@@ -13,7 +13,7 @@ namespace dlog_tests
 {
 
 static_assert(std::size(dplx::cncr::status_enum_definition<dlog::errc>::values)
-              == static_cast<std::size_t>(dlog::errc::LIMIT));
+              == static_cast<std::size_t>(dlog::errc::LIMIT) - 1U);
 static_assert(dplx::cncr::validate_status_enum_definition_data<dlog::errc>());
 
 } // namespace dlog_tests
