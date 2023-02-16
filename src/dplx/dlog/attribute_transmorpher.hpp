@@ -66,7 +66,7 @@ public:
             }
             catch (std::bad_alloc const &)
             {
-                return system_error::errc::not_enough_memory;
+                return errc::not_enough_memory;
             }
         }
         return mStringified;
@@ -227,7 +227,7 @@ public:
         }
         catch (std::bad_alloc const &)
         {
-            return system_error::errc::not_enough_memory;
+            return errc::not_enough_memory;
         }
     }
 
@@ -254,13 +254,13 @@ private:
             }
             catch (std::bad_alloc const &)
             {
-                return system_error::errc::not_enough_memory;
+                return errc::not_enough_memory;
             }
 
             return dp::oc::success();
         }
 
-        return dp::errc::bad;
+        return errc::unknown_attribute_type_id;
     }
 
     template <typename ReType>
@@ -284,7 +284,7 @@ private:
         }
         catch (std::bad_alloc const &)
         {
-            return system_error::errc::not_enough_memory;
+            return errc::not_enough_memory;
         }
     }
 };

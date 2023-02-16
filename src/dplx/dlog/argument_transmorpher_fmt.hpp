@@ -105,7 +105,7 @@ public:
         }
         catch (std::bad_alloc const &)
         {
-            return system_error::errc::not_enough_memory;
+            return errc::not_enough_memory;
         }
     }
 
@@ -161,7 +161,7 @@ private:
             return revive(ctx, store, name);
         }
 
-        return errc::bad; // TODO: proper error code for unknown arg type id
+        return errc::unknown_argument_type_id;
     }
 
     template <typename T>

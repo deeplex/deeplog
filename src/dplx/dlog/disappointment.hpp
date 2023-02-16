@@ -1,5 +1,5 @@
 
-// Copyright Henrik Steffen Gaßmann 2021
+// Copyright Henrik Steffen Gaßmann 2021-2023
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -38,14 +38,16 @@ namespace oc = OUTCOME_V2_NAMESPACE;
 
 enum class errc
 {
-    nothing = 0, // to be removed
     bad = 1,
     invalid_argument,
-    out_of_memory,
+    not_enough_memory,
     not_enough_space,
     missing_data,
     invalid_file_database_header,
     invalid_record_container_header,
+    container_unlink_failed,
+    unknown_argument_type_id,
+    unknown_attribute_type_id,
 
     LIMIT,
 };
@@ -67,15 +69,28 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
 
     static constexpr value_descriptor values[] = {
   // clang-format off
-        { code::nothing, generic_errc::success,
-            "no error/success" },
         { code::bad, generic_errc::unknown,
             "an external API did not meet its operation contract"},
+        { code::invalid_argument, generic_errc::invalid_argument,
+            "Invalid Argument" },
+        { code::not_enough_memory, generic_errc::not_enough_memory,
+            "The operation did not succeed due to a memory allocation failure" },
+        { code::not_enough_space, generic_errc::no_buffer_space,
+            "The operation failed to allocate a write buffer of sufficient size" },
+        { code::missing_data, generic_errc::unknown,
+            "The file/message is missing data at its end" },
+        { code::invalid_file_database_header, generic_errc::unknown,
+            "The .drot file doesn't start with a valid header" },
+        { code::invalid_record_container_header, generic_errc::unknown,
+            "The .dlog file doesn't start with a valid header" },
+        { code::container_unlink_failed, generic_errc::unknown,
+            "Failed to unlink one or more of the referenced record container(s)" },
+        { code::unknown_argument_type_id, generic_errc::unknown,
+            "Could not decode the serialized argument due to an unknown type_id" },
+        { code::unknown_attribute_type_id, generic_errc::unknown,
+            "Could not decode the serialized attribute due to an unknown type_id" },
   // clang-format on
     };
-
-    // static_assert(std::size(values) ==
-    // static_cast<std::size_t>(code::LIMIT));
 };
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)

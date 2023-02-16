@@ -121,7 +121,7 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
 
     if (!mContents.record_containers.empty())
     {
-        return system_error::errc::directory_not_empty;
+        return errc::container_unlink_failed;
     }
 
     rootLock.unlock();

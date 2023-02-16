@@ -95,7 +95,7 @@ private:
     {
         if (!dataSource.is_readable() || !dataSource.is_seekable())
         {
-            return system_error::errc::invalid_seek;
+            return errc::invalid_argument;
         }
 
         DPLX_TRY(pages.resize(buffer_size));
