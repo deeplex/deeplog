@@ -1,5 +1,5 @@
 
-// Copyright Henrik Steffen Gaßmann 2021
+// Copyright Henrik Steffen Gaßmann 2021-2023
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -71,11 +71,20 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "no error/success" },
         { code::bad, generic_errc::unknown,
             "an external API did not meet its operation contract"},
+        { code::invalid_argument, generic_errc::invalid_argument,
+            "Invalid Argument" },
+        { code::out_of_memory, generic_errc::not_enough_memory,
+            "The operation did not succeed due to a memory allocation failure" },
+        { code::not_enough_space, generic_errc::no_buffer_space,
+            "The operation failed to allocate a write buffer of sufficient size" },
+        { code::missing_data, generic_errc::unknown,
+            "The file/message is missing data at its end" },
+        { code::invalid_file_database_header, generic_errc::unknown,
+            "The .drot file doesn't start with a valid header" },
+        { code::invalid_record_container_header, generic_errc::unknown,
+            "The .dlog file doesn't start with a valid header" },
   // clang-format on
     };
-
-    // static_assert(std::size(values) ==
-    // static_cast<std::size_t>(code::LIMIT));
 };
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)

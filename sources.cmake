@@ -7,7 +7,6 @@ dplx_target_sources(deeplog
     PUBLIC
         dlog
 
-        dlog/disappointment
         dlog/definitions
 
         dlog/core
@@ -23,6 +22,15 @@ dplx_target_sources(deeplog
         dlog/file_database
 
         dlog/detail/interleaving_stream
+)
+
+dplx_target_sources(deeplog
+    TEST_TARGET deeplog-tests
+    MODE SMART_HEADER_ONLY MERGED_LAYOUT
+    BASE_DIR dplx
+
+    PUBLIC
+        dlog/disappointment
 )
 
 dplx_target_sources(deeplog
