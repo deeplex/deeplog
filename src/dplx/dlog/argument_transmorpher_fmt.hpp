@@ -105,7 +105,7 @@ public:
         }
         catch (std::bad_alloc const &)
         {
-            return system_error::errc::not_enough_memory;
+            return errc::not_enough_memory;
         }
     }
 

@@ -131,20 +131,20 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
     constexpr std::size_t page_size = std::size_t{4U} * 1024U;
     if (std::numeric_limits<std::uint32_t>::max() - page_size < regionSize)
     {
-        return errc::out_of_memory;
+        return errc::invalid_argument;
     }
     std::size_t const realRegionSize = cncr::round_up_p2(regionSize, page_size);
 
     std::size_t const combinedRegionSize = numRegions * realRegionSize;
     if (combinedRegionSize / realRegionSize != numRegions)
     {
-        return errc::out_of_memory;
+        return errc::invalid_argument;
     }
 
     std::size_t const fileSize = combinedRegionSize + head_area_size;
     if (fileSize < combinedRegionSize || !std::in_range<extent_type>(fileSize))
     {
-        return errc::out_of_memory;
+        return errc::invalid_argument;
     }
 
     llfio::unique_file_lock fileLock(backingFile, llfio::lock_kind::unlocked);

@@ -41,7 +41,7 @@ enum class errc
     nothing = 0, // to be removed
     bad = 1,
     invalid_argument,
-    out_of_memory,
+    not_enough_memory,
     not_enough_space,
     missing_data,
     invalid_file_database_header,
@@ -73,7 +73,7 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "an external API did not meet its operation contract"},
         { code::invalid_argument, generic_errc::invalid_argument,
             "Invalid Argument" },
-        { code::out_of_memory, generic_errc::not_enough_memory,
+        { code::not_enough_memory, generic_errc::not_enough_memory,
             "The operation did not succeed due to a memory allocation failure" },
         { code::not_enough_space, generic_errc::no_buffer_space,
             "The operation failed to allocate a write buffer of sufficient size" },
