@@ -36,13 +36,12 @@ namespace dplx::dlog
 namespace system_error = SYSTEM_ERROR2_NAMESPACE;
 namespace oc = OUTCOME_V2_NAMESPACE;
 
-template <typename R>
-using result = oc::experimental::status_result<R>;
-
 enum class errc
 {
     nothing = 0, // to be removed
     bad = 1,
+    invalid_argument,
+    out_of_memory,
     not_enough_space,
     missing_data,
     invalid_file_database_header,
@@ -50,6 +49,12 @@ enum class errc
 
     LIMIT,
 };
+
+template <typename R>
+using result = oc::experimental::status_result<R>;
+
+template <typename R>
+using pure_result = oc::experimental::status_result<R, errc>;
 
 } // namespace dplx::dlog
 

@@ -146,7 +146,8 @@ public:
         auto &&outBuffer = dp::get_output_buffer(self.mWriteBuffer);
         dp::emit_context emitCtx{outBuffer};
 
-        DPLX_TRY(outBuffer.bulk_write(magic.data(), magic.size()));
+        DPLX_TRY(outBuffer.bulk_write(as_bytes(std::span(magic)).data(),
+                                      std::size(magic)));
         file_info info{.epoch = log_clock::epoch()};
         DPLX_TRY(dp::encode_object(emitCtx, info));
 
@@ -185,9 +186,9 @@ public:
             = llfio::file_handle::flag::none;
 
     static inline constexpr std::string_view extension{".dlog"};
-    static inline constexpr auto magic = detail::make_byte_array<16>(
-            {0x83, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64, 0x6c, 0x6f, 0x67,
-             0x7d, 0x7e, 0xbb, 0x0a, 0x1a});
+    static inline constexpr std::uint8_t magic[16]
+            = {0x83, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64,
+               0x6c, 0x6f, 0x67, 0x7d, 0x7e, 0xbb, 0x0a, 0x1a};
 
     auto write(unsigned size) noexcept -> result<dp::memory_buffer>
     {

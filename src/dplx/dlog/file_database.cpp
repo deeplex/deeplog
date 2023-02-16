@@ -303,11 +303,12 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
         header = read[0];
     }
 
-    if (!std::ranges::equal(header.first(magic.size()), magic))
+    if (!std::ranges::equal(header.first(std::size(magic)),
+                            as_bytes(std::span(magic))))
     {
         return errc::invalid_file_database_header;
     }
-    if (auto areaZero = header.subspan(magic.size());
+    if (auto areaZero = header.subspan(std::size(magic));
         std::ranges::find_if(areaZero,
                              [](std::byte v) { return v != std::byte{}; })
         != areaZero.end())
@@ -323,7 +324,7 @@ auto file_database_handle::initialize_storage() noexcept -> result<void>
     DPLX_TRY(mRootHandle.truncate(4U << 12)); // 16KiB aka 4 pages
 
     llfio::file_handle::const_buffer_type writeBuffers[] = {
-            {magic.data(), magic.size()}
+            {as_bytes(std::span(magic)).data(), std::size(magic)}
     };
     DPLX_TRY(mRootHandle.write({writeBuffers, 0}));
 

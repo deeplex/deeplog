@@ -128,8 +128,8 @@ public:
         {
             DPLX_TRY(ctx.in.require_input(magic.size()));
 
-            if (!std::ranges::equal(std::span(ctx.in).first(magic.size()),
-                                    magic))
+            if (!std::ranges::equal(std::span(ctx.in).first(std::size(magic)),
+                                    as_bytes(std::span(magic))))
             {
                 return dlog::errc::invalid_record_container_header;
             }

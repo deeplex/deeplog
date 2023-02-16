@@ -18,8 +18,7 @@ namespace dplx::dlog
 }
 
 auto dplx::dp::codec<dplx::dlog::severity>::encode(
-        emit_context const &ctx, dplx::dlog::severity value) noexcept
-        -> result<void>
+        emit_context &ctx, dplx::dlog::severity value) noexcept -> result<void>
 {
     auto const bits = cncr::to_underlying(value);
     if (bits > cncr::to_underlying(dlog::severity::trace))
@@ -52,15 +51,14 @@ auto dplx::dp::codec<dplx::dlog::severity>::decode(
 }
 
 auto dplx::dp::codec<dplx::dlog::resource_id>::size_of(
-        emit_context const &, dplx::dlog::resource_id value) noexcept
-        -> std::uint64_t
+        emit_context &, dplx::dlog::resource_id value) noexcept -> std::uint64_t
 {
     return dp::encoded_item_head_size<type_code::posint>(
             cncr::to_underlying(value));
 }
 
 auto dplx::dp::codec<dplx::dlog::resource_id>::encode(
-        emit_context const &ctx, dplx::dlog::resource_id value) noexcept
+        emit_context &ctx, dplx::dlog::resource_id value) noexcept
         -> result<void>
 {
     return dp::emit_integer(ctx, cncr::to_underlying(value));

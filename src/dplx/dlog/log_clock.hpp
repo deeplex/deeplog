@@ -118,10 +118,10 @@ template <>
 class dplx::dp::codec<dplx::dlog::log_clock::time_point>
 {
 public:
-    static auto size_of(emit_context const &ctx,
+    static auto size_of(emit_context &ctx,
                         dplx::dlog::log_clock::time_point value) noexcept
             -> std::uint64_t;
-    static auto encode(emit_context const &ctx,
+    static auto encode(emit_context &ctx,
                        dplx::dlog::log_clock::time_point value) noexcept
             -> result<void>;
     static auto decode(parse_context &ctx,
@@ -133,10 +133,10 @@ template <>
 class dplx::dp::codec<dplx::dlog::log_clock::epoch_info>
 {
 public:
-    static auto size_of(emit_context const &ctx,
+    static auto size_of(emit_context &ctx,
                         dplx::dlog::log_clock::epoch_info value) noexcept
             -> std::uint64_t;
-    static auto encode(emit_context const &ctx,
+    static auto encode(emit_context &ctx,
                        dplx::dlog::log_clock::epoch_info value) noexcept
             -> result<void>;
     static auto decode(parse_context &ctx,

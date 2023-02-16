@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -67,23 +65,6 @@ constexpr auto to_underlying(Enum value) noexcept ->
     return static_cast<std::underlying_type_t<Enum>>(value);
 }
 
-template <std::size_t N, typename T>
-consteval auto make_byte_array(std::initializer_list<T> vs,
-                               std::byte const fill = std::byte{0xFE}) noexcept
-        -> std::array<std::byte, N>
-{
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-    std::array<std::byte, N> bs;
-    auto last
-            = std::transform(vs.begin(), vs.end(), bs.data(),
-                             [](auto v) { return static_cast<std::byte>(v); });
-    for (auto const bsEnd = bs.data() + N; last != bsEnd; ++last)
-    {
-        *last = fill;
-    }
-    return bs;
-}
-
 } // namespace dplx::dlog::detail
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
@@ -95,25 +76,24 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
     class dplx::dp::codec<_fq_type>                                            \
     {                                                                          \
     public:                                                                    \
-        static auto size_of(emit_context const &ctx,                           \
-                            _fq_type const &value) noexcept -> std::uint64_t;  \
-        static auto encode(emit_context const &ctx,                            \
-                           _fq_type const &value) noexcept -> result<void>;    \
+        static auto size_of(emit_context &ctx, _fq_type const &value) noexcept \
+                -> std::uint64_t;                                              \
+        static auto encode(emit_context &ctx, _fq_type const &value) noexcept  \
+                -> result<void>;                                               \
         static auto decode(parse_context &ctx, _fq_type &outValue) noexcept    \
                 -> result<void>;                                               \
     }
 
 #define DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(_fq_type)                            \
-    auto ::dplx::dp::codec<_fq_type>::size_of(emit_context const &ctx,         \
+    auto ::dplx::dp::codec<_fq_type>::size_of(emit_context &ctx,               \
                                               _fq_type const &value) noexcept  \
             -> std::uint64_t                                                   \
     {                                                                          \
         static_assert(packable_tuple<_fq_type>);                               \
         return dp::size_of_tuple(ctx, value);                                  \
     }                                                                          \
-    auto ::dplx::dp::codec<_fq_type>::encode(emit_context const &ctx,          \
-                                             _fq_type const &value) noexcept   \
-            -> result<void>                                                    \
+    auto ::dplx::dp::codec<_fq_type>::encode(                                  \
+            emit_context &ctx, _fq_type const &value) noexcept -> result<void> \
     {                                                                          \
         return dp::encode_tuple(ctx, value);                                   \
     }                                                                          \
@@ -124,16 +104,15 @@ consteval auto make_byte_array(std::initializer_list<T> vs,
     }
 
 #define DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(_fq_type)                           \
-    auto ::dplx::dp::codec<_fq_type>::size_of(emit_context const &ctx,         \
+    auto ::dplx::dp::codec<_fq_type>::size_of(emit_context &ctx,               \
                                               _fq_type const &value) noexcept  \
             -> std::uint64_t                                                   \
     {                                                                          \
         static_assert(packable_object<_fq_type>);                              \
         return dp::size_of_object(ctx, value);                                 \
     }                                                                          \
-    auto ::dplx::dp::codec<_fq_type>::encode(emit_context const &ctx,          \
-                                             _fq_type const &value) noexcept   \
-            -> result<void>                                                    \
+    auto ::dplx::dp::codec<_fq_type>::encode(                                  \
+            emit_context &ctx, _fq_type const &value) noexcept -> result<void> \
     {                                                                          \
         return dp::encode_object(ctx, value);                                  \
     }                                                                          \
