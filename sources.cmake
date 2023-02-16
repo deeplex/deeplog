@@ -15,6 +15,7 @@ dplx_target_sources(deeplog
         dlog/log_clock
         dlog/sink
 
+        dlog/bus/buffer_bus
         dlog/bus/mpsc_bus
 
         dlog/record_container
