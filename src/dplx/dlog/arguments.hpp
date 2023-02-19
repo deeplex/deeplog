@@ -44,12 +44,23 @@ concept loggable_argument
 // clang-format on
 
 template <cncr::integer T>
+    requires(sizeof(std::uint64_t) >= sizeof(T))
 struct argument<T>
 {
-    using type = T;
+    using type = std::
+            conditional_t<std::is_unsigned_v<T>, std::uint64_t, std::int64_t>;
     type value;
 
     static constexpr resource_id type_id{std::is_unsigned_v<T> ? 0U : 1U};
+};
+
+template <std::size_t N>
+struct argument<char[N]>
+{
+    using type = std::string_view;
+    type value;
+
+    static constexpr resource_id type_id{2};
 };
 
 template <typename Char, typename T>

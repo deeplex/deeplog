@@ -23,6 +23,7 @@
 #include <dplx/dlog/detail/utils.hpp> // declare_codec
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog::detail
 {
@@ -146,18 +147,39 @@ public:
     static constexpr std::uint32_t min_region_size = 4 * 1024U;
     static constexpr std::uint32_t max_message_size = 0x1fff'ffffU;
 
-    using output_stream = dp::memory_output_stream;
+    class output_buffer final : public bus_output_buffer
+    {
+        friend class mpsc_bus_handle;
+
+        std::uint32_t *mMsgCtrl{nullptr};
+
+    public:
+        output_buffer() noexcept = default;
+
+    private:
+        auto do_sync_output() noexcept -> dp::result<void> final
+        {
+            if (mMsgCtrl == nullptr) [[unlikely]]
+            {
+                return errc::bad;
+            }
+
+            std::atomic_ref<std::uint32_t>(*mMsgCtrl).fetch_and(
+                    max_message_size, std::memory_order::release);
+            // reset();
+            mMsgCtrl = nullptr;
+            return dp::oc::success();
+        }
+    };
 
     class logger_token
     {
         friend class mpsc_bus_handle;
 
         std::uint32_t regionId{0U};
-        std::uint32_t msgRegion{0U};
-        std::uint32_t msgBegin{0U};
 
     public:
-        logger_token() noexcept = default;
+        constexpr logger_token() noexcept = default;
 
     private:
         explicit logger_token(std::uint32_t regionId_) noexcept
@@ -262,84 +284,59 @@ private:
     }
 
 public:
-    auto write(logger_token &logger, std::uint32_t const msgSize) noexcept
-            -> pure_result<output_stream>
+    auto allocate(output_buffer &out,
+                  std::size_t const messageSize,
+                  logger_token const token) noexcept
+            -> cncr::data_defined_status_code<errc>
     {
-        if (msgSize > max_message_size) [[unlikely]]
+        if (messageSize > max_message_size) [[unlikely]]
         {
             return errc::not_enough_space;
         }
+        auto const payloadSize = static_cast<std::uint32_t>(messageSize);
+        auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
 
-        auto regionId = logger.regionId;
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        write_allocation allocation;
+        auto regionId = token.regionId;
         for (;;)
         {
-            auto reserveRx = allocate(regionId, msgSize);
-            if (reserveRx.has_value()) [[likely]]
+            auto const allocCode = do_allocate(out, allocSize, regionId);
+            if (allocCode == errc::success) [[likely]]
             {
-                allocation = reserveRx.assume_value();
                 break;
             }
             regionId = ++regionId == mNumRegions ? 0U : regionId;
-            if (reserveRx.assume_error() != errc::not_enough_space
-                || regionId == logger.regionId)
+            if (allocCode != errc::not_enough_space
+                || regionId == token.regionId)
             {
-                return static_cast<decltype(reserveRx) &&>(reserveRx)
-                        .assume_error();
+                return cncr::data_defined_status_code<errc>{allocCode};
             }
         }
 
-        logger.msgRegion = regionId;
-        logger.msgBegin = allocation.header_position;
-
-        return dp::memory_output_stream{std::span(
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                region_data(regionId) + allocation.payload_position, msgSize)};
-    }
-
-    void commit(logger_token &logger)
-    {
-        auto *const msgSizeLocation
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                = region_data(logger.msgRegion) + logger.msgBegin;
-
-        std::atomic_ref<std::uint32_t> msgSize(
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                *reinterpret_cast<std::uint32_t *>(msgSizeLocation));
-        msgSize.fetch_and(max_message_size, std::memory_order::release);
+        return cncr::data_defined_status_code<errc>{errc::success};
     }
 
 private:
-    struct write_allocation
-    {
-        std::uint32_t header_position;
-        std::uint32_t payload_position;
-    };
-
-    auto allocate(std::uint32_t const regionId,
-                  std::uint32_t const payloadSize) noexcept
-            -> pure_result<write_allocation>
+    auto do_allocate(output_buffer &out,
+                     std::uint32_t const allocSize,
+                     std::uint32_t const regionId) noexcept -> errc
     {
         auto *const ctx = region(regionId);
         auto *const regionData = region_data(regionId);
         auto const regionEnd = mRegionSize - region_ctrl_overhead;
-        auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
-
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        write_allocation allocation;
 
         std::atomic_ref<std::uint32_t> const sharedReadHand(ctx->read_ptr);
         std::atomic_ref<std::uint32_t> const sharedAllocHand(ctx->alloc_ptr);
 
         auto const readHand = sharedReadHand.load(std::memory_order::acquire);
-        auto allocHand = sharedAllocHand.load(std::memory_order::relaxed);
+        std::uint32_t allocHand
+                = sharedAllocHand.load(std::memory_order::relaxed);
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        std::uint32_t payloadPosition;
         for (;;)
         {
-            allocation.header_position = allocHand;
-            allocation.payload_position = allocHand + message_header_size;
+            payloadPosition = allocHand + message_header_size;
 
-            auto payloadEnd = allocation.payload_position + allocSize;
+            auto payloadEnd = payloadPosition + allocSize;
             auto const canWrap = allocHand >= readHand;
             auto bufferEnd = canWrap ? regionEnd : readHand;
             if (payloadEnd >= bufferEnd) [[unlikely]]
@@ -350,7 +347,7 @@ private:
                 }
                 else if (canWrap && allocSize < readHand)
                 {
-                    allocation.payload_position = 0U;
+                    payloadPosition = 0U;
                     payloadEnd = allocSize;
                 }
                 else
@@ -361,20 +358,22 @@ private:
 
             if (sharedAllocHand.compare_exchange_weak(
                         allocHand, payloadEnd, std::memory_order::relaxed))
+                    [[likely]]
             {
                 break;
             }
         }
 
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        auto *const headerPtr = regionData + allocation.header_position;
-        std::atomic_ref<std::uint32_t> msgSize(
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                *reinterpret_cast<std::uint32_t *>(headerPtr));
-        msgSize.store(payloadSize | message_lock_flag,
-                      std::memory_order::relaxed);
-
-        return allocation;
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        auto *ctrl = reinterpret_cast<std::uint32_t *>(regionData + allocHand);
+        auto *data = regionData + payloadPosition;
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        std::atomic_ref<std::uint32_t>(*ctrl).store(
+                allocSize | message_lock_flag, std::memory_order::relaxed);
+        out.reset(data, allocSize);
+        out.mMsgCtrl = ctrl;
+        return errc::success;
     }
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)

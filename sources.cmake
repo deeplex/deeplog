@@ -13,6 +13,7 @@ dplx_target_sources(deeplog
         dlog/log_bus
         dlog/log_clock
         dlog/sink
+        dlog/source
 
         dlog/bus/buffer_bus
         dlog/bus/mpsc_bus
@@ -48,6 +49,7 @@ dplx_target_sources(deeplog
         dlog/detail/codec_dummy.hpp
         dlog/detail/iso8601.hpp
         dlog/detail/utils.hpp
+        dlog/detail/x_poly_types.inl
 
         dlog/detail/file_stream.hpp
 )

@@ -15,6 +15,7 @@
 #include <dplx/dlog/detail/codec_dummy.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog
 {
@@ -36,21 +37,19 @@ concept source
 // clang-format off
 template <typename T>
 concept bus
-        = /*dp::output_stream<typename T::output_stream &>
-        &&*/ requires(T &&t,
+        = std::derived_from<typename T::output_buffer, bus_output_buffer>
+        && requires(T &&t,
                     typename T::logger_token logger,
-                    unsigned int const size,
+                    typename T::output_buffer out,
+                    unsigned const size,
                     void (&dummy_consumer)(std::span<std::byte const>) noexcept)
         {
             typename T::logger_token;
             { t.create_token() }
                     -> detail::tryable_result<typename T::logger_token>;
-
-            typename T::output_stream;
-            { t.write(logger, size) }
-                    -> detail::tryable_result<typename T::output_stream>;
-            t.commit(logger);
-
+            typename T::output_buffer;
+            { t.allocate(out, size, logger) }
+                    -> std::same_as<cncr::data_defined_status_code<errc>>;
             { t.consume_content(dummy_consumer) }
                     -> detail::tryable;
         };

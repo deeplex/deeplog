@@ -7,8 +7,6 @@
 //           https://www.boost.org/LICENSE_1_0.txt)
 
 #include <dplx/cncr/utils.hpp>
-#include <dplx/dp/items/emit_core.hpp>
-#include <dplx/dp/items/item_size_of_core.hpp>
 #include <dplx/dp/items/parse_core.hpp>
 
 #include "dplx/dlog/definitions.hpp"
@@ -17,22 +15,7 @@ namespace dplx::dlog
 {
 }
 
-auto dplx::dp::codec<dplx::dlog::severity>::encode(
-        emit_context &ctx, dplx::dlog::severity value) noexcept -> result<void>
-{
-    auto const bits = cncr::to_underlying(value);
-    if (bits > cncr::to_underlying(dlog::severity::trace))
-    {
-        return errc::item_value_out_of_range;
-    }
-    if (ctx.out.empty())
-    {
-        DPLX_TRY(ctx.out.ensure_size(1U));
-    }
-    *ctx.out.data() = static_cast<std::byte>(bits);
-    ctx.out.commit_written(1U);
-    return oc ::success();
-}
+// encode functions are located together with vlogger::vlog()
 
 auto dplx::dp::codec<dplx::dlog::severity>::decode(
         parse_context &ctx, dplx::dlog::severity &outValue) noexcept
@@ -48,20 +31,6 @@ auto dplx::dp::codec<dplx::dlog::severity>::decode(
     }
     outValue = static_cast<dlog::severity>(underlyingValue);
     return oc::success();
-}
-
-auto dplx::dp::codec<dplx::dlog::resource_id>::size_of(
-        emit_context &, dplx::dlog::resource_id value) noexcept -> std::uint64_t
-{
-    return dp::encoded_item_head_size<type_code::posint>(
-            cncr::to_underlying(value));
-}
-
-auto dplx::dp::codec<dplx::dlog::resource_id>::encode(
-        emit_context &ctx, dplx::dlog::resource_id value) noexcept
-        -> result<void>
-{
-    return dp::emit_integer(ctx, cncr::to_underlying(value));
 }
 
 auto dplx::dp::codec<dplx::dlog::resource_id>::decode(

@@ -1,0 +1,282 @@
+
+// Copyright Henrik S. Gaßmann 2023.
+//
+// Distributed under the Boost Software License, Version 1.0.
+//         (See accompanying file LICENSE or copy at
+//           https://www.boost.org/LICENSE_1_0.txt)
+
+#include "dplx/dlog/source.hpp"
+
+#include <dplx/dp/items/emit_core.hpp>
+#include <dplx/dp/items/emit_ranges.hpp>
+#include <dplx/dp/items/item_size_of_ranges.hpp>
+#include <dplx/scope_guard.hpp>
+
+#include <dplx/dlog/log_clock.hpp>
+
+template <>
+class dplx::dp::codec<dplx::dlog::detail::poly_string_value>
+{
+public:
+    static auto size_of(dp::emit_context &ctx,
+                        dlog::detail::poly_string_value const &str) noexcept
+            -> std::uint64_t
+    {
+        return dp::item_size_of_u8string(ctx, str.size);
+    }
+    static auto encode(dp::emit_context &ctx,
+                       dlog::detail::poly_string_value const &str) noexcept
+            -> dp::result<void>
+    {
+        return dp::emit_u8string(ctx, str.data, str.size);
+    }
+};
+
+auto dplx::dp::codec<dplx::dlog::severity>::encode(
+        emit_context &ctx, dplx::dlog::severity value) noexcept -> result<void>
+{
+    auto const bits = cncr::to_underlying(value);
+    if (bits > cncr::to_underlying(dlog::severity::trace)) [[unlikely]]
+    {
+        return errc::item_value_out_of_range;
+    }
+    if (ctx.out.empty()) [[unlikely]]
+    {
+        DPLX_TRY(ctx.out.ensure_size(1U));
+    }
+    *ctx.out.data() = static_cast<std::byte>(bits);
+    ctx.out.commit_written(1U);
+    return oc::success();
+}
+
+auto dplx::dp::codec<dplx::dlog::resource_id>::size_of(
+        emit_context &, dplx::dlog::resource_id value) noexcept -> std::uint64_t
+{
+    return dp::encoded_item_head_size<type_code::posint>(
+            cncr::to_underlying(value));
+}
+auto dplx::dp::codec<dplx::dlog::resource_id>::encode(
+        emit_context &ctx, dplx::dlog::resource_id value) noexcept
+        -> result<void>
+{
+    return dp::emit_integer(ctx, cncr::to_underlying(value));
+}
+
+namespace dplx::dlog::detail
+{
+
+namespace
+{
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+// NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
+
+inline auto item_size_of_poly_value(dp::emit_context &ctx,
+                                    poly_type_id id,
+                                    poly_value const &value) noexcept
+        -> std::uint64_t
+{
+    using enum poly_type_id;
+    using enum poly_log_thunk_mode;
+#define DPLX_X_WITH_THUNK 0
+
+    switch (id)
+    {
+    case null:
+        break;
+#define DPLX_X(name, type, var)                                                \
+    case name:                                                                 \
+        return dp::encoded_size_of(ctx, value.var);                            \
+        break;
+#include <dplx/dlog/detail/x_poly_types.inl>
+#undef DPLX_X
+    case thunk:
+        return value.thunk.func(value.thunk.self, size_of, ctx).assume_value();
+        break;
+    case LIMIT:
+    default:
+        cncr::unreachable();
+    }
+
+    return 0U;
+#undef DPLX_X_WITH_THUNK
+}
+
+inline auto encode_poly_value(dp::emit_context &ctx,
+                              poly_type_id id,
+                              poly_value const &value) noexcept -> result<void>
+{
+    using enum poly_type_id;
+    using enum poly_log_thunk_mode;
+#define DPLX_X_WITH_THUNK 0
+
+    switch (id)
+    {
+    case null:
+        break;
+#define DPLX_X(name, type, var)                                                \
+    case name:                                                                 \
+        if (auto &&encodeRx = dp::encode(ctx, value.var);                      \
+            encodeRx.has_error())                                              \
+        {                                                                      \
+            return static_cast<decltype(encodeRx) &&>(encodeRx)                \
+                    .assume_error();                                           \
+        }                                                                      \
+        break;
+#include <dplx/dlog/detail/x_poly_types.inl>
+#undef DPLX_X
+    case thunk:
+        if (auto &&encodeRx = value.thunk.func(value.thunk.self, encode, ctx);
+            encodeRx.has_error())
+        {
+            return static_cast<decltype(encodeRx) &&>(encodeRx).assume_error();
+        }
+        break;
+    case LIMIT:
+    default:
+        cncr::unreachable();
+    }
+
+    return dp::success();
+#undef DPLX_X_WITH_THUNK
+}
+
+// NOLINTEND(cppcoreguidelines-pro-type-union-access)
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
+} // namespace
+
+auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
+        -> result<void>
+{
+    if (static_cast<unsigned>(args.sev)
+        > static_cast<unsigned>(severity::trace))
+    {
+        return errc::invalid_argument;
+    }
+
+    // layout:
+    // array 5
+    // +  ui    severity
+    // +  ui64  timestamp
+    // +  str   message
+    // +  array format args
+    // +  map   attributes
+
+    constexpr auto numArrayElements = 5U;
+    constexpr auto timestampSize = 9U;
+    auto const timeStamp = log_clock::now();
+    dp::emit_context ctx{out};
+
+    // compute buffer size
+    constexpr auto encodedArraySize
+            = dp::encoded_item_head_size<dp::type_code::array>(
+                    numArrayElements);
+    constexpr auto encodedMetaSize = /*severity:*/ 1U + timestampSize;
+
+    auto encodedSize
+            = static_cast<unsigned>(encodedArraySize + encodedMetaSize);
+
+    encodedSize += static_cast<unsigned>(
+            dp::item_size_of_u8string(ctx, args.message.size()));
+
+    encodedSize += static_cast<unsigned>(
+            dp::encoded_item_head_size<dp::type_code::array>(
+                    args.num_arguments));
+    for (int i = 0; i < args.num_arguments; ++i)
+    {
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        encodedSize += static_cast<unsigned>(detail::item_size_of_poly_value(
+                ctx, args.part_types[i], args.message_parts[i]));
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    }
+
+    unsigned const numAttributes
+            = 0U + static_cast<unsigned>(args.location.line >= 0)
+            + static_cast<unsigned>(args.location.filenameSize >= 0);
+    encodedSize += static_cast<unsigned>(
+            dp::encoded_item_head_size<dp::type_code::array>(numAttributes));
+#if 0              
+    for (int i = 0; i < args.num_attributes; ++i)
+    {
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        /*...*/
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    }
+#endif
+    if (args.location.line >= 0)
+    {
+        encodedSize += static_cast<unsigned>(
+                dp::encoded_item_head_size<dp::type_code::posint>(
+                        static_cast<unsigned>(attr::line::id))
+                + dp::item_size_of_integer(ctx, args.location.line));
+    }
+    if (args.location.filenameSize >= 0)
+    {
+        encodedSize += static_cast<unsigned>(
+                dp::encoded_item_head_size<dp::type_code::posint>(
+                        static_cast<unsigned>(attr::file::id))
+                + dp::item_size_of_u8string(ctx, args.location.filenameSize));
+    }
+
+    // allocate an output buffer on the message bus
+    if (auto allocCode = do_allocate(out, encodedSize);
+        allocCode.value() != errc::success) [[unlikely]]
+    {
+        return allocCode;
+    }
+    scope_guard outputSync = [&out]() noexcept
+    {
+        (void)out.sync_output();
+    };
+
+    // write to output buffer
+    (void)dp::emit_array(ctx, numArrayElements);
+    // severity
+    *ctx.out.data() = static_cast<std::byte>(args.sev);
+    ctx.out.commit_written(1U);
+
+    // timestamp
+    *ctx.out.data() = static_cast<std::byte>(dp::type_code::posint);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    dp::detail::store(ctx.out.data() + 1, timeStamp.time_since_epoch().count());
+    ctx.out.commit_written(timestampSize);
+
+    // message
+    (void)dp::emit_u8string(ctx, args.message.data(), args.message.size());
+
+    (void)dp::emit_array<unsigned>(ctx, args.num_arguments);
+    for (int i = 0; i < args.num_arguments; ++i)
+    {
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        DPLX_TRY(detail::encode_poly_value(ctx, args.part_types[i],
+                                           args.message_parts[i]));
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    }
+
+    DPLX_TRY(dp::emit_map(ctx, numAttributes));
+#if 0
+    for (int i = 0; i < args.num_attributes; ++i)
+    {
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        /*...*/
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    }
+#endif
+
+    if (args.location.line >= 0)
+    {
+        DPLX_TRY(dp::emit_integer(ctx, static_cast<unsigned>(attr::line::id)));
+        DPLX_TRY(dp::emit_integer(ctx, args.location.line));
+    }
+    if (args.location.filenameSize >= 0)
+    {
+        DPLX_TRY(dp::emit_integer(ctx, static_cast<unsigned>(attr::file::id)));
+        DPLX_TRY(dp::emit_u8string(
+                ctx, args.location.filename,
+                static_cast<std::size_t>(args.location.filenameSize)));
+    }
+    return oc::success();
+}
+
+} // namespace dplx::dlog::detail

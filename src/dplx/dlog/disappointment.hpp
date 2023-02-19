@@ -36,8 +36,9 @@ namespace dplx::dlog
 namespace system_error = SYSTEM_ERROR2_NAMESPACE;
 namespace oc = OUTCOME_V2_NAMESPACE;
 
-enum class errc
+enum class [[nodiscard]] errc
 {
+    success = 0,
     bad = 1,
     invalid_argument,
     not_enough_memory,
@@ -69,6 +70,8 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
 
     static constexpr value_descriptor values[] = {
   // clang-format off
+        { code::success, generic_errc::success,
+            "No Error/Success" },
         { code::bad, generic_errc::unknown,
             "an external API did not meet its operation contract"},
         { code::invalid_argument, generic_errc::invalid_argument,

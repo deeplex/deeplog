@@ -12,7 +12,8 @@
 #include <cstdint>
 #include <span>
 
-#include <dplx/dp.hpp>
+#include <dplx/dp/disappointment.hpp>
+#include <dplx/dp/fwd.hpp>
 
 // span aliasse
 namespace dplx::dlog
@@ -58,7 +59,7 @@ class dplx::dp::codec<dplx::dlog::severity>
     using underlying_type = std::underlying_type_t<dlog::severity>;
 
 public:
-    static inline auto size_of(emit_context &, dplx::dlog::severity) noexcept
+    static constexpr auto size_of(emit_context &, dplx::dlog::severity) noexcept
             -> std::uint64_t
     {
         return 1U;

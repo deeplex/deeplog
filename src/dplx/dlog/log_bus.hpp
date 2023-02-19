@@ -7,31 +7,33 @@
 
 #pragma once
 
-#include <dplx/cncr/utils.hpp>
+#include <cstddef>
 
-#include <dplx/dlog/concepts.hpp>
+#include <dplx/dp/disappointment.hpp>
+#include <dplx/dp/streams/output_buffer.hpp>
 
 namespace dplx::dlog
 {
 
-template <bus Bus>
-struct bus_write_lock
+// the class is final and none of its base classes have public destructors
+// NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
+class bus_output_buffer : public dp::output_buffer
 {
-    using bus_type = Bus;
-    using token_type = typename bus_type::logger_token;
+protected:
+    constexpr ~bus_output_buffer() noexcept = default;
+    using output_buffer::output_buffer;
 
-    bus_type &bus;
-    token_type &token;
-
-    DPLX_ATTR_FORCE_INLINE explicit bus_write_lock(
-            bus_type &busRef, token_type &tokenRef) noexcept
-        : bus(busRef)
-        , token(tokenRef)
+private:
+    auto do_grow([[maybe_unused]] size_type requestedSize) noexcept
+            -> dp::result<void> final
     {
+        return dp::errc::end_of_stream;
     }
-    DPLX_ATTR_FORCE_INLINE ~bus_write_lock() noexcept
+    auto do_bulk_write([[maybe_unused]] std::byte const *src,
+                       [[maybe_unused]] std::size_t size) noexcept
+            -> dp::result<void> final
     {
-        bus.commit(token);
+        return dp::errc::end_of_stream;
     }
 };
 

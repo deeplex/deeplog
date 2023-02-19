@@ -11,6 +11,7 @@
 
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/core.hpp>
+#include <dplx/scope_guard.hpp>
 
 #include "test_dir.hpp"
 #include "test_utils.hpp"
@@ -19,6 +20,8 @@
 
 namespace dlog_tests
 {
+
+static_assert(dlog::bus<dlog::bufferbus_handle>);
 
 TEST_CASE("bufferbus buffers messages and outputs them afterwards")
 {
@@ -33,23 +36,27 @@ TEST_CASE("bufferbus buffers messages and outputs them afterwards")
     dlog::bufferbus_handle::logger_token token{};
     for (;;)
     {
-        auto size = static_cast<unsigned>(dp::encoded_size_of(msgId));
-        if (auto writeRx = bufferbus.write(token, size); writeRx.has_value())
+        auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
+        dlog::bufferbus_handle::output_buffer out;
+        if (auto allocCode = bufferbus.allocate(out, size, token);
+            allocCode.failure())
         {
-            auto encodeRx = dp::encode(writeRx.assume_value(), msgId);
-            REQUIRE(encodeRx);
+            if (allocCode.value() == dlog::errc::not_enough_space)
+            {
+                break;
+            }
+            else
+            {
+                allocCode.throw_exception();
+            }
+        }
+        dplx::scope_guard busLock = [&out]() noexcept
+        {
+            (void)out.sync_output();
+        };
 
-            bufferbus.commit(token);
-            msgId += 1;
-        }
-        else if (writeRx.assume_error() == dlog::errc::not_enough_space)
-        {
-            break;
-        }
-        else
-        {
-            REQUIRE(writeRx);
-        }
+        dp::encode(out, msgId).value();
+        msgId += 1;
     }
 
     auto const endId = msgId;

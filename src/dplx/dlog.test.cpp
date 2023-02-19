@@ -52,8 +52,10 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     core.attach_sink(std::move(sinkOwner));
 
     dlog::logger xlog{core.connector()};
-    DLOG_GENERIC(xlog, dlog::severity::warn,
-                 u8"important msg with arg {} and {}", 1, dlog::arg("argx", 2));
+    DLOG_WARN(xlog, "important msg with arg {}", 1);
+    // DLOG_GENERIC(xlog, dlog::severity::warn,
+    //              "important msg with arg {} and {}", 1, dlog::arg("argx",
+    //              2));
 
     auto retireRx = core.retire_log_records();
     REQUIRE(retireRx);

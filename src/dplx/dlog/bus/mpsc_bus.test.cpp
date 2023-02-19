@@ -20,6 +20,7 @@
 #include <dplx/dp/items/encoded_item_head_size.hpp>
 #include <dplx/dp/legacy/memory_input_stream.hpp>
 
+#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/log_bus.hpp>
 
 #include "test_dir.hpp"
@@ -56,22 +57,26 @@ TEST_CASE("mpsc_bus can be filled and drained")
     for (;;)
     {
         auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
-        if (auto writeRx = bufferbus.write(token, size); writeRx.has_value())
+        dlog::mpsc_bus_handle::output_buffer out;
+        if (auto allocCode = bufferbus.allocate(out, size, token);
+            allocCode.failure())
         {
-            auto encodeRx = dp::encode(writeRx.assume_value(), msgId);
-            REQUIRE(encodeRx);
+            if (allocCode.value() == dlog::errc::not_enough_space)
+            {
+                break;
+            }
+            else
+            {
+                allocCode.throw_exception();
+            }
+        }
+        dplx::scope_guard busLock = [&out]() noexcept
+        {
+            (void)out.sync_output();
+        };
 
-            bufferbus.commit(token);
-            msgId += 1;
-        }
-        else if (writeRx.assume_error() == dlog::errc::not_enough_space)
-        {
-            break;
-        }
-        else
-        {
-            REQUIRE(writeRx);
-        }
+        dp::encode(out, msgId).value();
+        msgId += 1;
     }
 
     auto const endId = msgId;
@@ -113,8 +118,16 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
 
         auto const encodedSize
                 = static_cast<unsigned>(dplx::dp::encoded_size_of(i));
-        DPLX_TRY(auto outStream, bus.write(token, encodedSize));
-        dlog::bus_write_lock busLock(bus, token);
+        dlog::mpsc_bus_handle::output_buffer outStream;
+        if (auto allocCode = bus.allocate(outStream, encodedSize, token);
+            allocCode.value() != dlog::errc::success)
+        {
+            return allocCode;
+        }
+        dplx::scope_guard busLock = [&outStream]() noexcept
+        {
+            (void)outStream.sync_output();
+        };
         DPLX_TRY(dplx::dp::encode(outStream, i));
     }
     return dlog::oc::success();

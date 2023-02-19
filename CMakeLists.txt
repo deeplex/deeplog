@@ -174,7 +174,7 @@ endif()
 install(DIRECTORY src/dplx
     TYPE INCLUDE
     FILES_MATCHING
-    REGEX ".*\\.h(pp)?"
+    REGEX ".*\\.(h(pp)?|inl)"
 )
 
 install(TARGETS deeplog compiler_settings EXPORT deeplog-targets)

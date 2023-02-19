@@ -75,21 +75,13 @@ public:
         {
             return dp::errc::oversized_additional_information_coding;
         }
-        bool const hasAttributes = tupleHead.value > 3;
-        bool const hasFmtArgs = tupleHead.value > 4;
 
         DPLX_TRY(decode(ctx, value.severity));
         DPLX_TRY(decode(ctx, value.timestamp));
         DPLX_TRY(dp::parse_text_finite(ctx, value.message));
 
-        if (hasAttributes)
-        {
-            DPLX_TRY(parse_attributes(ctx, value.attributes));
-        }
-        if (hasFmtArgs)
-        {
-            DPLX_TRY(parse_arguments(ctx, value.format_arguments));
-        }
+        DPLX_TRY(parse_arguments(ctx, value.format_arguments));
+        DPLX_TRY(parse_attributes(ctx, value.attributes));
         return oc::success();
     }
 };

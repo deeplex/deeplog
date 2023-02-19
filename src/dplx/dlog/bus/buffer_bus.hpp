@@ -20,6 +20,7 @@
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog
 {
@@ -62,7 +63,13 @@ public:
     {
     }
 
-    using output_stream = dp::memory_output_stream;
+    class output_buffer final : public bus_output_buffer
+    {
+        friend class bufferbus_handle;
+
+    public:
+        output_buffer() noexcept = default;
+    };
 
     struct logger_token
     {
@@ -101,28 +108,25 @@ public:
         return bufferbus_handle(std::move(backingFile), bufferSize);
     }
 
-    auto write(logger_token &, unsigned msgSize) noexcept
-            -> result<output_stream>
+    auto allocate(output_buffer &out,
+                  std::size_t messageSize,
+                  logger_token const) noexcept
+            -> cncr::data_defined_status_code<errc>
     {
-        auto const overhead = dp::detail::var_uint_encoded_size(msgSize);
-        auto const totalSize = overhead + msgSize;
+        auto const overhead = dp::detail::var_uint_encoded_size(messageSize);
+        auto const totalSize = overhead + messageSize;
 
         if (totalSize > mBuffer.size() - mWriteOffset)
         {
             return errc::not_enough_space;
         }
 
-        dp::memory_output_stream msgBuffer(
-                mBuffer.subspan(mWriteOffset, totalSize));
+        out.reset(mBuffer.subspan(mWriteOffset, totalSize));
         mWriteOffset += totalSize;
 
-        dp::emit_context ctx{msgBuffer};
-        DPLX_TRY(dp::emit_binary(ctx, msgSize));
-        return dp::memory_output_stream{std::span(msgBuffer)};
-    }
-
-    void commit(logger_token &)
-    {
+        dp::emit_context ctx{out};
+        (void)dp::emit_binary(ctx, messageSize);
+        return errc::success;
     }
 
     template <typename ConsumeFn>
@@ -182,7 +186,6 @@ public:
 
 private:
 };
-static_assert(bus<bufferbus_handle>);
 
 inline auto bufferbus(llfio::path_handle const &base,
                       llfio::path_view path,
