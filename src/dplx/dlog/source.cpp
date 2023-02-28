@@ -190,12 +190,13 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     }
 
     // layout:
-    // array 5
+    // array 6
     // +  ui    severity
     // +  ui64  timestamp
     // +  str   message
     // +  array format args
-    // +  map   attributes
+    // +  ui?   line
+    // +  str?  file
 
     constexpr auto numArrayElements = 5U;
     constexpr auto timestampSize = 9U;
@@ -225,32 +226,23 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
-    unsigned const numAttributes
-            = 0U + static_cast<unsigned>(args.location.line >= 0)
-            + static_cast<unsigned>(args.location.filenameSize >= 0);
-    encodedSize += static_cast<unsigned>(
-            dp::encoded_item_head_size<dp::type_code::array>(numAttributes));
-#if 0              
-    for (int i = 0; i < args.num_attributes; ++i)
-    {
-        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        /*...*/
-        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    }
-#endif
     if (args.location.line >= 0)
     {
         encodedSize += static_cast<unsigned>(
-                dp::encoded_item_head_size<dp::type_code::posint>(
-                        static_cast<unsigned>(attr::line::id))
-                + dp::item_size_of_integer(ctx, args.location.line));
+                dp::item_size_of_integer(ctx, args.location.line));
+    }
+    else
+    {
+        encodedSize += 1U; /*null*/
     }
     if (args.location.filenameSize >= 0)
     {
         encodedSize += static_cast<unsigned>(
-                dp::encoded_item_head_size<dp::type_code::posint>(
-                        static_cast<unsigned>(attr::file::id))
-                + dp::item_size_of_u8string(ctx, args.location.filenameSize));
+                dp::item_size_of_u8string(ctx, args.location.filenameSize));
+    }
+    else
+    {
+        encodedSize += 1U; /*null*/
     }
 
     // allocate an output buffer on the message bus
@@ -288,27 +280,23 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
-    DPLX_TRY(dp::emit_map(ctx, numAttributes));
-#if 0
-    for (int i = 0; i < args.num_attributes; ++i)
-    {
-        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        /*...*/
-        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    }
-#endif
-
     if (args.location.line >= 0)
     {
-        DPLX_TRY(dp::emit_integer(ctx, static_cast<unsigned>(attr::line::id)));
         DPLX_TRY(dp::emit_integer(ctx, args.location.line));
+    }
+    else
+    {
+        DPLX_TRY(dp::emit_null(ctx));
     }
     if (args.location.filenameSize >= 0)
     {
-        DPLX_TRY(dp::emit_integer(ctx, static_cast<unsigned>(attr::file::id)));
         DPLX_TRY(dp::emit_u8string(
                 ctx, args.location.filename,
                 static_cast<std::size_t>(args.location.filenameSize)));
+    }
+    else
+    {
+        DPLX_TRY(dp::emit_null(ctx));
     }
     return oc::success();
 }

@@ -31,13 +31,54 @@
 namespace dplx::dlog
 {
 
+class record_location
+{
+    std::string mFilename{};
+    int mLine{-1};
+
+public:
+    record_location() noexcept = default;
+    explicit record_location(std::string filename, int line) noexcept
+        : mFilename(std::move(filename))
+        , mLine(line)
+    {
+    }
+
+    [[nodiscard]] auto filename() const &noexcept -> std::string_view
+    {
+        return mFilename;
+    }
+    [[nodiscard]] auto filename() &&noexcept -> std::string
+    {
+        return std::move(mFilename);
+    }
+    [[nodiscard]] auto line() const noexcept -> int
+    {
+        return mLine;
+    }
+};
+
+} // namespace dplx::dlog
+
+template <>
+class dplx::dp::codec<dplx::dlog::record_location>
+{
+public:
+    static auto decode(parse_context &ctx,
+                       dplx::dlog::record_location &value) noexcept
+            -> result<void>;
+};
+
+namespace dplx::dlog
+{
+
 class record
 {
 public:
     dlog::severity severity;
     std::uint64_t timestamp; // FIXME: correct timestamp type
     std::string message;
-    record_attribute_container attributes;
+    record_location location;
     dynamic_format_arg_store<fmt::format_context> format_arguments;
 };
 
@@ -65,9 +106,8 @@ public:
         }
         // TODO: refactor record layout description into compile time constants
         if (tupleHead.indefinite()
-            || tupleHead.value < 3
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-            || 5 < tupleHead.value)
+            || 6 != tupleHead.value)
         {
             return dp::errc::tuple_size_mismatch;
         }
@@ -81,9 +121,11 @@ public:
         DPLX_TRY(dp::parse_text_finite(ctx, value.message));
 
         DPLX_TRY(parse_arguments(ctx, value.format_arguments));
-        DPLX_TRY(parse_attributes(ctx, value.attributes));
+        DPLX_TRY(decode(ctx, value.location));
         return oc::success();
     }
+
+private:
 };
 
 } // namespace dplx::dp
@@ -142,13 +184,12 @@ public:
 private:
     auto parse_item(parse_context &ctx, container &records) -> result<void>
     {
-        auto &record = records.emplace_back(dlog::record{
-                .severity = dlog::severity::none,
-                .timestamp = {},
-                .message = {},
-                .attributes
-                = dlog::record_attribute_container(records.get_allocator()),
-                .format_arguments = {}});
+        auto &record = records.emplace_back(
+                dlog::record{.severity = dlog::severity::none,
+                             .timestamp = {},
+                             .message = {},
+                             .location = {},
+                             .format_arguments = {}});
 
         auto decodeRx = record_decoder(ctx, record);
         if (decodeRx.has_failure())
