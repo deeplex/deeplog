@@ -65,10 +65,7 @@ TEST_CASE("mpsc_bus can be filled and drained")
             {
                 break;
             }
-            else
-            {
-                allocCode.throw_exception();
-            }
+            allocCode.throw_exception();
         }
         dplx::scope_guard busLock = [&out]() noexcept
         {

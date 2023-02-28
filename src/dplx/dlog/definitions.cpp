@@ -1,4 +1,3 @@
-#include "definitions.hpp"
 
 // Copyright Henrik Steffen Gaßmann 2023
 //
@@ -6,10 +5,12 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
+#include "dplx/dlog/definitions.hpp"
+
 #include <dplx/cncr/utils.hpp>
 #include <dplx/dp/items/parse_core.hpp>
 
-#include "dplx/dlog/definitions.hpp"
+#include <dplx/dlog/loggable.hpp>
 
 namespace dplx::dlog
 {
@@ -45,5 +46,20 @@ auto dplx::dp::codec<dplx::dlog::resource_id>::decode(
         return static_cast<result<void> &&>(parseRx).as_failure();
     }
     outValue = static_cast<dlog::resource_id>(underlyingValue);
+    return oc::success();
+}
+
+auto dplx::dp::codec<dplx::dlog::reification_type_id>::decode(
+        parse_context &ctx, dplx::dlog::reification_type_id &outValue) noexcept
+        -> result<void>
+{
+    underlying_type underlyingValue; // NOLINT(cppcoreguidelines-init-variables)
+    if (result<void> parseRx
+        = dp::parse_integer<underlying_type>(ctx, underlyingValue);
+        parseRx.has_failure())
+    {
+        return static_cast<result<void> &&>(parseRx).as_failure();
+    }
+    outValue = static_cast<dlog::reification_type_id>(underlyingValue);
     return oc::success();
 }

@@ -12,20 +12,21 @@
 #include <dplx/dp/items/item_size_of_ranges.hpp>
 #include <dplx/scope_guard.hpp>
 
+#include <dplx/dlog/attributes.hpp> // FIXME
 #include <dplx/dlog/log_clock.hpp>
 
 template <>
-class dplx::dp::codec<dplx::dlog::detail::poly_string_value>
+class dplx::dp::codec<dplx::dlog::detail::trivial_string_view>
 {
 public:
     static auto size_of(dp::emit_context &ctx,
-                        dlog::detail::poly_string_value const &str) noexcept
+                        dlog::detail::trivial_string_view const &str) noexcept
             -> std::uint64_t
     {
         return dp::item_size_of_u8string(ctx, str.size);
     }
     static auto encode(dp::emit_context &ctx,
-                       dlog::detail::poly_string_value const &str) noexcept
+                       dlog::detail::trivial_string_view const &str) noexcept
             -> dp::result<void>
     {
         return dp::emit_u8string(ctx, str.data, str.size);
@@ -62,6 +63,37 @@ auto dplx::dp::codec<dplx::dlog::resource_id>::encode(
     return dp::emit_integer(ctx, cncr::to_underlying(value));
 }
 
+auto dplx::dp::codec<dplx::dlog::reification_type_id>::size_of(
+        emit_context &, dplx::dlog::reification_type_id value) noexcept
+        -> std::uint64_t
+{
+    return dp::encoded_item_head_size<type_code::posint>(
+            cncr::to_underlying(value));
+}
+auto dplx::dp::codec<dplx::dlog::reification_type_id>::encode(
+        emit_context &ctx, dplx::dlog::reification_type_id value) noexcept
+        -> result<void>
+{
+    return dp::emit_integer(ctx, cncr::to_underlying(value));
+}
+
+auto dplx::dlog::detail::erased_loggable_ref::emit_reification_prefix(
+        dp::emit_context &ctx, reification_type_id id) noexcept
+        -> result<std::uint64_t>
+{
+    if (dp::result<void> emitRx = dp::emit_array(ctx, 2U); emitRx.has_error())
+            [[unlikely]]
+    {
+        return static_cast<decltype(emitRx) &&>(emitRx).assume_error();
+    }
+    if (dp::result<void> encodeRx = dp::encode(ctx, id); encodeRx.has_error())
+            [[unlikely]]
+    {
+        return static_cast<decltype(encodeRx) &&>(encodeRx).assume_error();
+    }
+    return 0U;
+}
+
 namespace dplx::dlog::detail
 {
 
@@ -70,15 +102,16 @@ namespace
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
+#define DPLX_X_WITH_THUNK 0
 
-inline auto item_size_of_poly_value(dp::emit_context &ctx,
-                                    poly_type_id id,
-                                    poly_value const &value) noexcept
+inline auto
+item_size_of_any_loggable(dp::emit_context &ctx,
+                          any_loggable_ref_storage_id id,
+                          any_loggable_ref_storage const &value) noexcept
         -> std::uint64_t
 {
-    using enum poly_type_id;
-    using enum poly_log_thunk_mode;
-#define DPLX_X_WITH_THUNK 0
+    using enum any_loggable_ref_storage_id;
+    using enum erased_loggable_thunk_mode;
 
     switch (id)
     {
@@ -86,7 +119,8 @@ inline auto item_size_of_poly_value(dp::emit_context &ctx,
         break;
 #define DPLX_X(name, type, var)                                                \
     case name:                                                                 \
-        return dp::encoded_size_of(ctx, value.var);                            \
+        return 1U + dp::encoded_size_of(ctx, as_reification_id(name))          \
+             + dp::encoded_size_of(ctx, value.var);                            \
         break;
 #include <dplx/dlog/detail/x_poly_types.inl>
 #undef DPLX_X
@@ -99,16 +133,16 @@ inline auto item_size_of_poly_value(dp::emit_context &ctx,
     }
 
     return 0U;
-#undef DPLX_X_WITH_THUNK
 }
 
-inline auto encode_poly_value(dp::emit_context &ctx,
-                              poly_type_id id,
-                              poly_value const &value) noexcept -> result<void>
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+inline auto encode_any_loggable(dp::emit_context &ctx,
+                                any_loggable_ref_storage_id id,
+                                any_loggable_ref_storage const &value) noexcept
+        -> result<void>
 {
-    using enum poly_type_id;
-    using enum poly_log_thunk_mode;
-#define DPLX_X_WITH_THUNK 0
+    using enum any_loggable_ref_storage_id;
+    using enum erased_loggable_thunk_mode;
 
     switch (id)
     {
@@ -116,13 +150,12 @@ inline auto encode_poly_value(dp::emit_context &ctx,
         break;
 #define DPLX_X(name, type, var)                                                \
     case name:                                                                 \
-        if (auto &&encodeRx = dp::encode(ctx, value.var);                      \
-            encodeRx.has_error())                                              \
-        {                                                                      \
-            return static_cast<decltype(encodeRx) &&>(encodeRx)                \
-                    .assume_error();                                           \
-        }                                                                      \
-        break;
+    {                                                                          \
+        DPLX_TRY(dp::emit_array(ctx, 2U));                                     \
+        DPLX_TRY(dp::encode(ctx, as_reification_id(name)));                    \
+        DPLX_TRY(dp::encode(ctx, value.var));                                  \
+        break;                                                                 \
+    }
 #include <dplx/dlog/detail/x_poly_types.inl>
 #undef DPLX_X
     case thunk:
@@ -137,15 +170,16 @@ inline auto encode_poly_value(dp::emit_context &ctx,
         cncr::unreachable();
     }
 
-    return dp::success();
-#undef DPLX_X_WITH_THUNK
+    return oc::success();
 }
 
+#undef DPLX_X_WITH_THUNK
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 } // namespace
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
         -> result<void>
 {
@@ -186,7 +220,7 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     for (int i = 0; i < args.num_arguments; ++i)
     {
         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        encodedSize += static_cast<unsigned>(detail::item_size_of_poly_value(
+        encodedSize += static_cast<unsigned>(detail::item_size_of_any_loggable(
                 ctx, args.part_types[i], args.message_parts[i]));
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
@@ -249,8 +283,8 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     for (int i = 0; i < args.num_arguments; ++i)
     {
         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        DPLX_TRY(detail::encode_poly_value(ctx, args.part_types[i],
-                                           args.message_parts[i]));
+        DPLX_TRY(detail::encode_any_loggable(ctx, args.part_types[i],
+                                             args.message_parts[i]));
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 

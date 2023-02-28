@@ -72,12 +72,10 @@ struct dplx::dp::codec<dlog_tests::custom_loggable>
     }
 };
 template <>
-struct dplx::dlog::argument<dlog_tests::custom_loggable>
+struct dplx::dlog::reification_tag<dlog_tests::custom_loggable>
+    : user_reification_type_constant<
+              1000U> // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 {
-    using type = dlog_tests::custom_loggable;
-    type value;
-
-    static constexpr resource_id type_id{1000U};
 };
 
 namespace dlog_tests

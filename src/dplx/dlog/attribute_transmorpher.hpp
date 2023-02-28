@@ -214,7 +214,9 @@ public:
     template <typename Attribute>
     auto register_attribute() -> dp::result<void>
     {
-        return register_attribute<Attribute::id, typename Attribute::retype>();
+        return register_attribute<
+                Attribute::id,
+                reification_type_of_t<typename Attribute::type>>();
     }
     template <resource_id Id, typename ReType>
     auto register_attribute() -> dp::result<void>
@@ -278,7 +280,8 @@ private:
             if (auto &&decodeRx = dp::decode(ctx, rawAttr->value());
                 !oc::try_operation_has_value(decodeRx))
             {
-                return oc::try_operation_return_as(std::move(decodeRx));
+                return oc::try_operation_return_as(
+                        static_cast<decltype(decodeRx) &&>(decodeRx));
             }
             return rx;
         }

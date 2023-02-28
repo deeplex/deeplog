@@ -45,10 +45,7 @@ TEST_CASE("bufferbus buffers messages and outputs them afterwards")
             {
                 break;
             }
-            else
-            {
-                allocCode.throw_exception();
-            }
+            allocCode.throw_exception();
         }
         dplx::scope_guard busLock = [&out]() noexcept
         {

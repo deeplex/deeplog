@@ -12,14 +12,14 @@
 
 #include <dplx/dp/concepts.hpp>
 
-#include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/definitions.hpp>
-#include <dplx/dlog/detail/utils.hpp>
+#include <dplx/dlog/loggable.hpp>
 
 namespace dplx::dlog
 {
 
-template <resource_id Id, typename T = void, typename ReType = T>
+template <resource_id Id, typename T = void>
+    requires(loggable<T> || std::is_void_v<T>)
 struct basic_attribute
 {
     static_assert(!std::is_void_v<T>,
@@ -29,43 +29,19 @@ struct basic_attribute
     static constexpr resource_id id{Id};
 
     using type = T;
-    using retype = ReType;
-
-    type const &value;
-};
-
-template <typename T>
-concept loggable_attribute = dp::encodable<typename T::type>
-                          && requires {
-                                 typename T::type;
-                                 typename T::retype;
-                                 {
-                                     T::id
-                                     } -> std::convertible_to<resource_id>;
-                             };
-
-template <resource_id Id, detail::integer T, detail::integer ReType>
-struct basic_attribute<Id, T, ReType>
-{
-    static constexpr resource_id id{Id};
-
-    using type = T;
-    using retype = ReType;
 
     type value;
 };
 
+template <typename T>
+concept attribute = requires { typename T::type; };
+
 namespace attr
 {
 
-using file = basic_attribute<resource_id{2}, std::string_view, std::string>;
+using file = basic_attribute<resource_id{2}, std::string_view>;
 using line = basic_attribute<resource_id{3}, unsigned>;
 
 } // namespace attr
-
-template <resource_id Id, typename T, typename ReType>
-struct argument<basic_attribute<Id, T, ReType>>
-{
-};
 
 } // namespace dplx::dlog

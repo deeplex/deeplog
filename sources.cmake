@@ -32,6 +32,9 @@ dplx_target_sources(deeplog
 
     PUBLIC
         dlog/disappointment
+        dlog/loggable
+
+        dlog/detail/any_loggable_ref
 )
 
 dplx_target_sources(deeplog
