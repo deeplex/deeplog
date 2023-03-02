@@ -50,6 +50,7 @@ dplx_target_sources(deeplog
         dlog/attributes.hpp
 
         dlog/detail/codec_dummy.hpp
+        dlog/detail/hex.hpp
         dlog/detail/iso8601.hpp
         dlog/detail/utils.hpp
         dlog/detail/x_poly_types.inl
