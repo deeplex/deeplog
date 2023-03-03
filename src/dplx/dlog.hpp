@@ -6,3 +6,6 @@
 //           https://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+
+#include <dplx/dlog/macros.hpp>
+#include <dplx/dlog/source.hpp>

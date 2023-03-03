@@ -48,6 +48,7 @@ dplx_target_sources(deeplog
         dlog/argument_transmorpher_fmt.hpp
         dlog/attribute_transmorpher.hpp
         dlog/attributes.hpp
+        dlog/macros.hpp
 
         dlog/detail/codec_dummy.hpp
         dlog/detail/hex.hpp

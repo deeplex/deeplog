@@ -15,6 +15,7 @@
 
 #include <dplx/dlog/bus/mpsc_bus.hpp>
 #include <dplx/dlog/core.hpp>
+#include <dplx/dlog/macros.hpp>
 
 #include "test_dir.hpp"
 #include "test_utils.hpp"

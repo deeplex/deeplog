@@ -37,8 +37,6 @@ consteval auto make_location(char const *filename,
     return {filename, static_cast<std::int_least32_t>(line),
             static_cast<std::int_least16_t>(filenameSize)};
 }
-#define DPLX_DLOG_LOCATION                                                     \
-    ::dplx::dlog::detail::make_location(__FILE__, __LINE__)
 #endif
 
 } // namespace dplx::dlog::detail
