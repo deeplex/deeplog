@@ -7,21 +7,11 @@
 
 #pragma once
 
-#include <concepts>
-#include <cstddef>
-#include <string>
-#include <type_traits>
+#include <cstdint>
 
 #include <fmt/core.h>
 
-#include <dplx/cncr/math_supplement.hpp>
-#include <dplx/cncr/utils.hpp>
-#include <dplx/dp/codecs/core.hpp>
-#include <dplx/dp/codecs/std-string.hpp>
-#include <dplx/dp/fwd.hpp>
-
 #include <dplx/dlog/arguments.hpp>
-#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/log_bus.hpp>
@@ -33,48 +23,28 @@ namespace dplx::dlog
 namespace detail
 {
 
-class vlogger
-{
-protected:
-    constexpr ~vlogger() noexcept = default;
-    constexpr vlogger() noexcept = default;
-
-public:
-    auto vlog(bus_output_buffer &out, log_args const &args) const noexcept
-            -> result<void>;
-
-private:
-    virtual auto do_allocate(bus_output_buffer &out,
-                             std::size_t messageSize) const noexcept
-            -> cncr::data_defined_status_code<errc>
-            = 0;
-};
+auto vlog(bus_handle &messageBus, log_args const &args) noexcept
+        -> result<void>;
 
 } // namespace detail
 
-template <bus T>
-class logger final : private detail::vlogger
+class span
 {
-    T *mBus{};
-    DPLX_ATTR_NO_UNIQUE_ADDRESS typename T::logger_token mToken{};
+    span_id mId{};
+    bus_handle *mBus{};
 
 public:
     // NOLINTNEXTLINE(cppcoreguidelines-non-private-member-variables-in-classes)
     severity threshold{};
 
-    constexpr logger() noexcept = default;
-
-    logger(T &targetBus, severity thresholdInit = default_threshold) noexcept
-        : mBus(&targetBus)
-        , mToken{}
+    span(bus_handle &targetBus,
+         severity thresholdInit = default_threshold) noexcept
+        : mId{}
+        , mBus(&targetBus)
         , threshold(thresholdInit)
     {
     }
 
-private:
-    using output_buffer = typename T::output_buffer;
-
-public:
     template <typename... Args>
         requires(... && loggable<Args>)
     [[nodiscard]] auto
@@ -94,28 +64,19 @@ public:
                 types[sizeof...(Args) > 0U ? sizeof...(Args) : 1U]
                 = {detail::any_loggable_ref_storage_tag<Args>...};
 
-        output_buffer buffer;
-        return vlogger::vlog(
-                buffer,
+        return detail::vlog(
+                *mBus,
                 detail::log_args{
                         message,
                         static_cast<detail::any_loggable_ref_storage const *>(
                                 values),
                         static_cast<detail::any_loggable_ref_storage_id const
                                             *>(types),
+                        mId,
                         location,
                         static_cast<std::uint_least16_t>(sizeof...(Args)),
                         sev,
                 });
-    }
-
-private:
-    auto do_allocate(bus_output_buffer &out,
-                     std::size_t messageSize) const noexcept
-            -> cncr::data_defined_status_code<errc> final
-    {
-        return mBus->allocate(static_cast<output_buffer &>(out), messageSize,
-                              mToken);
     }
 };
 

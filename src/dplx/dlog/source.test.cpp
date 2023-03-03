@@ -9,6 +9,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/items/parse_core.hpp>
 
 #include <dplx/dlog/bus/mpsc_bus.hpp>
@@ -87,7 +89,7 @@ TEST_CASE("The logger can write a message")
     dlog::core core{
             dlog::mpsc_bus(test_dir, "t1.dmsb", 4U, regionSize).value()};
 
-    dlog::logger xlog{core.connector()};
+    dlog::span xlog{core.connector()};
     DLOG_GENERIC(xlog, dlog::severity::warn, "important msg without arg");
 
     auto retireRx = core.retire_log_records();
@@ -100,7 +102,7 @@ TEST_CASE("The logger can write a message with an int and a string")
     dlog::core core{
             dlog::mpsc_bus(test_dir, "t2.dmsb", 4U, regionSize).value()};
 
-    dlog::logger xlog{core.connector()};
+    dlog::span xlog{core.connector()};
     DLOG_GENERIC(xlog, dlog::severity::warn, "important msg with arg {} and {}",
                  1, "it's me Mario");
 
@@ -114,7 +116,7 @@ TEST_CASE("The logger can write a message with a custom type")
     dlog::core core{
             dlog::mpsc_bus(test_dir, "t3.dmsb", 4U, regionSize).value()};
 
-    dlog::logger xlog{core.connector()};
+    dlog::span xlog{core.connector()};
     DLOG_GENERIC(xlog, dlog::severity::warn, "important msg with arg {}",
                  custom_loggable{});
 

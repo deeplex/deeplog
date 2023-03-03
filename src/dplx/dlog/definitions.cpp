@@ -20,10 +20,10 @@ namespace dplx::dlog
 
 auto trace_id::random() noexcept -> trace_id
 {
-    struct
+    struct // NOLINT(cppcoreguidelines-pro-type-member-init)
     {
         alignas(trace_id) char bytes[state_size];
-    } value; // NOLINT(cppcoreguidelines-pro-type-member-init)
+    } value;
     llfio::utils::random_fill(static_cast<char *>(value.bytes),
                               sizeof(value.bytes));
     return std::bit_cast<trace_id>(value);

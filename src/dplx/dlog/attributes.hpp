@@ -10,6 +10,8 @@
 #include <string_view>
 #include <type_traits>
 
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/concepts.hpp>
 
 #include <dplx/dlog/definitions.hpp>

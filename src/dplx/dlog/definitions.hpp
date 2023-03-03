@@ -132,6 +132,7 @@ struct trace_id
     }
 
     friend inline auto operator==(trace_id lhs, trace_id rhs) noexcept -> bool
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
             = default;
 };
 
@@ -173,7 +174,7 @@ public:
         auto &&it = ctx.begin();
         if (it != ctx.end() && *it != '}')
         {
-            throw format_error("invalid format");
+            ctx.on_error("invalid format");
         }
         return it;
     }
@@ -235,6 +236,7 @@ struct span_id
     }
 
     friend inline auto operator==(span_id lhs, span_id rhs) noexcept -> bool
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
             = default;
 };
 
@@ -271,7 +273,7 @@ public:
         auto &&it = ctx.begin();
         if (it != ctx.end() && *it != '}')
         {
-            throw format_error("invalid format");
+            ctx.on_error("invalid format");
         }
         return it;
     }

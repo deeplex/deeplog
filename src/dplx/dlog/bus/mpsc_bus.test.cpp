@@ -46,33 +46,35 @@ TEST_CASE("mpsc_bus() creates a mpsc_bus_handle given a mapped_file_handle")
 
 TEST_CASE("mpsc_bus can be filled and drained")
 {
-    auto createRx = dlog::mpsc_bus(llfio::mapped_temp_inode().value(), 2U,
-                                   dlog::mpsc_bus_handle::min_region_size);
-    REQUIRE(createRx);
-
-    auto bufferbus = std::move(createRx).assume_value();
+    auto bufferbus = dlog::mpsc_bus(llfio::mapped_temp_inode().value(), 2U,
+                                    dlog::mpsc_bus_handle::min_region_size)
+                             .value();
 
     auto msgId = 0U;
-    auto token = bufferbus.create_token().value();
     for (;;)
     {
         auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
-        dlog::mpsc_bus_handle::output_buffer out;
-        if (auto allocCode = bufferbus.allocate(out, size, token);
-            allocCode.failure())
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        dlog::output_buffer_storage outStorage;
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        dlog::bus_output_buffer *out;
+        if (auto createRx
+            = bufferbus.create_output_buffer_inplace(outStorage, size, {});
+            createRx.has_value())
         {
-            if (allocCode.value() == dlog::errc::not_enough_space)
+            out = createRx.assume_value();
+        }
+        else
+        {
+            if (createRx.assume_error() == dlog::errc::not_enough_space)
             {
                 break;
             }
-            allocCode.throw_exception();
+            createRx.assume_error().throw_exception();
         }
-        dplx::scope_guard busLock = [&out]() noexcept
-        {
-            (void)out.sync_output();
-        };
+        dlog::bus_output_guard busLock(*out);
 
-        dp::encode(out, msgId).value();
+        dp::encode(*out, msgId).value();
         msgId += 1;
     }
 
@@ -102,7 +104,6 @@ namespace
 auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
         -> dlog::result<void>
 {
-    DPLX_TRY(auto token, bus.create_token());
     for (unsigned i = 0U; i < limit; ++i)
     {
         /*
@@ -115,17 +116,13 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
 
         auto const encodedSize
                 = static_cast<unsigned>(dplx::dp::encoded_size_of(i));
-        dlog::mpsc_bus_handle::output_buffer outStream;
-        if (auto allocCode = bus.allocate(outStream, encodedSize, token);
-            allocCode.value() != dlog::errc::success)
-        {
-            return allocCode;
-        }
-        dplx::scope_guard busLock = [&outStream]() noexcept
-        {
-            (void)outStream.sync_output();
-        };
-        DPLX_TRY(dplx::dp::encode(outStream, i));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        dlog::output_buffer_storage outStorage;
+        DPLX_TRY(auto *outStream,
+                 bus.create_output_buffer_inplace(outStorage, encodedSize, {}));
+
+        dlog::bus_output_guard busLock(*outStream);
+        DPLX_TRY(dplx::dp::encode(*outStream, i));
     }
     return dlog::oc::success();
 }

@@ -53,6 +53,7 @@ public:
     fmt::string_view message;
     detail::any_loggable_ref_storage const *message_parts;
     detail::any_loggable_ref_storage_id const *part_types;
+    span_id owner;
     log_location location;
     std::uint_least16_t num_arguments;
     severity sev;

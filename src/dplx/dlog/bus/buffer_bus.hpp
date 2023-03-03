@@ -25,7 +25,7 @@
 namespace dplx::dlog
 {
 
-class bufferbus_handle
+class bufferbus_handle final : public bus_handle
 {
     llfio::mapped_file_handle mBackingFile;
     std::span<std::byte> mBuffer;
@@ -67,17 +67,10 @@ public:
     {
         friend class bufferbus_handle;
 
-    public:
-        output_buffer() noexcept = default;
-    };
+        using bus_output_buffer::bus_output_buffer;
 
-    struct logger_token
-    {
+    public:
     };
-    static auto create_token() noexcept -> result<logger_token>
-    {
-        return logger_token{};
-    }
 
     static auto bufferbus(llfio::path_handle const &base,
                           llfio::path_view path,
@@ -106,27 +99,6 @@ public:
                     static_cast<int>(dp::type_code::null), bufferSize);
 
         return bufferbus_handle(std::move(backingFile), bufferSize);
-    }
-
-    auto allocate(output_buffer &out,
-                  std::size_t messageSize,
-                  logger_token const) noexcept
-            -> cncr::data_defined_status_code<errc>
-    {
-        auto const overhead = dp::detail::var_uint_encoded_size(messageSize);
-        auto const totalSize = overhead + messageSize;
-
-        if (totalSize > mBuffer.size() - mWriteOffset)
-        {
-            return errc::not_enough_space;
-        }
-
-        out.reset(mBuffer.subspan(mWriteOffset, totalSize));
-        mWriteOffset += totalSize;
-
-        dp::emit_context ctx{out};
-        (void)dp::emit_binary(ctx, messageSize);
-        return errc::success;
     }
 
     template <typename ConsumeFn>
@@ -185,6 +157,28 @@ public:
     }
 
 private:
+    auto do_create_output_buffer_inplace(
+            output_buffer_storage &bufferPlacementStorage,
+            std::size_t messageSize,
+            span_id) noexcept -> result<bus_output_buffer *> override
+    {
+        auto const overhead = dp::detail::var_uint_encoded_size(messageSize);
+        auto const totalSize = overhead + messageSize;
+
+        if (totalSize > mBuffer.size() - mWriteOffset)
+        {
+            return errc::not_enough_space;
+        }
+
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        output_buffer out(mBackingFile.address() + mWriteOffset, totalSize);
+        mWriteOffset += totalSize;
+
+        dp::emit_context ctx{out};
+        (void)dp::emit_binary(ctx, messageSize);
+        return new (static_cast<void *>(&bufferPlacementStorage))
+                output_buffer(static_cast<output_buffer &&>(out));
+    }
 };
 
 inline auto bufferbus(llfio::path_handle const &base,

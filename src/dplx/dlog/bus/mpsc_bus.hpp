@@ -20,6 +20,7 @@
 #include <dplx/dp/streams/memory_output_stream.hpp>
 #include <dplx/scope_guard.hpp>
 
+#include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/utils.hpp> // declare_codec
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -65,7 +66,7 @@ struct mpsc_bus_region_ctrl
     std::uint8_t padding[56]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 };
 
-class mpsc_bus_handle final
+class mpsc_bus_handle final : public bus_handle
 {
     llfio::mapped_file_handle mBackingFile;
     std::uint32_t mNumRegions;
@@ -153,10 +154,8 @@ public:
 
         std::uint32_t *mMsgCtrl{nullptr};
 
-    public:
-        output_buffer() noexcept = default;
+        using bus_output_buffer::bus_output_buffer;
 
-    private:
         auto do_sync_output() noexcept -> dp::result<void> final
         {
             if (mMsgCtrl == nullptr) [[unlikely]]
@@ -171,29 +170,6 @@ public:
             return dp::oc::success();
         }
     };
-
-    class logger_token
-    {
-        friend class mpsc_bus_handle;
-
-        std::uint32_t regionId{0U};
-
-    public:
-        constexpr logger_token() noexcept = default;
-
-    private:
-        explicit logger_token(std::uint32_t regionId_) noexcept
-            : regionId(regionId_)
-        {
-        }
-    };
-
-    auto create_token() const noexcept -> result<logger_token>
-    {
-        auto const hashed = detail::hashed_this_thread_id();
-        auto const regionId = detail::hash_to_index(hashed, mNumRegions);
-        return logger_token(regionId);
-    }
 
     template <typename ConsumeFn>
     auto consume_content(ConsumeFn &&consumeFn) noexcept -> result<void>
@@ -283,12 +259,13 @@ private:
         return oc::success();
     }
 
-public:
-    auto allocate(output_buffer &out,
-                  std::size_t const messageSize,
-                  logger_token const token) noexcept
-            -> cncr::data_defined_status_code<errc>
+    auto do_create_output_buffer_inplace(
+            output_buffer_storage &bufferPlacementStorage,
+            std::size_t messageSize,
+            span_id spanId) noexcept -> result<bus_output_buffer *> override
     {
+        static_assert(sizeof(output_buffer_storage) >= sizeof(output_buffer));
+
         if (messageSize > max_message_size) [[unlikely]]
         {
             return errc::not_enough_space;
@@ -296,29 +273,35 @@ public:
         auto const payloadSize = static_cast<std::uint32_t>(messageSize);
         auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
 
-        auto regionId = token.regionId;
+        output_buffer out;
+        auto const spread
+                = (spanId == span_id::invalid()
+                           ? detail::hashed_this_thread_id()
+                           : static_cast<std::uint32_t>(spanId._state[0]));
+        auto const firstRegionId = detail::hash_to_index(spread, mNumRegions);
+        auto regionId = firstRegionId;
         for (;;)
         {
-            auto const allocCode = do_allocate(out, allocSize, regionId);
+            auto const allocCode = allocate(out, allocSize, regionId);
             if (allocCode == errc::success) [[likely]]
             {
                 break;
             }
             regionId = ++regionId == mNumRegions ? 0U : regionId;
             if (allocCode != errc::not_enough_space
-                || regionId == token.regionId)
+                || regionId == firstRegionId)
             {
                 return cncr::data_defined_status_code<errc>{allocCode};
             }
         }
 
-        return cncr::data_defined_status_code<errc>{errc::success};
+        return new (static_cast<void *>(&bufferPlacementStorage))
+                output_buffer(out);
     }
 
-private:
-    auto do_allocate(output_buffer &out,
-                     std::uint32_t const allocSize,
-                     std::uint32_t const regionId) noexcept -> errc
+    auto allocate(output_buffer &out,
+                  std::uint32_t const allocSize,
+                  std::uint32_t const regionId) noexcept -> errc
     {
         auto *const ctx = region(regionId);
         auto *const regionData = region_data(regionId);

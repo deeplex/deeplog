@@ -26,33 +26,35 @@ static_assert(dlog::bus<dlog::bufferbus_handle>);
 TEST_CASE("bufferbus buffers messages and outputs them afterwards")
 {
     constexpr auto bufferSize = 64 * 1024;
-    auto createRx
-            = dlog::bufferbus(llfio::mapped_temp_inode().value(), bufferSize);
-    REQUIRE(createRx);
-
-    auto bufferbus = std::move(createRx).assume_value();
+    auto bufferbus
+            = dlog::bufferbus(llfio::mapped_temp_inode().value(), bufferSize)
+                      .value();
 
     auto msgId = 0U;
-    dlog::bufferbus_handle::logger_token token{};
     for (;;)
     {
         auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
-        dlog::bufferbus_handle::output_buffer out;
-        if (auto allocCode = bufferbus.allocate(out, size, token);
-            allocCode.failure())
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        dlog::output_buffer_storage outStorage;
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        dlog::bus_output_buffer *out;
+        if (auto createRx
+            = bufferbus.create_output_buffer_inplace(outStorage, size, {});
+            createRx.has_value())
         {
-            if (allocCode.value() == dlog::errc::not_enough_space)
+            out = createRx.assume_value();
+        }
+        else
+        {
+            if (createRx.assume_error() == dlog::errc::not_enough_space)
             {
                 break;
             }
-            allocCode.throw_exception();
+            createRx.assume_error().throw_exception();
         }
-        dplx::scope_guard busLock = [&out]() noexcept
-        {
-            (void)out.sync_output();
-        };
+        dlog::bus_output_guard busLock(*out);
 
-        dp::encode(out, msgId).value();
+        dp::encode(*out, msgId).value();
         msgId += 1;
     }
 

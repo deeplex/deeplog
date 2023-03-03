@@ -180,8 +180,7 @@ inline auto encode_any_loggable(dp::emit_context &ctx,
 } // namespace
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
-        -> result<void>
+auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
 {
     if (static_cast<unsigned>(args.sev)
         > static_cast<unsigned>(severity::trace))
@@ -201,7 +200,8 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     constexpr auto numArrayElements = 5U;
     constexpr auto timestampSize = 9U;
     auto const timeStamp = log_clock::now();
-    dp::emit_context ctx{out};
+    dp::void_stream voidOut;
+    dp::emit_context sizeCtx{voidOut};
 
     // compute buffer size
     constexpr auto encodedArraySize
@@ -213,7 +213,7 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
             = static_cast<unsigned>(encodedArraySize + encodedMetaSize);
 
     encodedSize += static_cast<unsigned>(
-            dp::item_size_of_u8string(ctx, args.message.size()));
+            dp::item_size_of_u8string(sizeCtx, args.message.size()));
 
     encodedSize += static_cast<unsigned>(
             dp::encoded_item_head_size<dp::type_code::array>(
@@ -222,14 +222,14 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     {
         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         encodedSize += static_cast<unsigned>(detail::item_size_of_any_loggable(
-                ctx, args.part_types[i], args.message_parts[i]));
+                sizeCtx, args.part_types[i], args.message_parts[i]));
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
     if (args.location.line >= 0)
     {
         encodedSize += static_cast<unsigned>(
-                dp::item_size_of_integer(ctx, args.location.line));
+                dp::item_size_of_integer(sizeCtx, args.location.line));
     }
     else
     {
@@ -238,7 +238,7 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     if (args.location.filenameSize >= 0)
     {
         encodedSize += static_cast<unsigned>(
-                dp::item_size_of_u8string(ctx, args.location.filenameSize));
+                dp::item_size_of_u8string(sizeCtx, args.location.filenameSize));
     }
     else
     {
@@ -246,15 +246,13 @@ auto vlogger::vlog(bus_output_buffer &out, log_args const &args) const noexcept
     }
 
     // allocate an output buffer on the message bus
-    if (auto allocCode = do_allocate(out, encodedSize);
-        allocCode.value() != errc::success) [[unlikely]]
-    {
-        return allocCode;
-    }
-    scope_guard outputSync = [&out]() noexcept
-    {
-        (void)out.sync_output();
-    };
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+    dlog::output_buffer_storage outStorage;
+    DPLX_TRY(auto *out, messageBus.create_output_buffer_inplace(
+                                outStorage, encodedSize, args.owner));
+    bus_output_guard outGuard(*out);
+
+    dp::emit_context ctx{*out};
 
     // write to output buffer
     (void)dp::emit_array(ctx, numArrayElements);

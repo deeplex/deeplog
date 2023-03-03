@@ -26,7 +26,7 @@ using writable_bytes = std::span<std::byte>;
 // clang-format off
 template <typename T>
 concept source
-    = requires (T &&t, detail::encodable_dummy const &dummy)
+    = requires (T t, detail::encodable_dummy const dummy)
         {
             { t.static_resource(dummy) }
                     -> detail::tryable_result<std::uint64_t>;
@@ -37,19 +37,10 @@ concept source
 // clang-format off
 template <typename T>
 concept bus
-        = std::derived_from<typename T::output_buffer, bus_output_buffer>
-        && requires(T &&t,
-                    typename T::logger_token logger,
-                    typename T::output_buffer out,
-                    unsigned const size,
+        = std::derived_from<T, bus_handle>
+        && requires(T t,
                     void (&dummy_consumer)(std::span<std::byte const>) noexcept)
         {
-            typename T::logger_token;
-            { t.create_token() }
-                    -> detail::tryable_result<typename T::logger_token>;
-            typename T::output_buffer;
-            { t.allocate(out, size, logger) }
-                    -> std::same_as<cncr::data_defined_status_code<errc>>;
             { t.consume_content(dummy_consumer) }
                     -> detail::tryable;
         };
@@ -58,7 +49,7 @@ concept bus
 // clang-format off
 template <typename Fn>
 concept bus_consumer
-        = requires(Fn &&fn, std::span<std::byte const> const content)
+        = requires(Fn fn, std::span<std::byte const> const content)
         {
             static_cast<Fn &&>(fn)(content);
         };
