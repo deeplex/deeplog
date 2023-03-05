@@ -51,8 +51,7 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     dlog::core core{dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
     core.attach_sink(std::move(sinkOwner));
 
-    dlog::span xlog{core.connector()};
-    DLOG_WARN(xlog, "important msg with arg {}", 1);
+    DLOG_WARN_EX(core.connector(), "important msg with arg {}", 1);
     // DLOG_GENERIC(xlog, dlog::severity::warn,
     //              "important msg with arg {} and {}", 1, dlog::arg("argx",
     //              2));

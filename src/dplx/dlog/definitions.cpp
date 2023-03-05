@@ -8,6 +8,7 @@
 #include "dplx/dlog/definitions.hpp"
 
 #include <dplx/cncr/utils.hpp>
+#include <dplx/dp/api.hpp>
 #include <dplx/dp/items/emit_core.hpp>
 #include <dplx/dp/items/parse_core.hpp>
 #include <dplx/dp/items/parse_ranges.hpp>
@@ -90,6 +91,7 @@ auto dplx::dp::codec<dplx::dlog::trace_id>::decode(parse_context &ctx,
     return ctx.in.bulk_read(reinterpret_cast<std::byte *>(id._state),
                             dlog::trace_id::state_size);
 }
+
 auto dplx::dp::codec<dplx::dlog::trace_id>::encode(emit_context &ctx,
                                                    dlog::trace_id id) noexcept
         -> result<void>
@@ -117,4 +119,38 @@ auto dplx::dp::codec<dplx::dlog::span_id>::encode(emit_context &ctx,
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return dp::emit_binary(ctx, reinterpret_cast<std::byte const *>(id._state),
                            dlog::span_id::state_size);
+}
+
+auto dplx::dp::codec<dplx::dlog::span_context>::decode(
+        parse_context &ctx, dlog::span_context &spanCtx) noexcept
+        -> result<void>
+{
+    if (ctx.in.empty()) [[unlikely]]
+    {
+        DPLX_TRY(ctx.in.require_input(1U));
+    }
+    if (*ctx.in.data() == static_cast<std::byte>(type_code::null))
+    {
+        ctx.in.discard_buffered(1U);
+        spanCtx = {};
+        return dp::success();
+    }
+
+    DPLX_TRY(dp::expect_item_head(ctx, type_code::array, 2U));
+    DPLX_TRY(dp::codec<dlog::trace_id>::decode(ctx, spanCtx.traceId));
+    DPLX_TRY(dp::codec<dlog::span_id>::decode(ctx, spanCtx.spanId));
+    return oc::success();
+}
+auto dplx::dp::codec<dplx::dlog::span_context>::encode(
+        emit_context &ctx, dlog::span_context spanCtx) noexcept -> result<void>
+{
+    if (spanCtx == dlog::span_context{})
+    {
+        return dp::emit_null(ctx);
+    }
+
+    DPLX_TRY(dp::emit_array(ctx, 2U));
+    DPLX_TRY(dp::codec<dlog::trace_id>::encode(ctx, spanCtx.traceId));
+    DPLX_TRY(dp::codec<dlog::span_id>::encode(ctx, spanCtx.spanId));
+    return oc::success();
 }

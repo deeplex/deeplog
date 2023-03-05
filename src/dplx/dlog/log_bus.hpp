@@ -9,6 +9,8 @@
 
 #include <cstddef>
 
+#include <dplx/cncr/utils.hpp>
+#include <dplx/dp/api.hpp>
 #include <dplx/dp/disappointment.hpp>
 #include <dplx/dp/streams/output_buffer.hpp>
 
@@ -42,6 +44,23 @@ private:
     }
 };
 
+class bus_output_guard
+{
+    bus_output_buffer &mOutput;
+
+public:
+    DPLX_ATTR_FORCE_INLINE ~bus_output_guard() noexcept
+    {
+        (void)mOutput.sync_output();
+        mOutput.~bus_output_buffer();
+    }
+    DPLX_ATTR_FORCE_INLINE explicit bus_output_guard(
+            bus_output_buffer &which) noexcept
+        : mOutput(which)
+    {
+    }
+};
+
 struct output_buffer_storage
 {
     static constexpr std::size_t static_size = 128U;
@@ -50,6 +69,9 @@ struct output_buffer_storage
 
 class bus_handle
 {
+public:
+    severity threshold{default_threshold};
+
 protected:
     constexpr ~bus_handle() noexcept = default;
     constexpr bus_handle() noexcept = default;
@@ -61,8 +83,13 @@ protected:
     constexpr bus_handle(bus_handle &&) noexcept = default;
     constexpr auto operator=(bus_handle &&) noexcept -> bus_handle & = default;
 
+    constexpr explicit bus_handle(severity initialThreshold) noexcept
+        : threshold(initialThreshold)
+    {
+    }
+
 public:
-    auto
+    DPLX_ATTR_FORCE_INLINE auto
     create_output_buffer_inplace(output_buffer_storage &bufferPlacementStorage,
                                  std::size_t messageSize,
                                  span_id spanId) noexcept
@@ -72,28 +99,46 @@ public:
                                                messageSize, spanId);
     }
 
+    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto allocate_trace_id() noexcept
+            -> trace_id
+    {
+        return do_allocate_trace_id();
+    }
+    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto
+    allocate_span_id(trace_id trace) noexcept -> span_id
+    {
+        return do_allocate_span_id(trace);
+    }
+
+    template <dp::encodable T>
+    auto write(span_id sid, T const &msg) noexcept -> result<void>
+    {
+        auto const msgSize = dp::encoded_size_of(msg);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        output_buffer_storage outStorage;
+        DPLX_TRY(auto *out,
+                 do_create_output_buffer_inplace(outStorage, msgSize, sid));
+        bus_output_guard outGuard{*out};
+        return dp::encode(*out, msg);
+    }
+
 private:
     virtual auto do_create_output_buffer_inplace(
             output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
             span_id spanId) noexcept -> result<bus_output_buffer *>
             = 0;
-};
-
-class bus_output_guard
-{
-    bus_output_buffer &mOutput;
-
-public:
-    ~bus_output_guard() noexcept
-    {
-        (void)mOutput.sync_output();
-        mOutput.~bus_output_buffer();
-    }
-    explicit bus_output_guard(bus_output_buffer &which) noexcept
-        : mOutput(which)
-    {
-    }
+    virtual auto do_allocate_trace_id() noexcept -> trace_id = 0;
+    virtual auto do_allocate_span_id(trace_id trace) noexcept -> span_id = 0;
 };
 
 } // namespace dplx::dlog
+
+namespace dplx::dlog::detail
+{
+
+auto derive_span_id(std::uint64_t traceIdP0,
+                    std::uint64_t traceIdP1,
+                    std::uint64_t ctr) noexcept -> span_id;
+
+}

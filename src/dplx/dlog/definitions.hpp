@@ -303,3 +303,36 @@ struct dplx::dp::codec<dplx::dlog::span_id>
     static auto encode(emit_context &ctx, dlog::span_id id) noexcept
             -> result<void>;
 };
+
+namespace dplx::dlog
+{
+
+struct span_context
+{
+    trace_id traceId;
+    span_id spanId;
+
+    friend inline auto operator==(span_context, span_context) noexcept -> bool
+            = default;
+};
+
+} // namespace dplx::dlog
+
+template <>
+class dplx::dp::codec<dplx::dlog::span_context>
+{
+public:
+    static auto decode(parse_context &ctx, dlog::span_context &spanCtx) noexcept
+            -> result<void>;
+    static constexpr auto size_of(emit_context &ctx,
+                                  dlog::span_context spanCtx) noexcept
+            -> std::uint64_t
+    {
+        return spanCtx == dlog::span_context{}
+                     ? 1U
+                     : 1U + codec<dlog::trace_id>::size_of(ctx, {})
+                               + codec<dlog::span_id>::size_of(ctx, {});
+    }
+    static auto encode(emit_context &ctx, dlog::span_context spanCtx) noexcept
+            -> result<void>;
+};

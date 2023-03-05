@@ -62,8 +62,10 @@ struct mpsc_bus_region_ctrl
             std::uint32_t read_ptr;
     alignas(std::atomic_ref<std::uint32_t>::required_alignment)
             std::uint32_t alloc_ptr;
+    alignas(std::atomic_ref<std::uint64_t>::required_alignment) std::uint64_t
+            span_prng_ctr;
 
-    std::uint8_t padding[56]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+    std::uint8_t padding[48]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 };
 
 class mpsc_bus_handle final : public bus_handle
@@ -148,6 +150,11 @@ public:
     static constexpr std::uint32_t min_region_size = 4 * 1024U;
     static constexpr std::uint32_t max_message_size = 0x1fff'ffffU;
 
+private:
+    auto do_allocate_trace_id() noexcept -> trace_id override;
+    auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
+
+public:
     class output_buffer final : public bus_output_buffer
     {
         friend class mpsc_bus_handle;

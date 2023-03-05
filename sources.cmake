@@ -14,6 +14,7 @@ dplx_target_sources(deeplog
         dlog/log_clock
         dlog/sink
         dlog/source
+        dlog/span_scope
 
         dlog/bus/buffer_bus
         dlog/bus/mpsc_bus
@@ -32,6 +33,7 @@ dplx_target_sources(deeplog
 
     PUBLIC
         dlog/disappointment
+        dlog/fwd
         dlog/loggable
 
         dlog/detail/any_loggable_ref

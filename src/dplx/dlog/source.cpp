@@ -7,12 +7,14 @@
 
 #include "dplx/dlog/source.hpp"
 
+#include <dplx/dp/api.hpp>
 #include <dplx/dp/items/emit_core.hpp>
 #include <dplx/dp/items/emit_ranges.hpp>
 #include <dplx/dp/items/item_size_of_ranges.hpp>
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/attributes.hpp> // FIXME
+#include <dplx/dlog/log_bus.hpp>
 #include <dplx/dlog/log_clock.hpp>
 
 template <>
@@ -189,15 +191,16 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     }
 
     // layout:
-    // array 6
+    // array 7
     // +  ui    severity
+    // +  arr?  owner
     // +  ui64  timestamp
     // +  str   message
     // +  array format args
     // +  ui?   line
     // +  str?  file
 
-    constexpr auto numArrayElements = 5U;
+    constexpr auto numArrayElements = 7U;
     constexpr auto timestampSize = 9U;
     auto const timeStamp = log_clock::now();
     dp::void_stream voidOut;
@@ -211,6 +214,9 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
 
     auto encodedSize
             = static_cast<unsigned>(encodedArraySize + encodedMetaSize);
+
+    encodedSize
+            += static_cast<unsigned>(dp::encoded_size_of(sizeCtx, args.owner));
 
     encodedSize += static_cast<unsigned>(
             dp::item_size_of_u8string(sizeCtx, args.message.size()));
@@ -249,7 +255,7 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     dlog::output_buffer_storage outStorage;
     DPLX_TRY(auto *out, messageBus.create_output_buffer_inplace(
-                                outStorage, encodedSize, args.owner));
+                                outStorage, encodedSize, args.owner.spanId));
     bus_output_guard outGuard(*out);
 
     dp::emit_context ctx{*out};
@@ -259,6 +265,7 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     // severity
     *ctx.out.data() = static_cast<std::byte>(args.sev);
     ctx.out.commit_written(1U);
+    (void)dp::encode(ctx, args.owner);
 
     // timestamp
     *ctx.out.data() = static_cast<std::byte>(dp::type_code::posint);
