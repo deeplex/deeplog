@@ -13,6 +13,7 @@
 
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/detail/tls.hpp>
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/loggable.hpp>
 #include <dplx/dlog/span_scope.hpp>
@@ -62,6 +63,26 @@ inline constexpr struct log_fn
                                              message, sev, scope.context(),
                                              location, args...});
     }
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+    template <typename... Args>
+        requires(... && loggable<Args>)
+    [[nodiscard]] auto
+    operator()(severity sev,
+               fmt::format_string<reification_type_of_t<Args>...> message,
+               detail::log_location location,
+               Args const &...args) const noexcept -> result<void>
+    {
+        auto active = detail::active_span;
+        if (active == nullptr)
+        {
+            return oc::success();
+        }
+        return detail::vlog(*active, detail::stack_log_args<Args...>{
+                                             message, sev, span_context{},
+                                             location, args...});
+    }
+#endif
 } log;
 
 } // namespace dplx::dlog

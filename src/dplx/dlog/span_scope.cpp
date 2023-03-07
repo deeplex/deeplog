@@ -13,6 +13,7 @@
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
+#include <dplx/dlog/detail/tls.hpp>
 #include <dplx/dlog/log_bus.hpp>
 #include <dplx/dlog/log_clock.hpp>
 
@@ -97,8 +98,56 @@ public:
 namespace dplx::dlog
 {
 
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+auto span_scope::none(attach mode) noexcept -> span_scope
+{
+    if (auto prev = detail::active_span; prev != nullptr)
+    {
+        return none(*prev->bus(), mode);
+    }
+    return span_scope{};
+}
+#endif
+auto span_scope::none(bus_handle &targetBus, attach mode) noexcept -> span_scope
+{
+    return {{}, targetBus, nullptr, targetBus.threshold, mode};
+}
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+auto span_scope::open(std::string_view name,
+                      detail::function_location fn) noexcept -> span_scope
+{
+    if (auto prev = detail::active_span; prev != nullptr)
+    {
+        return open(*prev, name, attach::no, fn);
+    }
+    return span_scope{};
+}
+auto span_scope::open(std::string_view name,
+                      attach mode,
+                      detail::function_location fn) noexcept -> span_scope
+{
+    if (auto prev = detail::active_span; prev != nullptr)
+    {
+        return open(*prev, name, mode, fn);
+    }
+    return span_scope{};
+}
+#endif
 auto span_scope::open(bus_handle &targetBus,
                       std::string_view name,
+                      detail::function_location fn) noexcept -> span_scope
+{
+    return open(targetBus, name, attach::no, fn);
+}
+auto span_scope::open(span_scope const &parent,
+                      std::string_view name,
+                      detail::function_location fn) noexcept -> span_scope
+{
+    return open(parent, name, attach::no, fn);
+}
+auto span_scope::open(bus_handle &targetBus,
+                      std::string_view name,
+                      attach mode,
                       detail::function_location fn) noexcept -> span_scope
 {
     using namespace std::string_view_literals;
@@ -116,21 +165,25 @@ auto span_scope::open(bus_handle &targetBus,
         msg.timestamp = log_clock::now();
         if (targetBus.write(msg.id.spanId, msg).has_value())
         {
-            return {msg.id, targetBus, targetBus.threshold};
+            return {msg.id, targetBus, nullptr, targetBus.threshold, mode};
         }
     }
 
     return {};
 }
-
 auto span_scope::open(span_scope const &parent,
                       std::string_view name,
+                      attach mode,
                       detail::function_location fn) noexcept -> span_scope
 {
     using namespace std::string_view_literals;
-    if (parent.mId.traceId == trace_id::invalid() || parent.mBus == nullptr)
+    if (parent.mBus == nullptr)
     {
         return {};
+    }
+    if (parent.mId.traceId == trace_id::invalid())
+    {
+        return open(*parent.mBus, name, mode, fn);
     }
 
     span_start_msg msg{
@@ -146,7 +199,7 @@ auto span_scope::open(span_scope const &parent,
         return {};
     }
 
-    return {msg.id, *parent.mBus, parent.threshold};
+    return {msg.id, *parent.mBus, &parent, parent.threshold, mode};
 }
 
 auto span_scope::send_close_msg() noexcept -> result<void>

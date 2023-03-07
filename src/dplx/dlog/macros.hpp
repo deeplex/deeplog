@@ -40,6 +40,20 @@
 // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 
 #if _MSVC_TRADITIONAL
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#define DLOG_GENERIC(severity, message, ...)                                   \
+    do                                                                         \
+    { /* due to shadowing this name isn't required to be unique */             \
+        if (auto &&_dlog_materialized_temporary_                               \
+            = (::dplx::dlog::detail::active_span);                             \
+            _dlog_materialized_temporary_ != nullptr                           \
+            && _dlog_materialized_temporary_->threshold >= (severity))         \
+            (void)::dplx::dlog::log(*_dlog_materialized_temporary_,            \
+                                    (severity), (message), DPLX_DLOG_LOCATION, \
+                                    __VA_ARGS__);                              \
+    } while (0)
+#endif
 #define DLOG_GENERIC_EX(ctx, severity, message, ...)                           \
     do                                                                         \
     { /* due to shadowing this name isn't required to be unique */             \
@@ -49,7 +63,22 @@
                                     (message), DPLX_DLOG_LOCATION,             \
                                     __VA_ARGS__);                              \
     } while (0)
+
 #else // _MSVC_TRADITIONAL
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#define DLOG_GENERIC(severity, message, ...)                                   \
+    do                                                                         \
+    { /* due to shadowing this name isn't required to be unique */             \
+        if (auto &&_dlog_materialized_temporary_                               \
+            = (::dplx::dlog::detail::active_span);                             \
+            _dlog_materialized_temporary_ != nullptr                           \
+            && _dlog_materialized_temporary_->threshold >= (severity))         \
+            (void)::dplx::dlog::log(                                           \
+                    *_dlog_materialized_temporary_, (severity), (message),     \
+                    DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
+    } while (0)
+#endif
 #define DLOG_GENERIC_EX(ctx, severity, message, ...)                           \
     do                                                                         \
     { /* due to shadowing this name isn't required to be unique */             \
@@ -59,7 +88,21 @@
                     _dlog_materialized_temporary_, (severity), (message),      \
                     DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
     } while (0)
+
 #endif // _MSVC_TRADITIONAL
+
+#define DLOG_CRITICAL(message, ...)                                            \
+    DLOG_GENERIC(::dplx::dlog::severity::critical, message, __VA_ARGS__)
+#define DLOG_ERROR(message, ...)                                               \
+    DLOG_GENERIC(::dplx::dlog::severity::error, message, __VA_ARGS__)
+#define DLOG_WARN(message, ...)                                                \
+    DLOG_GENERIC(::dplx::dlog::severity::warn, message, __VA_ARGS__)
+#define DLOG_INFO(message, ...)                                                \
+    DLOG_GENERIC(::dplx::dlog::severity::info, message, __VA_ARGS__)
+#define DLOG_DEBUG(message, ...)                                               \
+    DLOG_GENERIC(::dplx::dlog::severity::debug, message, __VA_ARGS__)
+#define DLOG_TRACE(message, ...)                                               \
+    DLOG_GENERIC(::dplx::dlog::severity::trace, message, __VA_ARGS__)
 
 #define DLOG_CRITICAL_EX(ctx, message, ...)                                    \
     DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::critical, message, __VA_ARGS__)
@@ -74,20 +117,41 @@
 #define DLOG_TRACE_EX(ctx, message, ...)                                       \
     DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::trace, message, __VA_ARGS__)
 
+#define DPLX_DLOG_XDEF_OPEN_SPAN(mode, ...)                                    \
+    ::dplx::dlog::span_scope::open(__VA_ARGS__, mode, DPLX_DLOG_FUNC_LOCATION)
+
 #if _MSVC_TRADITIONAL
+
 #define DLOG_OPEN_SPAN_EX(ctx, name, ...)                                      \
-    ::dplx::dlog::span_scope::open(ctx, name, __VA_ARGS__,                     \
-                                   DPLX_DLOG_FUNC_LOCATION)
-#else
-#define DLOG_OPEN_SPAN_EX(ctx, name, ...)                                      \
-    ::dplx::dlog::span_scope::open(ctx, name __VA_OPT__(, ) __VA_ARGS__,       \
-                                   DPLX_DLOG_FUNC_LOCATION)
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no, ctx, name, __VA_ARGS__)
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#define DLOG_OPEN_SPAN(name, ...)                                              \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no, name, __VA_ARGS__)
+#define DLOG_ATTACH_SPAN(name, ...)                                            \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes, name, __VA_ARGS__)
+#define DLOG_ATTACH_SPAN_EX(ctx, name, ...)                                    \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes, ctx, name, __VA_ARGS__)
 #endif
 
-#if 0 && !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-#define DLOG_OPEN_SPAN(name, ...)
-#define DLOG_ATTACH_SPAN(name, ...)
-#define DLOG_ATTACH_SPAN_EX(ctx, name, ...)
+#else
+
+#define DLOG_OPEN_SPAN_EX(ctx, name, ...)                                      \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no, ctx,                    \
+                             name __VA_OPT__(, ) __VA_ARGS__)
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#define DLOG_OPEN_SPAN(name, ...)                                              \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no,                         \
+                             name __VA_OPT__(, ) __VA_ARGS__)
+#define DLOG_ATTACH_SPAN(name, ...)                                            \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes,                        \
+                             name __VA_OPT__(, ) __VA_ARGS__)
+#define DLOG_ATTACH_SPAN_EX(ctx, name, ...)                                    \
+    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes, ctx,                   \
+                             name __VA_OPT__(, ) __VA_ARGS__)
+#endif
+
 #endif
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

@@ -14,4 +14,6 @@ namespace dplx::dlog
 
 class bus_handle;
 
-}
+class span_scope;
+
+} // namespace dplx::dlog

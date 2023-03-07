@@ -19,6 +19,9 @@
 namespace dlog_tests
 {
 
+static_assert(!std::is_move_constructible_v<dlog::span_scope>);
+static_assert(!std::is_copy_constructible_v<dlog::span_scope>);
+
 TEST_CASE("can open a span scope")
 {
     constexpr auto regionSize = 1 << 14;
@@ -36,5 +39,25 @@ TEST_CASE("can open a span scope")
         }
     }
 }
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+TEST_CASE("implicit spans are respected")
+{
+    constexpr auto regionSize = 1 << 14;
+    dlog::core core{
+            dlog::mpsc_bus(test_dir, "ts2.dmsb", 4U, regionSize).value()};
+
+    {
+        dlog::span_scope log
+                = dlog::span_scope::none(core.connector(), dlog::attach::yes);
+        DLOG_WARN("this should be attached to the root span");
+
+        {
+            dlog::span_scope innerLog = DLOG_ATTACH_SPAN("inner");
+            DLOG_WARN("this should be attached to the inner span.");
+        }
+    }
+}
+#endif
 
 } // namespace dlog_tests

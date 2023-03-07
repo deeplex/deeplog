@@ -24,6 +24,7 @@ dplx_target_sources(deeplog
         dlog/file_database
 
         dlog/detail/interleaving_stream
+        dlog/detail/tls
 )
 
 dplx_target_sources(deeplog
