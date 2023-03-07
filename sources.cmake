@@ -32,11 +32,13 @@ dplx_target_sources(deeplog
     BASE_DIR dplx
 
     PUBLIC
+        dlog/config
         dlog/disappointment
         dlog/fwd
         dlog/loggable
 
         dlog/detail/any_loggable_ref
+        dlog/detail/workaround
 )
 
 dplx_target_sources(deeplog
@@ -60,6 +62,10 @@ dplx_target_sources(deeplog
 
         dlog/detail/file_stream.hpp
 )
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail)
+configure_file(tools/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail/config.hpp @ONLY)
+target_sources(deeplog PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail/config.hpp>)
 
 if (BUILD_TESTING)
     dplx_target_sources(deeplog-tests PRIVATE
