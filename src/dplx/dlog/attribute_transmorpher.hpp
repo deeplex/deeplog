@@ -22,6 +22,7 @@
 
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/detail/utils.hpp>
+#include <dplx/dlog/disappointment.hpp>
 
 namespace dplx::dlog
 {
