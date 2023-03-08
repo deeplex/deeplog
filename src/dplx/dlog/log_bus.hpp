@@ -99,6 +99,11 @@ public:
                                                messageSize, spanId);
     }
 
+    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto allocate_span_context() noexcept
+            -> span_context
+    {
+        return do_allocate_span_context();
+    }
     [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto allocate_trace_id() noexcept
             -> trace_id
     {
@@ -128,6 +133,7 @@ private:
             std::size_t messageSize,
             span_id spanId) noexcept -> result<bus_output_buffer *>
             = 0;
+    virtual auto do_allocate_span_context() noexcept -> span_context = 0;
     virtual auto do_allocate_trace_id() noexcept -> trace_id = 0;
     virtual auto do_allocate_span_id(trace_id trace) noexcept -> span_id = 0;
 };

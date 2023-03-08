@@ -153,7 +153,7 @@ auto span_scope::open(bus_handle &targetBus,
     using namespace std::string_view_literals;
 
     span_start_msg msg{
-            .id = {targetBus.allocate_trace_id(), {}},
+            .id = targetBus.allocate_span_context(),
             .parent = {},
             .name = name.data() == nullptr ? ""sv : name,
             .function = fn,
@@ -161,7 +161,6 @@ auto span_scope::open(bus_handle &targetBus,
     };
     if (msg.id.traceId != trace_id::invalid())
     {
-        msg.id.spanId = targetBus.allocate_span_id(msg.id.traceId);
         msg.timestamp = log_clock::now();
         if (targetBus.write(msg.id.spanId, msg).has_value())
         {

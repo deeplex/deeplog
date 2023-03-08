@@ -151,6 +151,7 @@ public:
     static constexpr std::uint32_t max_message_size = 0x1fff'ffffU;
 
 private:
+    auto do_allocate_span_context() noexcept -> span_context override;
     auto do_allocate_trace_id() noexcept -> trace_id override;
     auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
 

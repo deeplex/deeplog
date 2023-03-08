@@ -181,6 +181,7 @@ private:
                 output_buffer(static_cast<output_buffer &&>(out));
     }
 
+    auto do_allocate_span_context() noexcept -> span_context override;
     auto do_allocate_trace_id() noexcept -> trace_id override;
     auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
 };

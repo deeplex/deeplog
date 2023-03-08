@@ -188,6 +188,12 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
                            static_cast<std::uint32_t>(realRegionSize)};
 }
 
+auto mpsc_bus_handle::do_allocate_span_context() noexcept -> span_context
+{
+    auto const traceId = mpsc_bus_handle::do_allocate_trace_id();
+    return {traceId, mpsc_bus_handle::do_allocate_span_id(traceId)};
+}
+
 auto mpsc_bus_handle::do_allocate_trace_id() noexcept -> trace_id
 {
     return trace_id::random();

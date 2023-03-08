@@ -10,6 +10,11 @@
 namespace dplx::dlog
 {
 
+auto bufferbus_handle::do_allocate_span_context() noexcept -> span_context
+{
+    auto const traceId = bufferbus_handle::do_allocate_trace_id();
+    return {traceId, bufferbus_handle::do_allocate_span_id(traceId)};
+}
 auto bufferbus_handle::do_allocate_trace_id() noexcept -> trace_id
 {
     return trace_id::random();
