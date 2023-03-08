@@ -1,5 +1,7 @@
 {
     "recommendations": [
-        "ms-vscode.cpptools-extension-pack"
+        "ms-vscode.cpptools-extension-pack",
+        "lextudio.restructuredtext-pack",
+        "anweiss.cddl-languageserver"
     ]
 }

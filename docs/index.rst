@@ -8,6 +8,7 @@
    :caption: Contents:
 
    modules/user-types
+   modules/data-formats
 
 
 --------------------
