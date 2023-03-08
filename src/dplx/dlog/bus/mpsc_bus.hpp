@@ -279,7 +279,6 @@ private:
             return errc::not_enough_space;
         }
         auto const payloadSize = static_cast<std::uint32_t>(messageSize);
-        auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
 
         output_buffer out;
         auto const spread
@@ -290,7 +289,7 @@ private:
         auto regionId = firstRegionId;
         for (;;)
         {
-            auto const allocCode = allocate(out, allocSize, regionId);
+            auto const allocCode = allocate(out, payloadSize, regionId);
             if (allocCode == errc::success) [[likely]]
             {
                 break;
@@ -308,12 +307,13 @@ private:
     }
 
     auto allocate(output_buffer &out,
-                  std::uint32_t const allocSize,
+                  std::uint32_t const payloadSize,
                   std::uint32_t const regionId) noexcept -> errc
     {
         auto *const ctx = region(regionId);
         auto *const regionData = region_data(regionId);
         auto const regionEnd = mRegionSize - region_ctrl_overhead;
+        auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
 
         std::atomic_ref<std::uint32_t> const sharedReadHand(ctx->read_ptr);
         std::atomic_ref<std::uint32_t> const sharedAllocHand(ctx->alloc_ptr);
@@ -361,7 +361,7 @@ private:
         auto *data = regionData + payloadPosition;
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         std::atomic_ref<std::uint32_t>(*ctrl).store(
-                allocSize | message_lock_flag, std::memory_order::relaxed);
+                payloadSize | message_lock_flag, std::memory_order::relaxed);
         out.reset(data, allocSize);
         out.mMsgCtrl = ctrl;
         return errc::success;
