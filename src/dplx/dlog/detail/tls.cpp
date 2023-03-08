@@ -12,6 +12,7 @@
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 thread_local constinit dplx::dlog::span_scope const
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
         *dplx::dlog::detail::active_span{};
 #endif
 

@@ -73,7 +73,7 @@ inline constexpr struct log_fn
                detail::log_location location,
                Args const &...args) const noexcept -> result<void>
     {
-        auto active = detail::active_span;
+        auto const *active = detail::active_span;
         if (active == nullptr)
         {
             return oc::success();

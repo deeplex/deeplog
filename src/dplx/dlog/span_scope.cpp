@@ -101,7 +101,7 @@ namespace dplx::dlog
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 auto span_scope::none(attach mode) noexcept -> span_scope
 {
-    if (auto prev = detail::active_span; prev != nullptr)
+    if (auto const *prev = detail::active_span; prev != nullptr)
     {
         return none(*prev->bus(), mode);
     }
@@ -116,7 +116,7 @@ auto span_scope::none(bus_handle &targetBus, attach mode) noexcept -> span_scope
 auto span_scope::open(std::string_view name,
                       detail::function_location fn) noexcept -> span_scope
 {
-    if (auto prev = detail::active_span; prev != nullptr)
+    if (auto const *prev = detail::active_span; prev != nullptr)
     {
         return open(*prev, name, attach::no, fn);
     }
@@ -126,7 +126,7 @@ auto span_scope::open(std::string_view name,
                       attach mode,
                       detail::function_location fn) noexcept -> span_scope
 {
-    if (auto prev = detail::active_span; prev != nullptr)
+    if (auto const *prev = detail::active_span; prev != nullptr)
     {
         return open(*prev, name, mode, fn);
     }
