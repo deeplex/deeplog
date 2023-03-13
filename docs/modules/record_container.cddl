@@ -33,6 +33,7 @@ record = [
 
 span_start = [
     id: span_context,
+    kind: span_kind,
     parent: span_context / null,
     timestamp,
     name: dupe_tstr,
@@ -74,5 +75,6 @@ timestamp = uint
 trace_id = bstr .size 16
 span_id = bstr .size 8
 severity = #0.0 .. #0.23
+span_kind = #0.0 .. #0.4
 
 dupe_tstr = tstr / #6.25(uint)

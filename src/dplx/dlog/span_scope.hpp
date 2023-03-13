@@ -7,10 +7,13 @@
 
 #pragma once
 
+#include <dplx/dp/fwd.hpp>
+
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/tls.hpp>
+#include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog
@@ -22,6 +25,15 @@ enum class attach : bool
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
     yes,
 #endif
+};
+
+enum class span_kind : unsigned
+{
+    internal,
+    consumer,
+    producer,
+    client,
+    server,
 };
 
 class [[nodiscard]] span_scope
@@ -89,36 +101,42 @@ public:
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
     static auto root(std::string_view name,
                      attach mode,
-                     detail::attribute_args const &attrs) noexcept
+                     detail::attribute_args const &attrs,
+                     span_kind kind = span_kind::internal) noexcept
             -> span_scope;
     static auto start(std::string_view name,
                       attach mode,
-                      detail::attribute_args const &attrs) noexcept
+                      detail::attribute_args const &attrs,
+                      span_kind kind = span_kind::internal) noexcept
             -> span_scope;
 #endif
     static auto root(bus_handle &targetBus,
                      std::string_view name,
                      attach mode,
-                     detail::attribute_args const &attrs) noexcept
+                     detail::attribute_args const &attrs,
+                     span_kind kind = span_kind::internal) noexcept
             -> span_scope;
     static auto start(bus_handle &targetBus,
                       std::string_view name,
                       attach mode,
-                      detail::attribute_args const &attrs) noexcept
+                      detail::attribute_args const &attrs,
+                      span_kind kind = span_kind::internal) noexcept
             -> span_scope
     {
-        return start(targetBus, span_context{}, name, mode, attrs);
+        return start(targetBus, span_context{}, name, mode, attrs, kind);
     }
     static auto start(span_scope const &parent,
                       std::string_view name,
                       attach mode,
-                      detail::attribute_args const &attrs) noexcept
+                      detail::attribute_args const &attrs,
+                      span_kind kind = span_kind::internal) noexcept
             -> span_scope;
     static auto start(bus_handle &targetBus,
                       span_context parent,
                       std::string_view name,
                       attach mode,
-                      detail::attribute_args const &attrs) noexcept
+                      detail::attribute_args const &attrs,
+                      span_kind kind = span_kind::internal) noexcept
             -> span_scope;
 
     [[nodiscard]] auto context() const noexcept -> span_context
@@ -147,3 +165,5 @@ public:
 };
 
 } // namespace dplx::dlog
+
+DPLX_DLOG_DECLARE_CODEC(dplx::dlog::span_kind);

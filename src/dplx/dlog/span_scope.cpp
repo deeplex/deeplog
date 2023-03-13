@@ -11,6 +11,8 @@
 #include <dplx/dp/codecs/auto_tuple.hpp>
 #include <dplx/dp/codecs/std-container.hpp>
 #include <dplx/dp/codecs/std-string.hpp>
+#include <dplx/dp/items/emit_core.hpp>
+#include <dplx/dp/items/parse_core.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
@@ -42,6 +44,7 @@ struct span
 struct span_start_msg
 {
     span_context id;
+    span_kind kind;
     span_context parent;
     log_clock::time_point timestamp;
     std::string_view name;
@@ -74,6 +77,7 @@ class dplx::dp::codec<dplx::dlog::span_start_msg>
     };
 
     static constexpr tuple_def<tuple_member_def<&span_start_msg::id>{},
+                               tuple_member_def<&span_start_msg::kind>{},
                                tuple_member_def<&span_start_msg::parent>{},
                                tuple_member_def<&span_start_msg::timestamp>{},
                                tuple_member_def<&span_start_msg::name>{},
@@ -114,11 +118,39 @@ public:
     }
 };
 
+auto dplx::dp::codec<dplx::dlog::span_kind>::decode(
+        parse_context &ctx, dlog::span_kind &value) noexcept -> result<void>
+{
+    // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+    std::underlying_type_t<dlog::span_kind> rawValue;
+    DPLX_TRY(dp::parse_integer(
+            ctx, rawValue,
+            static_cast<std::underlying_type_t<dlog::span_kind>>(
+                    dlog::span_kind::server)));
+    value = static_cast<dlog::span_kind>(rawValue);
+    return oc::success();
+}
+auto dplx::dp::codec<dplx::dlog::span_kind>::size_of(
+        emit_context &ctx, dlog::span_kind const &value) noexcept
+        -> std::uint64_t
+{
+    return dp::item_size_of_integer(
+            ctx, static_cast<std::underlying_type_t<dlog::span_kind>>(value));
+}
+auto dplx::dp::codec<dplx::dlog::span_kind>::encode(
+        emit_context &ctx, dlog::span_kind const &value) noexcept
+        -> result<void>
+{
+    DPLX_TRY(dp::emit_integer(
+            ctx, static_cast<std::underlying_type_t<dlog::span_kind>>(value)));
+    return oc::success();
+}
+
 namespace dplx::dlog
 {
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-auto span_scope::none(attach mode) noexcept -> span_scope
+auto span_scope::none(attach const mode) noexcept -> span_scope
 {
     if (auto const *prev = detail::active_span; prev != nullptr)
     {
@@ -127,44 +159,46 @@ auto span_scope::none(attach mode) noexcept -> span_scope
     return span_scope{};
 }
 #endif
-auto span_scope::none(bus_handle &targetBus, attach mode) noexcept -> span_scope
+auto span_scope::none(bus_handle &targetBus, attach const mode) noexcept
+        -> span_scope
 {
     return {{}, targetBus, nullptr, targetBus.threshold, mode};
 }
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-auto span_scope::root(std::string_view name,
-                      attach mode,
-                      detail::attribute_args const &attrs) noexcept
-        -> span_scope
+auto span_scope::root(std::string_view const name,
+                      attach const mode,
+                      detail::attribute_args const &attrs,
+                      span_kind const kind) noexcept -> span_scope
 {
     if (auto const *prev = detail::active_span; prev != nullptr)
     {
-        return root(*prev->bus(), name, mode, attrs);
+        return root(*prev->bus(), name, mode, attrs, kind);
     }
     return span_scope{};
 }
-auto span_scope::start(std::string_view name,
-                       attach mode,
-                       detail::attribute_args const &attrs) noexcept
-        -> span_scope
+auto span_scope::start(std::string_view const name,
+                       attach const mode,
+                       detail::attribute_args const &attrs,
+                       span_kind const kind) noexcept -> span_scope
 {
     if (auto const *prev = detail::active_span; prev != nullptr)
     {
-        return start(*prev->bus(), prev->context(), name, mode, attrs);
+        return start(*prev->bus(), prev->context(), name, mode, attrs, kind);
     }
     return span_scope{};
 }
 #endif
 auto span_scope::root(bus_handle &targetBus,
-                      std::string_view name,
-                      attach mode,
-                      detail::attribute_args const &attrs) noexcept
-        -> span_scope
+                      std::string_view const name,
+                      attach const mode,
+                      detail::attribute_args const &attrs,
+                      span_kind const kind) noexcept -> span_scope
 {
     using namespace std::string_view_literals;
 
     span_start_msg msg{
             .id = targetBus.allocate_span_context(),
+            .kind = kind,
             .parent = {},
             .timestamp = {},
             .name = name.data() == nullptr ? ""sv : name,
@@ -185,9 +219,9 @@ auto span_scope::root(bus_handle &targetBus,
 }
 auto span_scope::start(span_scope const &parent,
                        std::string_view name,
-                       attach mode,
-                       detail::attribute_args const &attrs) noexcept
-        -> span_scope
+                       attach const mode,
+                       detail::attribute_args const &attrs,
+                       span_kind const kind) noexcept -> span_scope
 {
     using namespace std::string_view_literals;
     if (parent.mBus == nullptr)
@@ -202,6 +236,7 @@ auto span_scope::start(span_scope const &parent,
     span_start_msg msg{
             .id = {parent.mId.traceId,
                    parent.mBus->allocate_span_id(parent.mId.traceId)},
+            .kind = kind,
             .parent = parent.mId,
             .timestamp = log_clock::now(),
             .name = name.data() == nullptr ? ""sv : name,
@@ -217,11 +252,11 @@ auto span_scope::start(span_scope const &parent,
             mode};
 }
 auto span_scope::start(bus_handle &targetBus,
-                       span_context parent,
-                       std::string_view name,
-                       attach mode,
-                       detail::attribute_args const &attrs) noexcept
-        -> span_scope
+                       span_context const parent,
+                       std::string_view const name,
+                       attach const mode,
+                       detail::attribute_args const &attrs,
+                       span_kind const kind) noexcept -> span_scope
 {
     using namespace std::string_view_literals;
     if (parent.traceId == trace_id::invalid())
@@ -231,6 +266,7 @@ auto span_scope::start(bus_handle &targetBus,
 
     span_start_msg msg{
             .id = {parent.traceId, targetBus.allocate_span_id(parent.traceId)},
+            .kind = kind,
             .parent = parent,
             .timestamp = log_clock::now(),
             .name = name.data() == nullptr ? ""sv : name,
