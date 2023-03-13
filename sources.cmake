@@ -9,6 +9,7 @@ dplx_target_sources(deeplog
 
         dlog/definitions
 
+        dlog/attributes
         dlog/core
         dlog/log_bus
         dlog/log_clock

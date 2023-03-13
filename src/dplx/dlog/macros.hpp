@@ -10,34 +10,39 @@
 #include <dplx/predef/compiler.h>
 
 #include <dplx/dlog/arguments.hpp>
+#include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/source.hpp>
 #include <dplx/dlog/span_scope.hpp>
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
+////////////////////////////////////////////////////////////////////////////////
+// source_location shims
+
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-#if 0 && DPLX_DLOG_USE_SOURCE_LOCATION
+#if DPLX_DLOG_USE_SOURCE_LOCATION
+#error "DPLX_DLOG_USE_SOURCE_LOCATION not implemented"
 #else
+
 #define DPLX_DLOG_LOCATION                                                     \
     ::dplx::dlog::detail::make_location(__FILE__, __LINE__)
-#endif
-
-#if 0 && DPLX_DLOG_USE_SOURCE_LOCATION
-#else
 
 #if defined(DPLX_COMP_MSVC_AVAILABLE)
-#define DPLX_DLOG_FUNC_LOCATION                                                \
-    ::dplx::dlog::detail::make_function_location(__FUNCSIG__)
-#elif defined(DPLX_COMP_GNUC_AVAILABLE)
-#define DPLX_DLOG_FUNC_LOCATION                                                \
-    ::dplx::dlog::detail::make_function_location(__PRETTY_FUNCTION__)
+#define DPLX_DLOG_FUNCSIG                                                      \
+    ::dplx::dlog::detail::make_attribute_function(__FUNCSIG__)
+#elif defined(DPLX_COMP_GNUC_AVAILABLE) || defined(DPLX_COMP_CLANG_AVAILABLE)
+#define DPLX_DLOG_FUNCSIG                                                      \
+    ::dplx::dlog::detail::make_attribute_function(__PRETTY_FUNCTION__)
 #else
-#define DPLX_DLOG_FUNC_LOCATION                                                \
-    ::dplx::dlog::detail::make_function_location("<unsupported compiler>")
+#define DPLX_DLOG_FUNCSIG                                                      \
+    ::dplx::dlog::detail::make_attribute_function("<unsupported compiler>")
 #endif
 
 #endif
 // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+
+////////////////////////////////////////////////////////////////////////////////
+// log macros
 
 #if _MSVC_TRADITIONAL
 
@@ -117,40 +122,55 @@
 #define DLOG_TRACE_EX(ctx, message, ...)                                       \
     DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::trace, message, __VA_ARGS__)
 
-#define DPLX_DLOG_XDEF_OPEN_SPAN(mode, ...)                                    \
-    ::dplx::dlog::span_scope::open(__VA_ARGS__, mode, DPLX_DLOG_FUNC_LOCATION)
+////////////////////////////////////////////////////////////////////////////////
+// span scope macros
 
 #if _MSVC_TRADITIONAL
 
-#define DLOG_OPEN_SPAN_EX(ctx, name, ...)                                      \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no, ctx, name, __VA_ARGS__)
-
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-#define DLOG_OPEN_SPAN(name, ...)                                              \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no, name, __VA_ARGS__)
-#define DLOG_ATTACH_SPAN(name, ...)                                            \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes, name, __VA_ARGS__)
-#define DLOG_ATTACH_SPAN_EX(ctx, name, ...)                                    \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes, ctx, name, __VA_ARGS__)
-#endif
+#define DPLX_DLOG_XDEF_SPAN_SCOPE(mode, name, attachOpt, ...)                  \
+    ::dplx::dlog::span_scope::mode(                                            \
+            name, ::dplx::dlog::attach::attachOpt,                             \
+            ::dplx::dlog::make_attributes(DPLX_DLOG_FUNCSIG, __VA_ARGS__))
+#define DPLX_DLOG_XDEF_SPAN_SCOPE_EX(mode, ctx, name, attachOpt, ...)          \
+    ::dplx::dlog::span_scope::mode(                                            \
+            ctx, name, ::dplx::dlog::attach::attachOpt,                        \
+            ::dplx::dlog::make_attributes(DPLX_DLOG_FUNCSIG, __VA_ARGS__))
 
 #else
 
-#define DLOG_OPEN_SPAN_EX(ctx, name, ...)                                      \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no, ctx,                    \
-                             name __VA_OPT__(, ) __VA_ARGS__)
+#define DPLX_DLOG_XDEF_SPAN_SCOPE(mode, name, attachOpt, ...)                  \
+    ::dplx::dlog::span_scope::mode(                                            \
+            name, ::dplx::dlog::attach::attachOpt,                             \
+            ::dplx::dlog::make_attributes(                                     \
+                    DPLX_DLOG_FUNCSIG __VA_OPT__(, __VA_ARGS__)))
+#define DPLX_DLOG_XDEF_SPAN_SCOPE_EX(mode, ctx, name, attachOpt, ...)          \
+    ::dplx::dlog::span_scope::mode(                                            \
+            ctx, name, ::dplx::dlog::attach::attachOpt,                        \
+            ::dplx::dlog::make_attributes(                                     \
+                    DPLX_DLOG_FUNCSIG __VA_OPT__(, __VA_ARGS__)))
+
+#endif
+
+#define DLOG_SPAN_START_EX(parent, name, ...)                                  \
+    DPLX_DLOG_XDEF_SPAN_SCOPE_EX(start, parent, name, no, __VA_ARGS__)
+#define DLOG_SPAN_START_ROOT_EX(ctx, name, ...)                                \
+    DPLX_DLOG_XDEF_SPAN_SCOPE_EX(root, ctx, name, no, __VA_ARGS__)
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-#define DLOG_OPEN_SPAN(name, ...)                                              \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::no,                         \
-                             name __VA_OPT__(, ) __VA_ARGS__)
-#define DLOG_ATTACH_SPAN(name, ...)                                            \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes,                        \
-                             name __VA_OPT__(, ) __VA_ARGS__)
-#define DLOG_ATTACH_SPAN_EX(ctx, name, ...)                                    \
-    DPLX_DLOG_XDEF_OPEN_SPAN(::dplx::dlog::attach::yes, ctx,                   \
-                             name __VA_OPT__(, ) __VA_ARGS__)
-#endif
+
+#define DLOG_SPAN_START(name, ...)                                             \
+    DPLX_DLOG_XDEF_SPAN_SCOPE(start, name, no, __VA_ARGS__)
+#define DLOG_SPAN_START_ROOT(name, ...)                                        \
+    DPLX_DLOG_XDEF_SPAN_SCOPE(root, name, no, __VA_ARGS__)
+
+#define DLOG_SPAN_ATTACH(name, ...)                                            \
+    DPLX_DLOG_XDEF_SPAN_SCOPE(start, name, yes, __VA_ARGS__)
+#define DLOG_SPAN_ATTACH_EX(parent, name, ...)                                 \
+    DPLX_DLOG_XDEF_SPAN_SCOPE_EX(start, parent, name, yes, __VA_ARGS__)
+#define DLOG_SPAN_ATTACH_ROOT(name, ...)                                       \
+    DPLX_DLOG_XDEF_SPAN_SCOPE(root, name, yes, __VA_ARGS__)
+#define DLOG_SPAN_ATTACH_ROOT_EX(ctx, name, ...)                               \
+    DPLX_DLOG_XDEF_SPAN_SCOPE(root, ctx, name, yes, __VA_ARGS__)
 
 #endif
 

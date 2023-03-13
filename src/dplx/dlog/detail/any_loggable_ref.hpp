@@ -28,6 +28,12 @@ struct basic_trivial_string_view // NOLINT(cppcoreguidelines-pro-type-member-ini
     std::size_t size;
 
     constexpr basic_trivial_string_view() noexcept = default;
+    DPLX_ATTR_FORCE_INLINE explicit constexpr basic_trivial_string_view(
+            Char const *str, std::size_t strSize) noexcept
+        : data(str)
+        , size(strSize)
+    {
+    }
 
     DPLX_ATTR_FORCE_INLINE constexpr basic_trivial_string_view(
             Char const *str) noexcept
@@ -133,6 +139,18 @@ private:
 };
 
 } // namespace dplx::dlog::detail
+
+template <>
+class dplx::dp::codec<dplx::dlog::detail::trivial_string_view>
+{
+public:
+    static auto size_of(dp::emit_context &ctx,
+                        dlog::detail::trivial_string_view const &str) noexcept
+            -> std::uint64_t;
+    static auto encode(dp::emit_context &ctx,
+                       dlog::detail::trivial_string_view const &str) noexcept
+            -> dp::result<void>;
+};
 
 namespace dplx::dlog::detail
 {

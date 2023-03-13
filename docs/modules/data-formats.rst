@@ -2,5 +2,8 @@
  Data Formats
 ==============
 
-.. include:: data-formats.cddl
+Record Container
+----------------
+
+.. include:: record_container.cddl
     :code: CDDL

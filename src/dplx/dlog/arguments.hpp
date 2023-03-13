@@ -43,37 +43,7 @@ consteval auto make_location(char const *filename,
 }
 #endif
 
-struct function_location
-{
-    char const *function;
-    std::int_least16_t functionSize;
-};
-
-#if 0 && DPLX_DLOG_USE_SOURCE_LOCATION
-// TODO: implement `make_location()` with `std::source_location`
-#else
-consteval auto make_function_location(char const *function) noexcept
-        -> function_location
-{
-    auto const functionSize = std::char_traits<char>::length(function);
-    assert(functionSize <= INT_LEAST16_MAX);
-    return {function, static_cast<std::int_least16_t>(functionSize)};
-}
-#endif
-
 } // namespace dplx::dlog::detail
-
-template <>
-class dplx::dp::codec<dplx::dlog::detail::function_location>
-{
-    using function_location = dlog::detail::function_location;
-
-public:
-    static auto size_of(emit_context &ctx, function_location location) noexcept
-            -> std::uint64_t;
-    static auto encode(emit_context &ctx, function_location location) noexcept
-            -> result<void>;
-};
 
 namespace dplx::dlog::detail
 {
@@ -97,10 +67,8 @@ class stack_log_args : public log_args
     static_assert(sizeof...(Args) <= UINT_LEAST16_MAX);
 
 public:
-    detail::any_loggable_ref_storage const
-            values[sizeof...(Args) > 0U ? sizeof...(Args) : 1U];
-    detail::any_loggable_ref_storage_id const
-            types[sizeof...(Args) > 0U ? sizeof...(Args) : 1U];
+    detail::any_loggable_ref_storage const values[sizeof...(Args)];
+    detail::any_loggable_ref_storage_id const types[sizeof...(Args)];
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     stack_log_args(fmt::string_view msg,

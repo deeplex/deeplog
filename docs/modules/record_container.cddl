@@ -1,0 +1,78 @@
+
+record_container = [
+    ; magic is a byte string designed to mark this file as binary for unassuming
+    ; text editors. It also contains the ISO-8859-1 sequence «~{dlog}~»
+    magic: h'0d0aab7e7b646c6f677d7ebb0a1a',
+    resource,
+    records: #6.256([* entry]) / [* entry]
+]
+
+resource = resource_v00
+
+resource_v00 = {
+    0: 0, ; version property
+    4: epoch_info,
+    23: attributes,
+}
+
+epoch_info = [
+    system: uint,
+    steady: uint,
+]
+
+entry = record / span_start / span_end
+
+record = [
+    severity,
+    span_context / null,
+    timestamp,
+    message: dupe_tstr,
+    fmtArgs: [* any],
+    attributes,
+]
+
+span_start = [
+    id: span_context,
+    parent: span_context / null,
+    timestamp,
+    name: dupe_tstr,
+    [ * span_link ]
+    attributes,
+]
+span_end = [
+    id: span_context,
+    timestamp,
+]
+
+span_context = [
+    trace_id,
+    span_id,
+]
+
+span_link = [ span_context, attributes ]
+
+attributes = {
+    dlog_attr_line_id ^ => uint,
+    dlog_attr_file_id ^ => dupe_tstr
+    * dlog_attribute,
+    * otlp_attribute,
+}
+
+dlog_attr_line_id = 2
+dlog_attr_file_id = 3
+
+dlog_attribute = (dlog_attribute_id => dlog_attribute_value)
+dlog_attribute_value = any
+dlog_attribute_id = uint
+
+otlp_attributes = { * otlp_attribute }
+otlp_attribute = (otlp_attribute_id => otlp_attribute_value)
+otlp_attribute_value = bool / int / float64 / dupe_tstr / [((+ bool) // (+ int) // (+ float64) // (+ dupe_tstr))]
+otlp_attribute_id = dupe_tstr
+
+timestamp = uint
+trace_id = bstr .size 16
+span_id = bstr .size 8
+severity = #0.0 .. #0.23
+
+dupe_tstr = tstr / #6.25(uint)

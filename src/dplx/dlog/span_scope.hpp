@@ -8,6 +8,7 @@
 #pragma once
 
 #include <dplx/dlog/arguments.hpp>
+#include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/tls.hpp>
 #include <dplx/dlog/fwd.hpp>
@@ -55,11 +56,11 @@ private:
     span_scope(span_context sctx,
                bus_handle &targetBus,
                span_scope const *parent,
-               severity thresholdInit,
-               attach mode = attach::no) noexcept
+               severity const thresholdInit,
+               attach const mode = attach::no) noexcept
         : mId(sctx)
         , mBus(&targetBus)
-        , mPreviousScope(parent)
+        , mPreviousScope(mode == attach::no ? nullptr : parent)
         , threshold(thresholdInit)
     {
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
@@ -86,27 +87,39 @@ public:
     //   - no-, attach
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-    static auto open(std::string_view name,
-                     detail::function_location fn) noexcept -> span_scope;
-    static auto open(std::string_view name,
+    static auto root(std::string_view name,
                      attach mode,
-                     detail::function_location fn) noexcept -> span_scope;
+                     detail::attribute_args const &attrs) noexcept
+            -> span_scope;
+    static auto start(std::string_view name,
+                      attach mode,
+                      detail::attribute_args const &attrs) noexcept
+            -> span_scope;
 #endif
-    static auto open(bus_handle &targetBus,
-                     std::string_view name,
-                     detail::function_location fn) noexcept -> span_scope;
-    static auto open(span_scope const &parent,
-                     std::string_view name,
-                     detail::function_location fn) noexcept -> span_scope;
-
-    static auto open(bus_handle &targetBus,
+    static auto root(bus_handle &targetBus,
                      std::string_view name,
                      attach mode,
-                     detail::function_location fn) noexcept -> span_scope;
-    static auto open(span_scope const &parent,
-                     std::string_view name,
-                     attach mode,
-                     detail::function_location fn) noexcept -> span_scope;
+                     detail::attribute_args const &attrs) noexcept
+            -> span_scope;
+    static auto start(bus_handle &targetBus,
+                      std::string_view name,
+                      attach mode,
+                      detail::attribute_args const &attrs) noexcept
+            -> span_scope
+    {
+        return start(targetBus, span_context{}, name, mode, attrs);
+    }
+    static auto start(span_scope const &parent,
+                      std::string_view name,
+                      attach mode,
+                      detail::attribute_args const &attrs) noexcept
+            -> span_scope;
+    static auto start(bus_handle &targetBus,
+                      span_context parent,
+                      std::string_view name,
+                      attach mode,
+                      detail::attribute_args const &attrs) noexcept
+            -> span_scope;
 
     [[nodiscard]] auto context() const noexcept -> span_context
     {

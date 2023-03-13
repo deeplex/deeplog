@@ -29,11 +29,12 @@ TEST_CASE("can open a span scope")
             dlog::mpsc_bus(test_dir, "ts1.dmsb", 4U, regionSize).value()};
 
     {
-        dlog::span_scope log = DLOG_OPEN_SPAN_EX(core.connector(), "sample");
+        dlog::span_scope log
+                = DLOG_SPAN_START_ROOT_EX(core.connector(), "sample");
         DLOG_WARN_EX(log, "this should be attached to the root span");
 
         {
-            dlog::span_scope innerLog = DLOG_OPEN_SPAN_EX(log, "inner");
+            dlog::span_scope innerLog = DLOG_SPAN_START_EX(log, "inner");
             DLOG_WARN_EX(innerLog,
                          "this should be attached to the inner span.");
         }
@@ -53,7 +54,7 @@ TEST_CASE("implicit spans are respected")
         DLOG_WARN("this should be attached to the root span");
 
         {
-            dlog::span_scope innerLog = DLOG_ATTACH_SPAN("inner");
+            dlog::span_scope innerLog = DLOG_SPAN_ATTACH("inner");
             DLOG_WARN("this should be attached to the inner span.");
         }
     }

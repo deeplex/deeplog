@@ -13,27 +13,23 @@
 #include <dplx/dp/items/item_size_of_ranges.hpp>
 #include <dplx/scope_guard.hpp>
 
-#include <dplx/dlog/attributes.hpp> // FIXME
+#include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/log_bus.hpp>
 #include <dplx/dlog/log_clock.hpp>
 
-template <>
-class dplx::dp::codec<dplx::dlog::detail::trivial_string_view>
+auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::size_of(
+        dp::emit_context &ctx,
+        dlog::detail::trivial_string_view const &str) noexcept -> std::uint64_t
 {
-public:
-    static auto size_of(dp::emit_context &ctx,
-                        dlog::detail::trivial_string_view const &str) noexcept
-            -> std::uint64_t
-    {
-        return dp::item_size_of_u8string(ctx, str.size);
-    }
-    static auto encode(dp::emit_context &ctx,
-                       dlog::detail::trivial_string_view const &str) noexcept
-            -> dp::result<void>
-    {
-        return dp::emit_u8string(ctx, str.data, str.size);
-    }
-};
+    return dp::item_size_of_u8string(ctx, str.size);
+}
+auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::encode(
+        dp::emit_context &ctx,
+        dlog::detail::trivial_string_view const &str) noexcept
+        -> dp::result<void>
+{
+    return dp::emit_u8string(ctx, str.data, str.size);
+}
 
 auto dplx::dp::codec<dplx::dlog::severity>::encode(
         emit_context &ctx, dplx::dlog::severity value) noexcept -> result<void>
@@ -191,18 +187,21 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     }
 
     // layout:
-    // array 7
+    // array 6
     // +  ui    severity
     // +  arr?  owner
     // +  ui64  timestamp
     // +  str   message
     // +  array format args
-    // +  ui?   line
-    // +  str?  file
+    // +  map   attributes
 
-    constexpr auto numArrayElements = 7U;
+    constexpr auto numArrayElements = 6U;
     constexpr auto timestampSize = 9U;
     auto const timeStamp = log_clock::now();
+    bool const hasLine = args.location.line >= 0;
+    bool const hasFileName = args.location.filenameSize >= 0;
+    unsigned const numAttributes = static_cast<unsigned>(hasLine)
+                                 + static_cast<unsigned>(hasFileName);
     dp::void_stream voidOut;
     dp::emit_context sizeCtx{voidOut};
 
@@ -232,23 +231,18 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
-    if (args.location.line >= 0)
+    encodedSize += 1U; // map with 0-2 entries
+    if (hasLine)
     {
-        encodedSize += static_cast<unsigned>(
-                dp::item_size_of_integer(sizeCtx, args.location.line));
+        encodedSize += /* rid: */ 1U
+                     + static_cast<unsigned>(dp::item_size_of_integer(
+                             sizeCtx, args.location.line));
     }
-    else
+    if (hasFileName)
     {
-        encodedSize += 1U; /*null*/
-    }
-    if (args.location.filenameSize >= 0)
-    {
-        encodedSize += static_cast<unsigned>(
-                dp::item_size_of_u8string(sizeCtx, args.location.filenameSize));
-    }
-    else
-    {
-        encodedSize += 1U; /*null*/
+        encodedSize += /* rid: */ 1U
+                     + static_cast<unsigned>(dp::item_size_of_u8string(
+                             sizeCtx, args.location.filenameSize));
     }
 
     // allocate an output buffer on the message bus
@@ -285,23 +279,18 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
 
-    if (args.location.line >= 0)
+    DPLX_TRY(dp::emit_map(ctx, numAttributes));
+    if (hasLine)
     {
+        DPLX_TRY(dp::emit_integer(ctx, static_cast<unsigned>(attr::line::id)));
         DPLX_TRY(dp::emit_integer(ctx, args.location.line));
     }
-    else
+    if (hasFileName)
     {
-        DPLX_TRY(dp::emit_null(ctx));
-    }
-    if (args.location.filenameSize >= 0)
-    {
+        DPLX_TRY(dp::emit_integer(ctx, static_cast<unsigned>(attr::file::id)));
         DPLX_TRY(dp::emit_u8string(
                 ctx, args.location.filename,
                 static_cast<std::size_t>(args.location.filenameSize)));
-    }
-    else
-    {
-        DPLX_TRY(dp::emit_null(ctx));
     }
     return oc::success();
 }

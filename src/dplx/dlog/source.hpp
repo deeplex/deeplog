@@ -79,7 +79,7 @@ inline constexpr struct log_fn
             return oc::success();
         }
         return detail::vlog(*active, detail::stack_log_args<Args...>{
-                                             message, sev, span_context{},
+                                             message, sev, active->context(),
                                              location, args...});
     }
 #endif
