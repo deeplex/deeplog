@@ -39,19 +39,10 @@ template <typename T>
 concept bus
         = std::derived_from<T, bus_handle>
         && requires(T t,
-                    void (&dummy_consumer)(std::span<std::byte const>) noexcept)
+                    void (&dummy_consumer)(std::span<std::span<std::byte const> const>) noexcept)
         {
-            { t.consume_content(dummy_consumer) }
+            { t.consume_messages(dummy_consumer) }
                     -> detail::tryable;
-        };
-// clang-format on
-
-// clang-format off
-template <typename Fn>
-concept bus_consumer
-        = requires(Fn fn, std::span<std::byte const> const content)
-        {
-            static_cast<Fn &&>(fn)(content);
         };
 // clang-format on
 

@@ -17,7 +17,6 @@
 #include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 
-#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/log_bus.hpp>
@@ -64,6 +63,8 @@ public:
     {
     }
 
+    static constexpr std::size_t consume_batch_size = 1U;
+
     class output_buffer final : public bus_output_buffer
     {
         friend class bufferbus_handle;
@@ -103,8 +104,8 @@ public:
     }
 
     template <typename ConsumeFn>
-        requires bus_consumer<ConsumeFn &&>
-    auto consume_content(ConsumeFn &&consume) noexcept -> result<void>
+        requires raw_message_consumer<ConsumeFn &&>
+    auto consume_messages(ConsumeFn &&consume) noexcept -> result<void>
     {
         dp::memory_input_stream contentStream(mBuffer.first(mWriteOffset));
         dp::parse_context ctx{contentStream};
@@ -121,10 +122,11 @@ public:
                 break;
             }
 
-            std::span<std::byte const> const msg(
-                    contentStream.data(),
-                    static_cast<std::size_t>(msgInfo.value));
-            static_cast<ConsumeFn &&>(consume)(msg);
+            std::span<std::byte const> const msgs[1] = {
+                    {contentStream.data(),
+                     static_cast<std::size_t>(msgInfo.value)},
+            };
+            static_cast<ConsumeFn &&>(consume)(msgs);
 
             contentStream.discard_buffered(
                     static_cast<std::size_t>(msgInfo.value));

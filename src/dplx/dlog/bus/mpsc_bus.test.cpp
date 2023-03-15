@@ -19,6 +19,7 @@
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/items/encoded_item_head_size.hpp>
 #include <dplx/dp/legacy/memory_input_stream.hpp>
+#include <dplx/dp/streams/memory_input_stream.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/log_bus.hpp>
@@ -82,16 +83,19 @@ TEST_CASE("mpsc_bus can be filled and drained")
     msgId = 0;
 
     auto consumeRx = bufferbus.consume_messages(
-            [&](std::span<std::byte const> msg)
+            [&](std::span<dlog::bytes const> const &msgs) noexcept
             {
-                dp::memory_view msgBuffer(msg);
+                for (auto const msg : msgs)
+                {
+                    dp::memory_input_stream msgStream(msg);
 
-                auto decodeRx
-                        = dp::decode(dp::as_value<unsigned int>, msgBuffer);
-                REQUIRE(decodeRx);
+                    auto decodeRx
+                            = dp::decode(dp::as_value<unsigned int>, msgStream);
+                    REQUIRE(decodeRx);
 
-                [[maybe_unused]] auto parsedId = decodeRx.assume_value();
-                msgId += 1;
+                    [[maybe_unused]] auto parsedId = decodeRx.assume_value();
+                    msgId += 1;
+                }
             });
 
     REQUIRE(consumeRx);
@@ -131,14 +135,18 @@ auto consume_content(dlog::mpsc_bus_handle &bus, std::span<std::uint8_t> ids)
         -> dlog::result<void>
 {
     return bus.consume_messages(
-            [ids](std::span<std::byte const> const &msg)
+            [ids](std::span<dlog::bytes const> const &msgs) noexcept
             {
-                dplx::dp::memory_view legacyBuffer(msg);
-                auto value = dplx::dp::decode(dplx::dp::as_value<unsigned>,
-                                              legacyBuffer)
-                                     .value();
-                assert(value < ids.size());
-                ++ids[value];
+                for (auto const msg : msgs)
+                {
+                    dp::memory_input_stream msgStream(msg);
+                    auto value
+                            = dp::decode(dp::as_value<unsigned int>, msgStream)
+                                      .value();
+
+                    assert(value < ids.size());
+                    ++ids[value];
+                }
             });
 }
 

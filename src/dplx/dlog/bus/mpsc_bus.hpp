@@ -150,6 +150,8 @@ public:
     static constexpr std::uint32_t min_region_size = 4 * 1024U;
     static constexpr std::uint32_t max_message_size = 0x1fff'ffffU;
 
+    static constexpr unsigned consume_batch_size = 64U;
+
 private:
     auto do_allocate_span_context() noexcept -> span_context override;
     auto do_allocate_trace_id() noexcept -> trace_id override;
@@ -180,12 +182,7 @@ public:
     };
 
     template <typename ConsumeFn>
-    auto consume_content(ConsumeFn &&consumeFn) noexcept -> result<void>
-    {
-        return this->consume_messages(static_cast<ConsumeFn &&>(consumeFn));
-    }
-
-    template <typename ConsumeFn>
+        requires raw_message_consumer<ConsumeFn &&>
     auto consume_messages(ConsumeFn &&consumeFn) noexcept -> result<void>
     {
         for (std::uint32_t regionId = 0U; regionId < mNumRegions; ++regionId)
@@ -202,8 +199,8 @@ private:
             -> result<void>
     {
         auto *const ctx = region(regionId);
-        std::span<std::byte> blockData(region_data(regionId),
-                                       mRegionSize - region_ctrl_overhead);
+        auto *const blockData = region_data(regionId);
+        writable_bytes block(blockData, mRegionSize - region_ctrl_overhead);
 
         std::atomic_ref<std::uint32_t> const readPtr(ctx->read_ptr);
         std::atomic_ref<std::uint32_t> const allocPtr(ctx->alloc_ptr);
@@ -227,41 +224,66 @@ private:
 
         for (;;)
         {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            auto *const ints = reinterpret_cast<std::uint32_t *>(
-                    blockData.subspan(readPos).data());
-            std::atomic_ref<std::uint32_t> const msgHeadPtr(*ints);
+            std::size_t batchSize = 0U;
+            struct
+            {
+                std::uint32_t *head{};
+                writable_bytes content;
+            } infos[consume_batch_size] = {};
+            bytes msgs[consume_batch_size];
 
-            auto const msgHead = msgHeadPtr.load(std::memory_order::acquire);
-            if ((msgHead & message_lock_flag) != 0U)
+            // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+            for (; batchSize < consume_batch_size; ++batchSize)
+            {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                auto *const msgHeadPtr = reinterpret_cast<std::uint32_t *>(
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        blockData + readPos);
+
+                auto const msgHead
+                        = std::atomic_ref<std::uint32_t>{*msgHeadPtr}.load(
+                                std::memory_order::acquire);
+                if ((msgHead & message_lock_flag) != 0U)
+                {
+                    break;
+                }
+                if (readPos + block_size + msgHead
+                    > mRegionSize - region_ctrl_overhead)
+                {
+                    readPos = std::uint32_t{0U} - block_size;
+                }
+
+                auto const allocSize = cncr::round_up_p2(msgHead, block_size);
+                infos[batchSize] = {
+                        .head = msgHeadPtr,
+                        .content
+                        = block.subspan(readPos + block_size, allocSize),
+                };
+                msgs[batchSize] = block.subspan(readPos + block_size, msgHead);
+
+                readPos += allocSize + block_size;
+                if (readPos == mRegionSize - region_ctrl_overhead)
+                {
+                    readPos = 0U;
+                }
+            }
+            if (batchSize == 0U)
             {
                 break;
             }
-            if (readPos + block_size + msgHead
-                > mRegionSize - region_ctrl_overhead)
+
+            (void)(static_cast<ConsumeFn &&>(consumeFn)(
+                    std::span(static_cast<bytes const *>(msgs), batchSize)));
+
+            for (std::size_t i = 0U; i < batchSize; ++i)
             {
-                readPos = std::uint32_t{0U} - block_size;
+                std::atomic_ref<std::uint32_t>{*infos[i].head}.fetch_or(
+                        message_consumed_flag, std::memory_order::relaxed);
+                std::memset(infos[i].content.data(),
+                            static_cast<int>(unused_block_content),
+                            infos[i].content.size());
             }
-
-            std::uint32_t const allocSize
-                    = cncr::round_up_p2(msgHead, block_size);
-
-            std::span<std::byte> const rwmsg
-                    = blockData.subspan(readPos + block_size, msgHead);
-            std::span<std::byte const> const msg{rwmsg};
-
-            (void)(static_cast<ConsumeFn &&>(consumeFn)(msg));
-
-            msgHeadPtr.fetch_or(message_consumed_flag,
-                                std::memory_order::release);
-            std::memset(rwmsg.data(), static_cast<int>(unused_block_content),
-                        allocSize);
-
-            readPos += allocSize + block_size;
-            if (readPos == mRegionSize - region_ctrl_overhead)
-            {
-                readPos = 0U;
-            }
+            // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
         }
 
         return oc::success();

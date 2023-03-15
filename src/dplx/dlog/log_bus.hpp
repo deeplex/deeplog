@@ -8,6 +8,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <span>
 
 #include <dplx/cncr/utils.hpp>
 #include <dplx/dp/api.hpp>
@@ -19,6 +21,14 @@
 
 namespace dplx::dlog
 {
+
+template <typename Fn>
+concept raw_message_consumer = requires(
+        Fn fn, std::span<std::span<std::byte const> const> const msgs) {
+                                   {
+                                       static_cast<Fn &&>(fn)(msgs)
+                                   } noexcept;
+                               };
 
 // the class is final and none of its base classes have public destructors
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)

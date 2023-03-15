@@ -21,7 +21,6 @@
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/items/skip_item.hpp>
 #include <dplx/dp/legacy/memory_buffer.hpp>
-#include <dplx/dp/legacy/memory_output_stream.hpp>
 #include <dplx/dp/object_def.hpp>
 
 #include <dplx/dlog/concepts.hpp>
@@ -30,26 +29,21 @@
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/log_clock.hpp>
 
+namespace dplx::dlog::detail
+{
+
+auto concate_messages(dp::output_buffer &out,
+                      std::span<serialized_message_info const> const &messages,
+                      severity threshold) noexcept -> result<void>;
+
+}
+
 namespace dplx::dlog
 {
 
 template <typename T>
 concept sink_backend
-        = std::movable<T>
-       && requires(T &sinkBackend, unsigned msgSize, std::u8string_view text) {
-              {
-                  sinkBackend.write(msgSize)
-                  } -> detail::tryable_result<dp::memory_buffer>;
-              //{
-              //    sinkBackend.write_static_string(text)
-              //    } -> detail::tryable;
-              {
-                  sinkBackend.drain_opened()
-                  } -> detail::tryable;
-              {
-                  sinkBackend.drain_closed()
-                  } -> detail::tryable;
-          };
+        = std::movable<T> && std::derived_from<T, dp::output_buffer>;
 
 template <sink_backend Backend>
 class basic_sink_frontend : public sink_frontend_base
@@ -68,14 +62,7 @@ public:
             -> basic_sink_frontend & = default;
 
     basic_sink_frontend(severity threshold, backend_type backend)
-        : sink_frontend_base(threshold, predicate_type{})
-        , mBackend(std::move(backend))
-    {
-    }
-    basic_sink_frontend(severity threshold,
-                        predicate_type shouldDiscard,
-                        backend_type backend)
-        : sink_frontend_base(threshold, shouldDiscard)
+        : sink_frontend_base(threshold)
         , mBackend(std::move(backend))
     {
     }
@@ -90,21 +77,18 @@ public:
     }
 
 private:
-    auto retire(bytes rawRecord,
-                [[maybe_unused]] additional_record_info const
-                        &additionalInfo) noexcept -> result<void> override
+    auto do_try_consume(
+            std::size_t const binarySize,
+            std::span<serialized_message_info const> const messages) noexcept
+            -> bool override
     {
-        DPLX_TRY(auto &&outBuffer,
-                 mBackend.write(static_cast<unsigned>(rawRecord.size())));
-        auto &&outStream = dp::get_output_buffer(outBuffer);
-
-        DPLX_TRY(outStream.bulk_write(rawRecord.data(), rawRecord.size()));
-        return oc::success();
+        (void)binarySize;
+        return detail::concate_messages(mBackend, messages, mThreshold)
+                .has_value();
     }
-    auto drain_closed_impl() noexcept -> result<void> override
+    auto do_try_sync() noexcept -> bool override
     {
-        DPLX_TRY(mBackend.drain_closed());
-        return oc::success();
+        return oc::try_operation_has_value(mBackend.sync_output());
     }
 };
 
@@ -118,17 +102,16 @@ struct file_info
                               .allow_versioned_auto_decoder = true};
 };
 
-class file_sink_backend
+class file_sink_backend final : public dp::output_buffer
 {
     using rotate_fn = std::function<result<void>(llfio::file_handle &)>;
 
-    dp::memory_buffer mWriteBuffer;
     llfio::file_handle mBackingFile;
 
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>>
             mBufferAllocation;
     rotate_fn mRotateBackingFile;
-    unsigned mTargetBufferSize{};
+    std::size_t mTargetBufferSize{};
 
 public:
     file_sink_backend() noexcept = default;
@@ -141,18 +124,16 @@ public:
         file_sink_backend self{};
         self.mTargetBufferSize = targetBufferSize;
 
-        DPLX_TRY(self.mBufferAllocation.resize(targetBufferSize));
-        self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
-        auto &&outBuffer = dp::get_output_buffer(self.mWriteBuffer);
-        dp::emit_context emitCtx{outBuffer};
+        DPLX_TRY(self.resize(targetBufferSize));
+        self.reset(self.mBufferAllocation.as_span());
+        dp::emit_context emitCtx{self};
 
-        DPLX_TRY(outBuffer.bulk_write(as_bytes(std::span(magic)).data(),
-                                      std::size(magic)));
+        DPLX_TRY(self.bulk_write(as_bytes(std::span(magic)).data(),
+                                 std::size(magic)));
         file_info info{.epoch = log_clock::epoch()};
         DPLX_TRY(dp::encode_object(emitCtx, info));
 
         DPLX_TRY(dp::emit_array_indefinite(emitCtx));
-        DPLX_TRY(outBuffer.sync_output());
 
         if (rotate)
         {
@@ -164,13 +145,7 @@ public:
         // if created
         if (maxExtent == 0U)
         {
-            llfio::file_handle::const_buffer_type writeBuffers[] = {
-                    {self.mWriteBuffer.consumed_begin(),
-                     self.mWriteBuffer.consumed_size()}
-            };
-            DPLX_TRY(self.mBackingFile.write({writeBuffers, 0U}));
-
-            self.mWriteBuffer = self.mBufferAllocation.as_memory_buffer();
+            DPLX_TRY(self.sync_output());
         }
 
         self.mRotateBackingFile = std::move(rotate);
@@ -190,77 +165,92 @@ public:
             = {0x83, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64,
                0x6c, 0x6f, 0x67, 0x7d, 0x7e, 0xbb, 0x0a, 0x1a};
 
-    auto write(unsigned size) noexcept -> result<dp::memory_buffer>
-    {
-        if (mWriteBuffer.remaining_size() < size)
-        {
-            DPLX_TRY(write_to_handle());
-
-            if (mWriteBuffer.remaining_size() < size)
-            {
-                DPLX_TRY(mBufferAllocation.resize(size));
-            }
-
-            mWriteBuffer = mBufferAllocation.as_memory_buffer();
-        }
-
-        return dp::memory_buffer(mWriteBuffer.consume(static_cast<int>(size)),
-                                 size, 0);
-    }
-    static auto drain_opened() noexcept -> result<void>
-    {
-        return oc::success();
-    }
-
-    auto drain_closed() noexcept -> result<void>
-    {
-        DPLX_TRY(write_to_handle());
-        DPLX_TRY(mBufferAllocation.resize(mTargetBufferSize));
-        mWriteBuffer = mBufferAllocation.as_memory_buffer();
-
-        return oc::success();
-    }
-
-    auto write_to_handle() noexcept -> result<void>
-    {
-        if (mWriteBuffer.consumed_size() > 0)
-        {
-            llfio::file_handle::const_buffer_type writeBuffers[] = {
-                    {mWriteBuffer.consumed_begin(),
-                     mWriteBuffer.consumed_size()}
-            };
-
-            DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
-        }
-
-        if (mRotateBackingFile)
-        {
-            DPLX_TRY(mRotateBackingFile(mBackingFile));
-        }
-        return oc::success();
-    }
-
     auto finalize() noexcept -> result<void>
     {
         if (!mBackingFile.is_valid())
         {
             return oc::success();
         }
-        auto &&outBuffer = dp::get_output_buffer(mWriteBuffer);
-        dp::emit_context ctx{outBuffer};
+        dp::emit_context ctx{*this};
         DPLX_TRY(dp::emit_break(ctx));
-        DPLX_TRY(outBuffer.sync_output());
-        llfio::file_handle::const_buffer_type writeBuffers[] = {
-                {mWriteBuffer.consumed_begin(), mWriteBuffer.consumed_size()}
-        };
-
-        DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
-
+        DPLX_TRY(sync_output());
         DPLX_TRY(mBackingFile.close());
 
         *this = file_sink_backend();
-
         return oc::success();
+    }
+
+private:
+    auto resize(std::size_t requestedSize) noexcept -> dp::result<void>
+    {
+        return mBufferAllocation.resize(static_cast<unsigned>(requestedSize));
+    }
+    auto do_grow(size_type requestedSize) noexcept -> dp::result<void> override
+    {
+        if (size() != mBufferAllocation.size())
+        {
+            auto const buffer = mBufferAllocation.as_span();
+            llfio::file_handle::const_buffer_type writeBuffers[] = {
+                    {buffer.data(), buffer.size() - size()}
+            };
+
+            DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
+        }
+        if (mBufferAllocation.size() < requestedSize)
+        {
+            DPLX_TRY(resize(requestedSize));
+        }
+        reset(mBufferAllocation.as_span());
+        return dp::oc::success();
+    }
+    auto do_bulk_write(std::byte const *src, std::size_t srcSize) noexcept
+            -> dp::result<void> override
+    {
+        if (srcSize < mBufferAllocation.size() / 2)
+        {
+            auto const buffer = mBufferAllocation.as_span();
+            llfio::file_handle::const_buffer_type writeBuffers[] = {
+                    {buffer.data(), buffer.size() - size()}
+            };
+            DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
+            reset(buffer);
+            std::memcpy(buffer.data(), src, srcSize);
+            commit_written(srcSize);
+            return dp::oc::success();
+        }
+
+        auto const buffer = mBufferAllocation.as_span();
+        llfio::file_handle::const_buffer_type writeBuffers[] = {
+                {buffer.data(), buffer.size() - size()},
+                {          src,                srcSize}
+        };
+
+        DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
+        reset(buffer);
+        return dp::oc::success();
+    }
+    auto do_sync_output() noexcept -> dp::result<void> override
+    {
+        if (size() != mBufferAllocation.size())
+        {
+            auto const buffer = mBufferAllocation.as_span();
+            llfio::file_handle::const_buffer_type writeBuffers[] = {
+                    {buffer.data(), buffer.size() - size()}
+            };
+
+            DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
+            reset(buffer);
+        }
+        if (mBufferAllocation.size() != mTargetBufferSize)
+        {
+            DPLX_TRY(resize(mTargetBufferSize));
+        }
+
+        if (mRotateBackingFile)
+        {
+            DPLX_TRY(mRotateBackingFile(mBackingFile));
+        }
+        return dp::oc::success();
     }
 };
 

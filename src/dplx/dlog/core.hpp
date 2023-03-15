@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
-#include <functional>
 #include <memory>
 #include <span>
 #include <vector>
+
+#include <boost/variant2.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/definitions.hpp>
@@ -21,125 +21,130 @@
 namespace dplx::dlog
 {
 
-// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-struct additional_record_info
+// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
+
+struct serialized_info_base
+{
+    bytes raw_data;
+};
+
+struct serialized_unknown_message_info : serialized_info_base
+{
+};
+struct serialized_record_info : serialized_info_base
 {
     log_clock::time_point timestamp;
     severity message_severity;
-    unsigned message_size;
-    unsigned attributes_size;
-    unsigned format_args_size;
-
-    static constexpr auto message_offset() noexcept -> int
-    {
-        return 1 + 1 + encoded_timestamp_size;
-    }
-    [[nodiscard]] constexpr auto attributes_offset() const noexcept -> int
-    {
-        return 1 + 1 + encoded_timestamp_size + static_cast<int>(message_size);
-    }
-    [[nodiscard]] constexpr auto format_args_offset() const noexcept -> int
-    {
-        return 1 + 1 + encoded_timestamp_size + static_cast<int>(message_size)
-             + static_cast<int>(attributes_size);
-    }
-
-    static constexpr int encoded_timestamp_size = 9;
 };
+struct serialized_span_start_info : serialized_info_base
+{
+};
+struct serialized_span_end_info : serialized_info_base
+{
+};
+struct serialized_malformed_message_info : serialized_info_base
+{
+};
+
+// NOLINTEND(cppcoreguidelines-pro-type-member-init)
+
+using serialized_message_info
+        = boost::variant2::variant<serialized_unknown_message_info,
+                                   serialized_record_info,
+                                   serialized_span_start_info,
+                                   serialized_span_end_info,
+                                   serialized_malformed_message_info>;
 
 class sink_frontend_base
 {
-public:
-    using predicate_type = std::function<bool(
-            bytes rawMessage, additional_record_info const &additionalInfo)>;
-
-private:
+protected:
+    // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes)
     severity mThreshold;
-    result<void> mLastRx;
-    predicate_type mShouldDiscard;
+    bool mActive;
+    // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 
 public:
     virtual ~sink_frontend_base() = default;
 
 protected:
-    /*
     sink_frontend_base(sink_frontend_base const &) = default;
     auto operator=(sink_frontend_base const &)
             -> sink_frontend_base & = default;
-            */
+
     sink_frontend_base(sink_frontend_base &&) noexcept = default;
     auto operator=(sink_frontend_base &&) noexcept
             -> sink_frontend_base & = default;
 
-    explicit sink_frontend_base(severity threshold,
-                                predicate_type shouldDiscard) noexcept
+    explicit sink_frontend_base(severity threshold) noexcept
         : mThreshold(threshold)
-        , mLastRx(oc::success())
-        , mShouldDiscard(std::move(shouldDiscard))
+        , mActive(true)
     {
-    }
-
-private:
-    // exactly four pointer sized arguments to avoid the stack with
-    // Microsoft's x64 calling convention
-    virtual auto retire(bytes rawMessage,
-                        additional_record_info const &additionalInfo) noexcept
-            -> result<void>
-            = 0;
-
-    virtual auto drain_opened_impl() noexcept -> result<void>
-    {
-        return oc::success();
-    }
-    virtual auto drain_closed_impl() noexcept -> result<void>
-    {
-        return oc::success();
     }
 
 public:
-    void push(bytes rawMessage,
-              additional_record_info const &additionalInfo) noexcept;
-
-    auto drain_opened() noexcept -> result<void>
+    [[nodiscard]] auto try_consume(
+            std::size_t const binarySize,
+            std::span<serialized_message_info const> const &messages) noexcept
+            -> bool
     {
-        if (mLastRx.has_value())
+        if (!mActive) [[unlikely]]
         {
-            mLastRx = drain_opened_impl();
+            return false;
         }
-        return oc::success(); // FIXME: think about lazy error passing
+        return (mActive = do_try_consume(binarySize, messages));
     }
-    auto drain_closed() noexcept -> result<void>
+    [[nodiscard]] auto is_active() const noexcept -> bool
     {
-        if (mLastRx.has_value())
-        {
-            mLastRx = drain_closed_impl();
-        }
-        return oc::success(); // FIXME: think about lazy error passing
+        return mActive;
     }
 
-    [[nodiscard]] static auto last_rx() noexcept -> result<void>
+    [[nodiscard]] auto try_sync() noexcept -> bool
     {
-        return oc::success(); // FIXME: think about lazy error passing
+        if (!mActive) [[unlikely]]
+        {
+            return false;
+        }
+        return (mActive = do_try_sync());
+    }
+
+private:
+    [[nodiscard]] virtual auto
+    do_try_consume(std::size_t binarySize,
+                   std::span<serialized_message_info const> messages) noexcept
+            -> bool
+            = 0;
+
+    [[nodiscard]] virtual auto do_try_sync() noexcept -> bool
+    {
+        return true;
     }
 };
 
 namespace detail
 {
 
+auto preparse_messages(std::span<bytes const> const &records,
+                       std::span<serialized_message_info> parses) noexcept
+        -> std::size_t;
+
+void multicast_messages(std::span<std::unique_ptr<sink_frontend_base>> &sinks,
+                        std::size_t binarySize,
+                        std::span<serialized_message_info> parses) noexcept;
+
+void sync_sinks(std::span<std::unique_ptr<sink_frontend_base>> sinks) noexcept;
+
+template <std::size_t MaxBatchSize>
 struct consume_record_fn
 {
-    std::span<std::unique_ptr<sink_frontend_base>> sinks;
+    std::span<std::unique_ptr<sink_frontend_base>> sinks{};
 
-    void operator()(bytes const message) const noexcept
+    void operator()(std::span<bytes const> records) noexcept
     {
-        (void)multicast(message, sinks);
+        serialized_message_info parses[MaxBatchSize];
+        auto binarySize = detail::preparse_messages(records, parses);
+        detail::multicast_messages(sinks, binarySize,
+                                   std::span(parses).first(records.size()));
     }
-
-private:
-    static auto multicast(
-            bytes message,
-            std::span<std::unique_ptr<sink_frontend_base> const> sinks) noexcept
-            -> result<void>;
 };
 
 } // namespace detail
@@ -155,6 +160,7 @@ class core
 public:
     explicit core(Bus &&rig)
         : mBus(std::move(rig))
+        , mSinks()
     {
     }
 
@@ -163,53 +169,46 @@ public:
         return mBus;
     }
 
-    auto retire_log_records() -> result<int>
+    auto retire_log_records() noexcept -> result<int>
     {
-        auto validEnd
-                = std::partition(mSinks.begin(), mSinks.end(),
-                                 [](sink_owner const &sink)
-                                 { return sink->drain_opened().has_value(); });
+        detail::consume_record_fn<Bus::consume_batch_size> drain{mSinks};
 
-        auto numValidSinks
-                = static_cast<std::size_t>(validEnd - mSinks.begin());
-        detail::consume_record_fn const drain{
-                std::span(mSinks.data(), numValidSinks)};
+        DPLX_TRY(mBus.consume_messages(drain));
+        detail::sync_sinks(mSinks);
+        return oc::success();
+    }
 
-        DPLX_TRY(mBus.consume_content(drain));
-
-        int numSinkFailures = 0;
-        for (auto &sink : mSinks)
+    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
+            -> sink_frontend_base *
+    {
+        auto *const ptr = sink.get();
+        mSinks.push_back(static_cast<decltype(sink) &&>(sink));
+        return ptr;
+    }
+    void remove_sink(sink_frontend_base *const which) noexcept
+    {
+        for (auto it = mSinks.begin(), end = mSinks.end(); it != end; ++it)
         {
-            if (sink->drain_closed().has_error())
+            if (which == it->get())
             {
-                numSinkFailures += 1;
+                mSinks.erase(it);
+                break;
             }
         }
-        return numSinkFailures;
     }
-
-    void attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
+    auto release_sink(sink_frontend_base *const which) noexcept
+            -> sink_frontend_base *
     {
-        mSinks.push_back(std::move(sink));
-    }
-    void remove_sink(sink_frontend_base *which) noexcept
-    {
-        if (auto const where
-            = std::ranges::find(mSinks, which, &sink_owner::get);
-            where != mSinks.end())
+        for (auto it = mSinks.begin(), end = mSinks.end(); it != end; ++it)
         {
-            mSinks.erase(where);
+            if (which == it->get())
+            {
+                (void)it->release();
+                mSinks.erase(it);
+                break;
+            }
         }
-    }
-    void release_sink(sink_frontend_base *which) noexcept
-    {
-        if (auto const where
-            = std::ranges::find(mSinks, which, &sink_owner::get);
-            where != mSinks.end())
-        {
-            (void)where->release();
-            mSinks.erase(where);
-        }
+        return which;
     }
     void clear_sinks() noexcept
     {

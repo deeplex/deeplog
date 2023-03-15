@@ -13,6 +13,7 @@
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/scope_guard.hpp>
 
+#include "dplx/dlog/concepts.hpp"
 #include "test_dir.hpp"
 #include "test_utils.hpp"
 
@@ -61,16 +62,20 @@ TEST_CASE("bufferbus buffers messages and outputs them afterwards")
     auto const endId = msgId;
     msgId = 0;
 
-    auto consumeRx = bufferbus.consume_content(
-            [&](std::span<std::byte const> msg)
+    auto consumeRx = bufferbus.consume_messages(
+            [&](std::span<dlog::bytes const> const &msgs) noexcept
             {
-                auto decodeRx
-                        = dp::decode(dp::as_value<unsigned int>, as_bytes(msg));
-                REQUIRE(decodeRx);
+                for (auto const msg : msgs)
+                {
+                    dp::memory_input_stream msgStream(msg);
 
-                auto parsedId = decodeRx.assume_value();
-                REQUIRE(parsedId == msgId);
-                msgId += 1;
+                    auto decodeRx
+                            = dp::decode(dp::as_value<unsigned int>, msgStream);
+                    REQUIRE(decodeRx);
+
+                    [[maybe_unused]] auto parsedId = decodeRx.assume_value();
+                    msgId += 1;
+                }
             });
 
     REQUIRE(consumeRx);

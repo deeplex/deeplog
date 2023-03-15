@@ -7,6 +7,7 @@
         "boost-config",
         "boost-predef",
         "boost-mp11",
+        "boost-variant2",
         "concrete",
         "deeppack",
         "fmt",
