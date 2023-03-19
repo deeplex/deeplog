@@ -31,7 +31,7 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
 
     auto dbOpenRx = dlog::file_database_handle::file_database(
-            test_dir, "log-test.drot", "log-test.{iso8601}.dlog");
+            test_dir, "log-test.drot", "log-test.{now:%FT%H-%M-%S}.dlog");
     REQUIRE(dbOpenRx);
     auto &&db = std::move(dbOpenRx).assume_value();
 
@@ -43,13 +43,10 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
             bufferSize, {});
     REQUIRE(sinkBackendOpenRx);
 
-    auto sinkOwner = std::make_unique<sink_type>(
-            dlog::severity::info, std::move(sinkBackendOpenRx).assume_value());
-    auto *sink = sinkOwner.get();
-
     constexpr auto regionSize = 1 << 14;
     dlog::core core{dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
-    core.attach_sink(std::move(sinkOwner));
+    auto *sink = core.attach_sink(std::make_unique<sink_type>(
+            dlog::severity::info, std::move(sinkBackendOpenRx).assume_value()));
 
     DLOG_WARN_EX(core.connector(), "important msg with arg {}", 1);
     // DLOG_GENERIC(xlog, dlog::severity::warn,
@@ -61,7 +58,8 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     CHECK(retireRx.assume_value() == 0);
 
     core.release_sink(sink);
-    sinkOwner.reset(sink);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+    std::unique_ptr<sink_type> sinkOwner(static_cast<sink_type *>(sink));
     auto finRx = sinkOwner->backend().finalize();
     REQUIRE(finRx);
 }
