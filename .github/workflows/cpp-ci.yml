@@ -42,7 +42,7 @@ jobs:
         uses: lukka/run-vcpkg@v10
         with:
           vcpkgDirectory: ${{ github.workspace }}/build/vcpkg
-          vcpkgGitCommitId: 37fce29a263a1546262eaed6af7ccac53b0094cd
+          vcpkgGitCommitId: 1271068e139c1fc30bae405c0bca0e379e155bd2
           prependedCacheKey: compiler=${{ matrix.compiler }}
           #appendedCacheKey: r00
 
@@ -102,7 +102,7 @@ jobs:
         uses: lukka/run-vcpkg@v10
         with:
           vcpkgDirectory: ${{ github.workspace }}/../vcpkg
-          vcpkgGitCommitId: 37fce29a263a1546262eaed6af7ccac53b0094cd
+          vcpkgGitCommitId: 1271068e139c1fc30bae405c0bca0e379e155bd2
           prependedCacheKey: compiler=clang-15
           #appendedCacheKey: r00
 
