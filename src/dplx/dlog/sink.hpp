@@ -23,6 +23,7 @@
 #include <dplx/dp/legacy/memory_buffer.hpp>
 #include <dplx/dp/object_def.hpp>
 
+#include <dplx/dlog/attribute_transmorpher.hpp>
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core.hpp>
 #include <dplx/dlog/detail/utils.hpp>
@@ -95,9 +96,11 @@ private:
 struct file_info
 {
     log_clock::epoch_info epoch;
+    attribute_container attributes;
 
     static inline constexpr dp::object_def<
-            dp::property_def<4U, &file_info::epoch>{}>
+            dp::property_def<4U, &file_info::epoch>{},
+            dp::property_def<23U, &file_info::attributes>{}>
             layout_descriptor{.version = 0U,
                               .allow_versioned_auto_decoder = true};
 };
@@ -130,7 +133,7 @@ public:
 
         DPLX_TRY(self.bulk_write(as_bytes(std::span(magic)).data(),
                                  std::size(magic)));
-        file_info info{.epoch = log_clock::epoch()};
+        file_info info{.epoch = log_clock::epoch(), .attributes = {}};
         DPLX_TRY(dp::encode_object(emitCtx, info));
 
         DPLX_TRY(dp::emit_array_indefinite(emitCtx));
