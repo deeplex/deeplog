@@ -31,55 +31,15 @@
 namespace dplx::dlog
 {
 
-class record_location
-{
-    std::string mFilename{};
-    int mLine{-1};
-
-public:
-    record_location() noexcept = default;
-    explicit record_location(std::string filename, int line) noexcept
-        : mFilename(std::move(filename))
-        , mLine(line)
-    {
-    }
-
-    [[nodiscard]] auto filename() const &noexcept -> std::string_view
-    {
-        return mFilename;
-    }
-    [[nodiscard]] auto filename() &&noexcept -> std::string
-    {
-        return std::move(mFilename);
-    }
-    [[nodiscard]] auto line() const noexcept -> int
-    {
-        return mLine;
-    }
-};
-
-} // namespace dplx::dlog
-
-template <>
-class dplx::dp::codec<dplx::dlog::record_location>
-{
-public:
-    static auto decode(parse_context &ctx,
-                       dplx::dlog::record_location &value) noexcept
-            -> result<void>;
-};
-
-namespace dplx::dlog
-{
-
 class record
 {
 public:
     dlog::severity severity;
+    span_context context;
     std::uint64_t timestamp; // FIXME: correct timestamp type
     std::string message;
-    record_location location;
     dynamic_format_arg_store<fmt::format_context> format_arguments;
+    attribute_container attributes;
 };
 
 } // namespace dplx::dlog
@@ -95,7 +55,6 @@ class basic_decoder<dlog::record> // TODO: transform into a codec
 {
 public:
     dlog::argument_transmorpher &parse_arguments;
-    dlog::record_attribute_reviver &parse_attributes;
 
     auto operator()(parse_context &ctx, dlog::record &value) -> result<void>
     {
@@ -104,24 +63,32 @@ public:
         {
             return dp::errc::item_type_mismatch;
         }
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
         // TODO: refactor record layout description into compile time constants
         if (tupleHead.indefinite()
-            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-            || 6 != tupleHead.value)
+            || (tupleHead.value != 2 && tupleHead.value != 6
+                && tupleHead.value != 7))
         {
             return dp::errc::tuple_size_mismatch;
         }
-        if (tupleHead.encoded_length != 1)
+
+        if (tupleHead.value != 6)
         {
-            return dp::errc::oversized_additional_information_coding;
+            for (unsigned i = 0; i < tupleHead.value; i++)
+            {
+                DPLX_TRY(dp::skip_item(ctx));
+            }
+            return dp::success();
         }
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
         DPLX_TRY(decode(ctx, value.severity));
+        DPLX_TRY(decode(ctx, value.context));
         DPLX_TRY(decode(ctx, value.timestamp));
         DPLX_TRY(dp::parse_text_finite(ctx, value.message));
 
         DPLX_TRY(parse_arguments(ctx, value.format_arguments));
-        DPLX_TRY(decode(ctx, value.location));
+        DPLX_TRY(dp::decode(ctx, value.attributes));
         return oc::success();
     }
 
@@ -186,10 +153,11 @@ private:
     {
         auto &record = records.emplace_back(
                 dlog::record{.severity = dlog::severity::none,
+                             .context = {},
                              .timestamp = {},
                              .message = {},
-                             .location = {},
-                             .format_arguments = {}});
+                             .format_arguments = {},
+                             .attributes = {}});
 
         auto decodeRx = record_decoder(ctx, record);
         if (decodeRx.has_failure())

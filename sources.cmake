@@ -10,6 +10,7 @@ dplx_target_sources(deeplog
         dlog/definitions
 
         dlog/attributes
+        dlog/attribute_transmorpher
         dlog/core
         dlog/log_bus
         dlog/log_clock
@@ -54,7 +55,6 @@ dplx_target_sources(deeplog
 
         dlog/arguments.hpp
         dlog/argument_transmorpher_fmt.hpp
-        dlog/attribute_transmorpher.hpp
         dlog/attributes.hpp
         dlog/macros.hpp
 
