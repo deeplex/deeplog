@@ -34,6 +34,7 @@ dplx_target_sources(deeplog
     BASE_DIR dplx
 
     PUBLIC
+        dlog/any_attribute
         dlog/config
         dlog/disappointment
         dlog/fwd
