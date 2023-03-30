@@ -59,7 +59,7 @@ private:
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct contents_t
     {
-        unsigned revision;
+        unsigned long long revision;
         std::vector<record_container_meta> record_containers;
 
         static constexpr dp::object_def<
