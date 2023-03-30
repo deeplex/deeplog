@@ -40,6 +40,7 @@ dplx_target_sources(deeplog
         dlog/loggable
 
         dlog/detail/any_loggable_ref
+        dlog/detail/any_reified
         dlog/detail/workaround
 )
 
