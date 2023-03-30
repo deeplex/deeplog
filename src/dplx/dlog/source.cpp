@@ -262,7 +262,7 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     (void)dp::encode(ctx, args.owner);
 
     // timestamp
-    *ctx.out.data() = static_cast<std::byte>(dp::type_code::posint);
+    *ctx.out.data() = static_cast<std::byte>(27U); // NOLINT
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     dp::detail::store(ctx.out.data() + 1, timeStamp.time_since_epoch().count());
     ctx.out.commit_written(timestampSize);
