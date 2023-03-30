@@ -6,3 +6,9 @@
 //           https://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+
+#include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/fwd.hpp>
+#include <dplx/dlog/macros.hpp>
+#include <dplx/dlog/source.hpp>
+#include <dplx/dlog/span_scope.hpp>

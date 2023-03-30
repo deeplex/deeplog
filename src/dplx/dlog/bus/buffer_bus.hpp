@@ -17,17 +17,18 @@
 #include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 
-#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog
 {
 
-class bufferbus_handle
+class bufferbus_handle final : public bus_handle
 {
     llfio::mapped_file_handle mBackingFile;
     std::span<std::byte> mBuffer;
+    std::uint64_t mSpanPrngCtr{};
     std::size_t mWriteOffset;
 
 public:
@@ -62,15 +63,16 @@ public:
     {
     }
 
-    using output_stream = dp::memory_output_stream;
+    static constexpr std::size_t consume_batch_size = 1U;
 
-    struct logger_token
+    class output_buffer final : public bus_output_buffer
     {
+        friend class bufferbus_handle;
+
+        using bus_output_buffer::bus_output_buffer;
+
+    public:
     };
-    static auto create_token() noexcept -> result<logger_token>
-    {
-        return logger_token{};
-    }
 
     static auto bufferbus(llfio::path_handle const &base,
                           llfio::path_view path,
@@ -101,33 +103,9 @@ public:
         return bufferbus_handle(std::move(backingFile), bufferSize);
     }
 
-    auto write(logger_token &, unsigned msgSize) noexcept
-            -> result<output_stream>
-    {
-        auto const overhead = dp::detail::var_uint_encoded_size(msgSize);
-        auto const totalSize = overhead + msgSize;
-
-        if (totalSize > mBuffer.size() - mWriteOffset)
-        {
-            return errc::not_enough_space;
-        }
-
-        dp::memory_output_stream msgBuffer(
-                mBuffer.subspan(mWriteOffset, totalSize));
-        mWriteOffset += totalSize;
-
-        dp::emit_context ctx{msgBuffer};
-        DPLX_TRY(dp::emit_binary(ctx, msgSize));
-        return dp::memory_output_stream{std::span(msgBuffer)};
-    }
-
-    void commit(logger_token &)
-    {
-    }
-
     template <typename ConsumeFn>
-        requires bus_consumer<ConsumeFn &&>
-    auto consume_content(ConsumeFn &&consume) noexcept -> result<void>
+        requires raw_message_consumer<ConsumeFn &&>
+    auto consume_messages(ConsumeFn &&consume) noexcept -> result<void>
     {
         dp::memory_input_stream contentStream(mBuffer.first(mWriteOffset));
         dp::parse_context ctx{contentStream};
@@ -144,10 +122,11 @@ public:
                 break;
             }
 
-            std::span<std::byte const> const msg(
-                    contentStream.data(),
-                    static_cast<std::size_t>(msgInfo.value));
-            static_cast<ConsumeFn &&>(consume)(msg);
+            std::span<std::byte const> const msgs[1] = {
+                    {contentStream.data(),
+                     static_cast<std::size_t>(msgInfo.value)},
+            };
+            static_cast<ConsumeFn &&>(consume)(msgs);
 
             contentStream.discard_buffered(
                     static_cast<std::size_t>(msgInfo.value));
@@ -181,8 +160,33 @@ public:
     }
 
 private:
+    auto do_create_output_buffer_inplace(
+            output_buffer_storage &bufferPlacementStorage,
+            std::size_t messageSize,
+            span_id) noexcept -> result<bus_output_buffer *> override
+    {
+        auto const overhead = dp::detail::var_uint_encoded_size(messageSize);
+        auto const totalSize = overhead + messageSize;
+
+        if (totalSize > mBuffer.size() - mWriteOffset)
+        {
+            return errc::not_enough_space;
+        }
+
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        output_buffer out(mBackingFile.address() + mWriteOffset, totalSize);
+        mWriteOffset += totalSize;
+
+        dp::emit_context ctx{out};
+        (void)dp::emit_binary(ctx, messageSize);
+        return new (static_cast<void *>(&bufferPlacementStorage))
+                output_buffer(static_cast<output_buffer &&>(out));
+    }
+
+    auto do_allocate_span_context() noexcept -> span_context override;
+    auto do_allocate_trace_id() noexcept -> trace_id override;
+    auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
 };
-static_assert(bus<bufferbus_handle>);
 
 inline auto bufferbus(llfio::path_handle const &base,
                       llfio::path_view path,

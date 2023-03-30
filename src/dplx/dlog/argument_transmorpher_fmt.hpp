@@ -26,6 +26,7 @@
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/loggable.hpp>
 
 namespace dplx::dlog
 {
@@ -65,7 +66,7 @@ public:
 
 class argument_transmorpher
 {
-    using key_type = resource_id;
+    using key_type = reification_type_id;
     using parse_context = dp::parse_context;
     using format_context = fmt::format_context;
     using char_type = typename fmt::format_context::char_type;
@@ -95,13 +96,12 @@ public:
     }
 
     template <typename T>
-        requires loggable_argument<T>
-              && dp::decodable<T>
-                 auto register_type() -> result<void>
+        requires reifiable<T>
+    auto register_type() -> result<void>
     {
         try
         {
-            mKnownTypes.insert(argument<T>::type_id, &revive_template<T>);
+            mKnownTypes.insert(reification_tag_v<T>, &revive_template<T>);
         }
         catch (std::bad_alloc const &)
         {
@@ -129,7 +129,7 @@ private:
         }
         bool const named = tupleHead.value == 3;
 
-        DPLX_TRY(auto key, dp::decode(dp::as_value<key_type>, ctx));
+        DPLX_TRY(key_type key, dp::decode(dp::as_value<key_type>, ctx));
 
         char const *name = nullptr;
         if (named)
@@ -147,11 +147,11 @@ private:
             }
         }
 
-        if (key == argument<std::uint64_t>::type_id)
+        if (key == reification_tag_v<std::uint64_t>)
         {
             return revive_template<std::uint64_t>(ctx, store, name);
         }
-        if (key == argument<std::int64_t>::type_id)
+        if (key == reification_tag_v<std::int64_t>)
         {
             return revive_template<std::int64_t>(ctx, store, name);
         }

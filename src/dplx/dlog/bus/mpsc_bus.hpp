@@ -20,9 +20,11 @@
 #include <dplx/dp/streams/memory_output_stream.hpp>
 #include <dplx/scope_guard.hpp>
 
+#include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/utils.hpp> // declare_codec
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog::detail
 {
@@ -60,11 +62,13 @@ struct mpsc_bus_region_ctrl
             std::uint32_t read_ptr;
     alignas(std::atomic_ref<std::uint32_t>::required_alignment)
             std::uint32_t alloc_ptr;
+    alignas(std::atomic_ref<std::uint64_t>::required_alignment) std::uint64_t
+            span_prng_ctr;
 
-    std::uint8_t padding[56]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+    std::uint8_t padding[48]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 };
 
-class mpsc_bus_handle final
+class mpsc_bus_handle final : public bus_handle
 {
     llfio::mapped_file_handle mBackingFile;
     std::uint32_t mNumRegions;
@@ -146,40 +150,39 @@ public:
     static constexpr std::uint32_t min_region_size = 4 * 1024U;
     static constexpr std::uint32_t max_message_size = 0x1fff'ffffU;
 
-    using output_stream = dp::memory_output_stream;
+    static constexpr unsigned consume_batch_size = 64U;
 
-    class logger_token
+private:
+    auto do_allocate_span_context() noexcept -> span_context override;
+    auto do_allocate_trace_id() noexcept -> trace_id override;
+    auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
+
+public:
+    class output_buffer final : public bus_output_buffer
     {
         friend class mpsc_bus_handle;
 
-        std::uint32_t regionId{0U};
-        std::uint32_t msgRegion{0U};
-        std::uint32_t msgBegin{0U};
+        std::uint32_t *mMsgCtrl{nullptr};
 
-    public:
-        logger_token() noexcept = default;
+        using bus_output_buffer::bus_output_buffer;
 
-    private:
-        explicit logger_token(std::uint32_t regionId_) noexcept
-            : regionId(regionId_)
+        auto do_sync_output() noexcept -> dp::result<void> final
         {
+            if (mMsgCtrl == nullptr) [[unlikely]]
+            {
+                return errc::bad;
+            }
+
+            std::atomic_ref<std::uint32_t>(*mMsgCtrl).fetch_and(
+                    max_message_size, std::memory_order::release);
+            // reset();
+            mMsgCtrl = nullptr;
+            return dp::oc::success();
         }
     };
 
-    auto create_token() const noexcept -> result<logger_token>
-    {
-        auto const hashed = detail::hashed_this_thread_id();
-        auto const regionId = detail::hash_to_index(hashed, mNumRegions);
-        return logger_token(regionId);
-    }
-
     template <typename ConsumeFn>
-    auto consume_content(ConsumeFn &&consumeFn) noexcept -> result<void>
-    {
-        return this->consume_messages(static_cast<ConsumeFn &&>(consumeFn));
-    }
-
-    template <typename ConsumeFn>
+        requires raw_message_consumer<ConsumeFn &&>
     auto consume_messages(ConsumeFn &&consumeFn) noexcept -> result<void>
     {
         for (std::uint32_t regionId = 0U; regionId < mNumRegions; ++regionId)
@@ -196,8 +199,8 @@ private:
             -> result<void>
     {
         auto *const ctx = region(regionId);
-        std::span<std::byte> blockData(region_data(regionId),
-                                       mRegionSize - region_ctrl_overhead);
+        auto *const blockData = region_data(regionId);
+        writable_bytes block(blockData, mRegionSize - region_ctrl_overhead);
 
         std::atomic_ref<std::uint32_t> const readPtr(ctx->read_ptr);
         std::atomic_ref<std::uint32_t> const allocPtr(ctx->alloc_ptr);
@@ -221,125 +224,132 @@ private:
 
         for (;;)
         {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            auto *const ints = reinterpret_cast<std::uint32_t *>(
-                    blockData.subspan(readPos).data());
-            std::atomic_ref<std::uint32_t> const msgHeadPtr(*ints);
+            std::size_t batchSize = 0U;
+            struct
+            {
+                std::uint32_t *head{};
+                writable_bytes content;
+            } infos[consume_batch_size] = {};
+            bytes msgs[consume_batch_size];
 
-            auto const msgHead = msgHeadPtr.load(std::memory_order::acquire);
-            if ((msgHead & message_lock_flag) != 0U)
+            // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+            for (; batchSize < consume_batch_size; ++batchSize)
+            {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                auto *const msgHeadPtr = reinterpret_cast<std::uint32_t *>(
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        blockData + readPos);
+
+                auto const msgHead
+                        = std::atomic_ref<std::uint32_t>{*msgHeadPtr}.load(
+                                std::memory_order::acquire);
+                if ((msgHead & message_lock_flag) != 0U)
+                {
+                    break;
+                }
+                if (readPos + block_size + msgHead
+                    > mRegionSize - region_ctrl_overhead)
+                {
+                    readPos = std::uint32_t{0U} - block_size;
+                }
+
+                auto const allocSize = cncr::round_up_p2(msgHead, block_size);
+                infos[batchSize] = {
+                        .head = msgHeadPtr,
+                        .content
+                        = block.subspan(readPos + block_size, allocSize),
+                };
+                msgs[batchSize] = block.subspan(readPos + block_size, msgHead);
+
+                readPos += allocSize + block_size;
+                if (readPos == mRegionSize - region_ctrl_overhead)
+                {
+                    readPos = 0U;
+                }
+            }
+            if (batchSize == 0U)
             {
                 break;
             }
-            if (readPos + block_size + msgHead
-                > mRegionSize - region_ctrl_overhead)
+
+            (void)(static_cast<ConsumeFn &&>(consumeFn)(
+                    std::span(static_cast<bytes const *>(msgs), batchSize)));
+
+            for (std::size_t i = 0U; i < batchSize; ++i)
             {
-                readPos = std::uint32_t{0U} - block_size;
+                std::atomic_ref<std::uint32_t>{*infos[i].head}.fetch_or(
+                        message_consumed_flag, std::memory_order::relaxed);
+                std::memset(infos[i].content.data(),
+                            static_cast<int>(unused_block_content),
+                            infos[i].content.size());
             }
-
-            std::uint32_t const allocSize
-                    = cncr::round_up_p2(msgHead, block_size);
-
-            std::span<std::byte> const rwmsg
-                    = blockData.subspan(readPos + block_size, msgHead);
-            std::span<std::byte const> const msg{rwmsg};
-
-            (void)(static_cast<ConsumeFn &&>(consumeFn)(msg));
-
-            msgHeadPtr.fetch_or(message_consumed_flag,
-                                std::memory_order::release);
-            std::memset(rwmsg.data(), static_cast<int>(unused_block_content),
-                        allocSize);
-
-            readPos += allocSize + block_size;
-            if (readPos == mRegionSize - region_ctrl_overhead)
-            {
-                readPos = 0U;
-            }
+            // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
         }
 
         return oc::success();
     }
 
-public:
-    auto write(logger_token &logger, std::uint32_t const msgSize) noexcept
-            -> pure_result<output_stream>
+    auto do_create_output_buffer_inplace(
+            output_buffer_storage &bufferPlacementStorage,
+            std::size_t messageSize,
+            span_id spanId) noexcept -> result<bus_output_buffer *> override
     {
-        if (msgSize > max_message_size) [[unlikely]]
+        static_assert(sizeof(output_buffer_storage) >= sizeof(output_buffer));
+
+        if (messageSize > max_message_size) [[unlikely]]
         {
             return errc::not_enough_space;
         }
+        auto const payloadSize = static_cast<std::uint32_t>(messageSize);
 
-        auto regionId = logger.regionId;
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        write_allocation allocation;
+        output_buffer out;
+        auto const spread
+                = (spanId == span_id::invalid()
+                           ? detail::hashed_this_thread_id()
+                           : static_cast<std::uint32_t>(spanId._state[0]));
+        auto const firstRegionId = detail::hash_to_index(spread, mNumRegions);
+        auto regionId = firstRegionId;
         for (;;)
         {
-            auto reserveRx = allocate(regionId, msgSize);
-            if (reserveRx.has_value()) [[likely]]
+            auto const allocCode = allocate(out, payloadSize, regionId);
+            if (allocCode == errc::success) [[likely]]
             {
-                allocation = reserveRx.assume_value();
                 break;
             }
             regionId = ++regionId == mNumRegions ? 0U : regionId;
-            if (reserveRx.assume_error() != errc::not_enough_space
-                || regionId == logger.regionId)
+            if (allocCode != errc::not_enough_space
+                || regionId == firstRegionId)
             {
-                return static_cast<decltype(reserveRx) &&>(reserveRx)
-                        .assume_error();
+                return cncr::data_defined_status_code<errc>{allocCode};
             }
         }
 
-        logger.msgRegion = regionId;
-        logger.msgBegin = allocation.header_position;
-
-        return dp::memory_output_stream{std::span(
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                region_data(regionId) + allocation.payload_position, msgSize)};
+        return new (static_cast<void *>(&bufferPlacementStorage))
+                output_buffer(out);
     }
 
-    void commit(logger_token &logger)
-    {
-        auto *const msgSizeLocation
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                = region_data(logger.msgRegion) + logger.msgBegin;
-
-        std::atomic_ref<std::uint32_t> msgSize(
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                *reinterpret_cast<std::uint32_t *>(msgSizeLocation));
-        msgSize.fetch_and(max_message_size, std::memory_order::release);
-    }
-
-private:
-    struct write_allocation
-    {
-        std::uint32_t header_position;
-        std::uint32_t payload_position;
-    };
-
-    auto allocate(std::uint32_t const regionId,
-                  std::uint32_t const payloadSize) noexcept
-            -> pure_result<write_allocation>
+    auto allocate(output_buffer &out,
+                  std::uint32_t const payloadSize,
+                  std::uint32_t const regionId) noexcept -> errc
     {
         auto *const ctx = region(regionId);
         auto *const regionData = region_data(regionId);
         auto const regionEnd = mRegionSize - region_ctrl_overhead;
         auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
 
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        write_allocation allocation;
-
         std::atomic_ref<std::uint32_t> const sharedReadHand(ctx->read_ptr);
         std::atomic_ref<std::uint32_t> const sharedAllocHand(ctx->alloc_ptr);
 
         auto const readHand = sharedReadHand.load(std::memory_order::acquire);
-        auto allocHand = sharedAllocHand.load(std::memory_order::relaxed);
+        std::uint32_t allocHand
+                = sharedAllocHand.load(std::memory_order::relaxed);
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        std::uint32_t payloadPosition;
         for (;;)
         {
-            allocation.header_position = allocHand;
-            allocation.payload_position = allocHand + message_header_size;
+            payloadPosition = allocHand + message_header_size;
 
-            auto payloadEnd = allocation.payload_position + allocSize;
+            auto payloadEnd = payloadPosition + allocSize;
             auto const canWrap = allocHand >= readHand;
             auto bufferEnd = canWrap ? regionEnd : readHand;
             if (payloadEnd >= bufferEnd) [[unlikely]]
@@ -350,7 +360,7 @@ private:
                 }
                 else if (canWrap && allocSize < readHand)
                 {
-                    allocation.payload_position = 0U;
+                    payloadPosition = 0U;
                     payloadEnd = allocSize;
                 }
                 else
@@ -361,20 +371,22 @@ private:
 
             if (sharedAllocHand.compare_exchange_weak(
                         allocHand, payloadEnd, std::memory_order::relaxed))
+                    [[likely]]
             {
                 break;
             }
         }
 
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        auto *const headerPtr = regionData + allocation.header_position;
-        std::atomic_ref<std::uint32_t> msgSize(
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                *reinterpret_cast<std::uint32_t *>(headerPtr));
-        msgSize.store(payloadSize | message_lock_flag,
-                      std::memory_order::relaxed);
-
-        return allocation;
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        auto *ctrl = reinterpret_cast<std::uint32_t *>(regionData + allocHand);
+        auto *data = regionData + payloadPosition;
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        std::atomic_ref<std::uint32_t>(*ctrl).store(
+                payloadSize | message_lock_flag, std::memory_order::relaxed);
+        out.reset(data, allocSize);
+        out.mMsgCtrl = ctrl;
+        return errc::success;
     }
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)

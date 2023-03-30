@@ -7,140 +7,114 @@
 
 #pragma once
 
-#include <concepts>
-#include <type_traits>
+#include <cstdint>
+#include <cstring>
+#include <source_location>
 
-#include <dplx/cncr/math_supplement.hpp>
-#include <dplx/dp.hpp>
-#include <dplx/dp/api.hpp>
-#include <dplx/dp/codecs/core.hpp>
-#include <dplx/dp/codecs/std-string.hpp>
-#include <dplx/dp/items/emit_core.hpp>
+#include <fmt/core.h>
+
+#include <dplx/dp/disappointment.hpp>
+#include <dplx/dp/fwd.hpp>
 
 #include <dplx/dlog/definitions.hpp>
-#include <dplx/dlog/detail/utils.hpp>
-#include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/detail/any_loggable_ref.hpp>
+#include <dplx/dlog/loggable.hpp>
 
-namespace dplx::dlog
+namespace dplx::dlog::detail
 {
 
-template <typename T>
-struct argument;
-
-// clang-format off
-template <typename T>
-concept loggable_argument
-    =  requires
-    {
-        typename T;
-        typename argument<T>;
-    }
-    && dp::encodable<argument<T>>
-    && requires
-        {
-            { argument<T>::type_id }
-                    -> std::convertible_to<resource_id>;
-        };
-// clang-format on
-
-template <cncr::integer T>
-struct argument<T>
+struct log_location
 {
-    using type = T;
-    type value;
-
-    static constexpr resource_id type_id{std::is_unsigned_v<T> ? 0U : 1U};
+    char const *filename;
+    std::int_least32_t line;
+    std::int_least16_t filenameSize;
 };
 
-template <typename Char, typename T>
-    requires(std::same_as<Char, char> || std::same_as<Char, char8_t>)
-struct named_arg
+#if 0 && DPLX_DLOG_USE_SOURCE_LOCATION
+// TODO: implement `make_location()` with `std::source_location`
+#else
+consteval auto make_location(char const *filename,
+                             std::uint_least32_t line) noexcept -> log_location
 {
-    std::basic_string_view<Char> name;
-    T const &value;
-};
+    auto const filenameSize = std::char_traits<char>::length(filename);
+    assert(filenameSize <= INT_LEAST16_MAX);
+    return {filename, static_cast<std::int_least32_t>(line),
+            static_cast<std::int_least16_t>(filenameSize)};
+}
+#endif
 
-inline constexpr struct arg_fn
+} // namespace dplx::dlog::detail
+
+namespace dplx::dlog::detail
 {
-    template <typename T>
-    auto operator()(std::string_view name, T const &value) const noexcept
-            -> named_arg<char, T>
-    {
-        return {name, value};
-    }
-    template <typename T>
-    auto operator()(std::u8string_view name, T const &value) const noexcept
-            -> named_arg<char8_t, T>
-    {
-        return {name, value};
-    }
-} arg{};
 
-template <typename Char, typename T>
-struct argument<named_arg<Char, T>>
-{
-    using type = T;
-    std::basic_string_view<Char> name;
-    type const &value;
-
-    explicit constexpr argument(named_arg<Char, T> const &self) noexcept
-        : name(self.name)
-        , value(self.value)
-    {
-    }
-
-    static constexpr resource_id type_id{argument<T>::type_id};
-};
-
-} // namespace dplx::dlog
-
-template <typename T>
-class dplx::dp::codec<dplx::dlog::argument<T>>
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+class log_args
 {
 public:
-    static inline auto size_of(emit_context &ctx,
-                               dplx::dlog::argument<T> arg) noexcept
-            -> std::uint64_t
+    fmt::string_view message;
+    detail::any_loggable_ref_storage const *message_parts;
+    detail::any_loggable_ref_storage_id const *part_types;
+    span_context owner;
+    log_location location;
+    std::uint_least16_t num_arguments;
+    severity sev;
+};
+
+template <typename... Args>
+class stack_log_args : public log_args
+{
+    static_assert(sizeof...(Args) <= UINT_LEAST16_MAX);
+
+public:
+    detail::any_loggable_ref_storage const values[sizeof...(Args)];
+    detail::any_loggable_ref_storage_id const types[sizeof...(Args)];
+
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    stack_log_args(fmt::string_view msg,
+                   severity xsev,
+                   span_context ctxId,
+                   detail::log_location loc,
+                   Args const &...args)
+        : log_args(log_args{
+                msg,
+                values,
+                types,
+                ctxId,
+                loc,
+                static_cast<std::uint_least16_t>(sizeof...(Args)),
+                xsev,
+        })
+        , values{detail::any_loggable_ref_storage_type_of_t<
+                  detail::any_loggable_ref_storage_tag<Args>>(args)...}
+        , types{detail::any_loggable_ref_storage_tag<Args>...}
     {
-        return dp::encoded_item_head_size<type_code::array>(2U)
-             + dp::encoded_size_of(ctx, static_cast<dlog::resource_id>(
-                                                dlog::argument<T>::type_id))
-             + dp::encoded_size_of(ctx, arg.value);
     }
-    static inline auto encode(emit_context &ctx,
-                              dplx::dlog::argument<T> arg) noexcept
-            -> result<void>
+    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+
+    stack_log_args(stack_log_args const &) = delete;
+    auto operator=(stack_log_args const &) -> stack_log_args & = delete;
+};
+
+template <>
+class stack_log_args<> : public log_args
+{
+public:
+    stack_log_args(fmt::string_view msg,
+                   severity xsev,
+                   span_context ctxId,
+                   detail::log_location loc)
+        : log_args(log_args{
+                msg,
+                nullptr,
+                nullptr,
+                ctxId,
+                loc,
+                0U,
+                xsev,
+        })
     {
-        DPLX_TRY(dp::emit_array(ctx, 2U));
-        DPLX_TRY(dp::encode(ctx, static_cast<dlog::resource_id>(
-                                         dlog::argument<T>::type_id)));
-        return dp::encode(ctx, arg.value);
     }
 };
 
-template <typename Char, dplx::dlog::loggable_argument T>
-class dplx::dp::codec<dplx::dlog::argument<dplx::dlog::named_arg<Char, T>>>
-{
-public:
-    static inline auto
-    size_of(emit_context &ctx,
-            dplx::dlog::argument<dplx::dlog::named_arg<Char, T>> const
-                    &arg) noexcept -> std::uint64_t
-    {
-        return dp::encoded_item_head_size<type_code::array>(3U)
-             + dp::encoded_size_of(ctx, static_cast<dlog::resource_id>(
-                                                dlog::argument<T>::type_id))
-             + dp::encoded_size_of(ctx, arg.value);
-    }
-    static inline auto
-    encode(emit_context &ctx,
-           dplx::dlog::argument<dplx::dlog::named_arg<Char, T>> const
-                   &arg) noexcept -> result<void>
-    {
-        DPLX_TRY(dp::emit_array(ctx, 3U));
-        DPLX_TRY(dp::encode(ctx, static_cast<dlog::resource_id>(
-                                         dlog::argument<T>::type_id)));
-        DPLX_TRY(dp::encode(ctx, arg.name));
-        return dp::encode(ctx, arg.value);
-    }
-};
+} // namespace dplx::dlog::detail

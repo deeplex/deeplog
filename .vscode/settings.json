@@ -1,3 +1,9 @@
 {
-    "esbonio.sphinx.confDir": ""
+    "esbonio.sphinx.confDir": "",
+    "files.associations": {
+        "chrono": "cpp",
+        "system_error": "cpp",
+        "xlocale": "cpp",
+        "*.ipp": "cpp"
+    }
 }

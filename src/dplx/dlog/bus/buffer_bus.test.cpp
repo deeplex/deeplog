@@ -11,7 +11,9 @@
 
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/core.hpp>
+#include <dplx/scope_guard.hpp>
 
+#include "dplx/dlog/concepts.hpp"
 #include "test_dir.hpp"
 #include "test_utils.hpp"
 
@@ -20,51 +22,60 @@
 namespace dlog_tests
 {
 
+static_assert(dlog::bus<dlog::bufferbus_handle>);
+
 TEST_CASE("bufferbus buffers messages and outputs them afterwards")
 {
     constexpr auto bufferSize = 64 * 1024;
-    auto createRx
-            = dlog::bufferbus(llfio::mapped_temp_inode().value(), bufferSize);
-    REQUIRE(createRx);
-
-    auto bufferbus = std::move(createRx).assume_value();
+    auto bufferbus
+            = dlog::bufferbus(llfio::mapped_temp_inode().value(), bufferSize)
+                      .value();
 
     auto msgId = 0U;
-    dlog::bufferbus_handle::logger_token token{};
     for (;;)
     {
-        auto size = static_cast<unsigned>(dp::encoded_size_of(msgId));
-        if (auto writeRx = bufferbus.write(token, size); writeRx.has_value())
+        auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        dlog::output_buffer_storage outStorage;
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        dlog::bus_output_buffer *out;
+        if (auto createRx
+            = bufferbus.create_output_buffer_inplace(outStorage, size, {});
+            createRx.has_value())
         {
-            auto encodeRx = dp::encode(writeRx.assume_value(), msgId);
-            REQUIRE(encodeRx);
-
-            bufferbus.commit(token);
-            msgId += 1;
-        }
-        else if (writeRx.assume_error() == dlog::errc::not_enough_space)
-        {
-            break;
+            out = createRx.assume_value();
         }
         else
         {
-            REQUIRE(writeRx);
+            if (createRx.assume_error() == dlog::errc::not_enough_space)
+            {
+                break;
+            }
+            createRx.assume_error().throw_exception();
         }
+        dlog::bus_output_guard busLock(*out);
+
+        dp::encode(*out, msgId).value();
+        msgId += 1;
     }
 
     auto const endId = msgId;
     msgId = 0;
 
-    auto consumeRx = bufferbus.consume_content(
-            [&](std::span<std::byte const> msg)
+    auto consumeRx = bufferbus.consume_messages(
+            [&](std::span<dlog::bytes const> const &msgs) noexcept
             {
-                auto decodeRx
-                        = dp::decode(dp::as_value<unsigned int>, as_bytes(msg));
-                REQUIRE(decodeRx);
+                for (auto const msg : msgs)
+                {
+                    dp::memory_input_stream msgStream(msg);
 
-                auto parsedId = decodeRx.assume_value();
-                REQUIRE(parsedId == msgId);
-                msgId += 1;
+                    auto decodeRx
+                            = dp::decode(dp::as_value<unsigned int>, msgStream);
+                    REQUIRE(decodeRx);
+
+                    [[maybe_unused]] auto parsedId = decodeRx.assume_value();
+                    msgId += 1;
+                }
             });
 
     REQUIRE(consumeRx);

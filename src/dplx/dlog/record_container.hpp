@@ -35,10 +35,11 @@ class record
 {
 public:
     dlog::severity severity;
+    span_context context;
     std::uint64_t timestamp; // FIXME: correct timestamp type
     std::string message;
-    record_attribute_container attributes;
     dynamic_format_arg_store<fmt::format_context> format_arguments;
+    attribute_container attributes;
 };
 
 } // namespace dplx::dlog
@@ -54,7 +55,6 @@ class basic_decoder<dlog::record> // TODO: transform into a codec
 {
 public:
     dlog::argument_transmorpher &parse_arguments;
-    dlog::record_attribute_reviver &parse_attributes;
 
     auto operator()(parse_context &ctx, dlog::record &value) -> result<void>
     {
@@ -63,35 +63,36 @@ public:
         {
             return dp::errc::item_type_mismatch;
         }
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
         // TODO: refactor record layout description into compile time constants
         if (tupleHead.indefinite()
-            || tupleHead.value < 3
-            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-            || 5 < tupleHead.value)
+            || (tupleHead.value != 2 && tupleHead.value != 6
+                && tupleHead.value != 7))
         {
             return dp::errc::tuple_size_mismatch;
         }
-        if (tupleHead.encoded_length != 1)
+
+        if (tupleHead.value != 6)
         {
-            return dp::errc::oversized_additional_information_coding;
+            for (unsigned i = 0; i < tupleHead.value; i++)
+            {
+                DPLX_TRY(dp::skip_item(ctx));
+            }
+            return dp::success();
         }
-        bool const hasAttributes = tupleHead.value > 3;
-        bool const hasFmtArgs = tupleHead.value > 4;
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
         DPLX_TRY(decode(ctx, value.severity));
+        DPLX_TRY(decode(ctx, value.context));
         DPLX_TRY(decode(ctx, value.timestamp));
         DPLX_TRY(dp::parse_text_finite(ctx, value.message));
 
-        if (hasAttributes)
-        {
-            DPLX_TRY(parse_attributes(ctx, value.attributes));
-        }
-        if (hasFmtArgs)
-        {
-            DPLX_TRY(parse_arguments(ctx, value.format_arguments));
-        }
+        DPLX_TRY(parse_arguments(ctx, value.format_arguments));
+        DPLX_TRY(dp::decode(ctx, value.attributes));
         return oc::success();
     }
+
+private:
 };
 
 } // namespace dplx::dp
@@ -150,13 +151,13 @@ public:
 private:
     auto parse_item(parse_context &ctx, container &records) -> result<void>
     {
-        auto &record = records.emplace_back(dlog::record{
-                .severity = dlog::severity::none,
-                .timestamp = {},
-                .message = {},
-                .attributes
-                = dlog::record_attribute_container(records.get_allocator()),
-                .format_arguments = {}});
+        auto &record = records.emplace_back(
+                dlog::record{.severity = dlog::severity::none,
+                             .context = {},
+                             .timestamp = {},
+                             .message = {},
+                             .format_arguments = {},
+                             .attributes = {}});
 
         auto decodeRx = record_decoder(ctx, record);
         if (decodeRx.has_failure())

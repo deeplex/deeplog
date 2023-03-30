@@ -19,7 +19,9 @@
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/items/encoded_item_head_size.hpp>
 #include <dplx/dp/legacy/memory_input_stream.hpp>
+#include <dplx/dp/streams/memory_input_stream.hpp>
 
+#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/log_bus.hpp>
 
 #include "test_dir.hpp"
@@ -45,49 +47,55 @@ TEST_CASE("mpsc_bus() creates a mpsc_bus_handle given a mapped_file_handle")
 
 TEST_CASE("mpsc_bus can be filled and drained")
 {
-    auto createRx = dlog::mpsc_bus(llfio::mapped_temp_inode().value(), 2U,
-                                   dlog::mpsc_bus_handle::min_region_size);
-    REQUIRE(createRx);
-
-    auto bufferbus = std::move(createRx).assume_value();
+    auto bufferbus = dlog::mpsc_bus(llfio::mapped_temp_inode().value(), 2U,
+                                    dlog::mpsc_bus_handle::min_region_size)
+                             .value();
 
     auto msgId = 0U;
-    auto token = bufferbus.create_token().value();
     for (;;)
     {
         auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
-        if (auto writeRx = bufferbus.write(token, size); writeRx.has_value())
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        dlog::output_buffer_storage outStorage;
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        dlog::bus_output_buffer *out;
+        if (auto createRx
+            = bufferbus.create_output_buffer_inplace(outStorage, size, {});
+            createRx.has_value())
         {
-            auto encodeRx = dp::encode(writeRx.assume_value(), msgId);
-            REQUIRE(encodeRx);
-
-            bufferbus.commit(token);
-            msgId += 1;
-        }
-        else if (writeRx.assume_error() == dlog::errc::not_enough_space)
-        {
-            break;
+            out = createRx.assume_value();
         }
         else
         {
-            REQUIRE(writeRx);
+            if (createRx.assume_error() == dlog::errc::not_enough_space)
+            {
+                break;
+            }
+            createRx.assume_error().throw_exception();
         }
+        dlog::bus_output_guard busLock(*out);
+
+        dp::encode(*out, msgId).value();
+        msgId += 1;
     }
 
     auto const endId = msgId;
     msgId = 0;
 
     auto consumeRx = bufferbus.consume_messages(
-            [&](std::span<std::byte const> msg)
+            [&](std::span<dlog::bytes const> const &msgs) noexcept
             {
-                dp::memory_view msgBuffer(msg);
+                for (auto const msg : msgs)
+                {
+                    dp::memory_input_stream msgStream(msg);
 
-                auto decodeRx
-                        = dp::decode(dp::as_value<unsigned int>, msgBuffer);
-                REQUIRE(decodeRx);
+                    auto decodeRx
+                            = dp::decode(dp::as_value<unsigned int>, msgStream);
+                    REQUIRE(decodeRx);
 
-                [[maybe_unused]] auto parsedId = decodeRx.assume_value();
-                msgId += 1;
+                    [[maybe_unused]] auto parsedId = decodeRx.assume_value();
+                    msgId += 1;
+                }
             });
 
     REQUIRE(consumeRx);
@@ -100,7 +108,6 @@ namespace
 auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
         -> dlog::result<void>
 {
-    DPLX_TRY(auto token, bus.create_token());
     for (unsigned i = 0U; i < limit; ++i)
     {
         /*
@@ -113,9 +120,13 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
 
         auto const encodedSize
                 = static_cast<unsigned>(dplx::dp::encoded_size_of(i));
-        DPLX_TRY(auto outStream, bus.write(token, encodedSize));
-        dlog::bus_write_lock busLock(bus, token);
-        DPLX_TRY(dplx::dp::encode(outStream, i));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        dlog::output_buffer_storage outStorage;
+        DPLX_TRY(auto *outStream,
+                 bus.create_output_buffer_inplace(outStorage, encodedSize, {}));
+
+        dlog::bus_output_guard busLock(*outStream);
+        DPLX_TRY(dplx::dp::encode(*outStream, i));
     }
     return dlog::oc::success();
 }
@@ -124,14 +135,18 @@ auto consume_content(dlog::mpsc_bus_handle &bus, std::span<std::uint8_t> ids)
         -> dlog::result<void>
 {
     return bus.consume_messages(
-            [ids](std::span<std::byte const> const &msg)
+            [ids](std::span<dlog::bytes const> const &msgs) noexcept
             {
-                dplx::dp::memory_view legacyBuffer(msg);
-                auto value = dplx::dp::decode(dplx::dp::as_value<unsigned>,
-                                              legacyBuffer)
-                                     .value();
-                assert(value < ids.size());
-                ++ids[value];
+                for (auto const msg : msgs)
+                {
+                    dp::memory_input_stream msgStream(msg);
+                    auto value
+                            = dp::decode(dp::as_value<unsigned int>, msgStream)
+                                      .value();
+
+                    assert(value < ids.size());
+                    ++ids[value];
+                }
             });
 }
 

@@ -15,6 +15,7 @@
 #include <dplx/dlog/detail/codec_dummy.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog
 {
@@ -25,7 +26,7 @@ using writable_bytes = std::span<std::byte>;
 // clang-format off
 template <typename T>
 concept source
-    = requires (T &&t, detail::encodable_dummy const &dummy)
+    = requires (T t, detail::encodable_dummy const dummy)
         {
             { t.static_resource(dummy) }
                     -> detail::tryable_result<std::uint64_t>;
@@ -36,32 +37,12 @@ concept source
 // clang-format off
 template <typename T>
 concept bus
-        = /*dp::output_stream<typename T::output_stream &>
-        &&*/ requires(T &&t,
-                    typename T::logger_token logger,
-                    unsigned int const size,
-                    void (&dummy_consumer)(std::span<std::byte const>) noexcept)
+        = std::derived_from<T, bus_handle>
+        && requires(T t,
+                    void (&dummy_consumer)(std::span<std::span<std::byte const> const>) noexcept)
         {
-            typename T::logger_token;
-            { t.create_token() }
-                    -> detail::tryable_result<typename T::logger_token>;
-
-            typename T::output_stream;
-            { t.write(logger, size) }
-                    -> detail::tryable_result<typename T::output_stream>;
-            t.commit(logger);
-
-            { t.consume_content(dummy_consumer) }
+            { t.consume_messages(dummy_consumer) }
                     -> detail::tryable;
-        };
-// clang-format on
-
-// clang-format off
-template <typename Fn>
-concept bus_consumer
-        = requires(Fn &&fn, std::span<std::byte const> const content)
-        {
-            static_cast<Fn &&>(fn)(content);
         };
 // clang-format on
 

@@ -12,6 +12,7 @@
 #include <shared_mutex>
 #include <utility>
 
+#include <fmt/chrono.h>
 #include <fmt/format.h>
 
 #include <dplx/dp.hpp>
@@ -260,13 +261,10 @@ auto file_database_handle::file_name(std::string const &pattern,
                                      file_sink_id sinkId,
                                      unsigned rotationCount) -> std::string
 {
-    auto const timePoint = std::chrono::system_clock::now();
-    auto const iso8601DateTime = detail::iso8601_datetime(timePoint);
+    auto const now = std::chrono::system_clock::now();
 
-    return fmt::format(fmt::runtime(pattern),
-                       fmt::arg("id", cncr::to_underlying(sinkId)),
-                       fmt::arg("iso8601", iso8601DateTime),
-                       fmt::arg("ctr", rotationCount));
+    return fmt::format(fmt::runtime(pattern), fmt::arg("id", sinkId),
+                       fmt::arg("now", now), fmt::arg("ctr", rotationCount));
 }
 
 auto file_database_handle::validate_magic() noexcept -> result<void>

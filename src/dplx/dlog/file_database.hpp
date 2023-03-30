@@ -29,6 +29,11 @@ enum class file_sink_id : std::uint32_t
 {
     default_ = 0,
 };
+constexpr auto format_as(file_sink_id id) noexcept
+        -> std::underlying_type_t<file_sink_id>
+{
+    return static_cast<std::underlying_type_t<file_sink_id>>(id);
+}
 
 class file_database_handle
 {
@@ -54,7 +59,7 @@ private:
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct contents_t
     {
-        unsigned revision;
+        unsigned long long revision;
         std::vector<record_container_meta> record_containers;
 
         static constexpr dp::object_def<
@@ -135,27 +140,6 @@ private:
 };
 
 } // namespace dplx::dlog
-
-template <typename Char>
-struct fmt::formatter<dplx::dlog::file_sink_id, Char>
-    : private fmt::formatter<std::underlying_type_t<dplx::dlog::file_sink_id>,
-                             Char>
-{
-private:
-    using value_type = dplx::dlog::file_sink_id;
-    using underlying_type = std::underlying_type_t<value_type>;
-    using base_type = fmt::formatter<underlying_type, Char>;
-
-public:
-    using base_type::base_type;
-    using base_type::parse;
-
-    template <typename FormatContext>
-    auto format(value_type value, FormatContext &ctx) -> decltype(ctx.out())
-    {
-        return base_type::format(static_cast<underlying_type>(value), ctx);
-    }
-};
 
 DPLX_DLOG_DECLARE_CODEC(
         ::dplx::dlog::file_database_handle::record_container_meta);

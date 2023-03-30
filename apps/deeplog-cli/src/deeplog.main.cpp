@@ -1,5 +1,5 @@
 
-// Copyright Henrik Steffen Gaßmann 2022-2023
+// Copyright 2021, 2023 Henrik Steffen Gaßmann
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -15,6 +15,9 @@
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
 #include <parallel_hashmap/phmap.h>
+
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-string.hpp>
 
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/definitions.hpp>
@@ -188,17 +191,21 @@ private:
         DPLX_TRY(auto &&inStream,
                  detail::os_input_stream::create(containerFile, maxExtent));
 
-        dlog::argument_transmorpher argumentTransmorpher;
-        dlog::record_attribute_reviver parseAttrs;
-        (void)parseAttrs.register_attribute<attr::file>();
-        (void)parseAttrs.register_attribute<attr::line>();
+        dp::parse_context ctx(inStream);
+        dp::scoped_state attributeTypeRegistryScope(
+                ctx.states, attribute_type_registry_state);
+        {
+            auto *attributeTypeRegistry = attributeTypeRegistryScope.get();
+            (void)attributeTypeRegistry->insert<attr::file>();
+            (void)attributeTypeRegistry->insert<attr::line>();
+        }
 
-        dp::basic_decoder<record> decode_record{argumentTransmorpher,
-                                                parseAttrs};
+        dlog::argument_transmorpher argumentTransmorpher;
+
+        dp::basic_decoder<record> decode_record{argumentTransmorpher};
         dp::basic_decoder<record_container> decode{decode_record};
 
         record_container value;
-        dp::parse_context ctx{inStream};
         DPLX_TRY(decode(ctx, value));
 
         return value;

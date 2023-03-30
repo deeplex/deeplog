@@ -7,107 +7,125 @@
 
 #include "dplx/dlog/core.hpp"
 
+#include <algorithm>
+
 #include <boost/predef/compiler.h>
 
+#include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/auto_tuple.hpp>
 #include <dplx/dp/items/skip_item.hpp>
-#include <dplx/dp/legacy/memory_input_stream.hpp>
+#include <dplx/dp/streams/memory_input_stream.hpp>
 
 #if defined BOOST_COMP_MSVC_AVAILABLE
-
+/*
 #pragma warning(disable : 4146) // C4146: unary minus operator applied to
                                 // unsigned type, result still unsigned
-
+*/
 #endif
-
-namespace dplx::dlog
-{
-
-void sink_frontend_base::push(
-        bytes rawMessage, additional_record_info const &additionalInfo) noexcept
-{
-    if (mLastRx.has_error()) [[unlikely]]
-    {
-        return;
-    }
-    if (mThreshold < additionalInfo.message_severity)
-    {
-        return;
-    }
-    if (mShouldDiscard) [[unlikely]]
-    {
-        if (mShouldDiscard(rawMessage, additionalInfo))
-        {
-            return;
-        }
-    }
-
-    mLastRx = retire(rawMessage, additionalInfo);
-}
-
-} // namespace dplx::dlog
 
 namespace dplx::dlog::detail
 {
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto consume_record_fn::multicast(
-        bytes const message,
-        std::span<std::unique_ptr<sink_frontend_base> const> sinks) noexcept
-        -> result<void>
+namespace
 {
-    dp::memory_view messageView(message);
-    auto &&buffer = dp::get_input_buffer(messageView);
-    dp::parse_context ctx{buffer};
 
-    DPLX_TRY(auto &&tupleInfo, dp::decode_tuple_head(ctx));
+auto preparse_record(dp::parse_context &ctx, bytes const rawMessage) noexcept
+        -> serialized_message_info
+{
+    serialized_message_info info{
+            serialized_record_info{{rawMessage}, {}, {}}
+    };
+    auto &parsed = *get_if<serialized_record_info>(&info);
 
-    additional_record_info addInfo{};
-    DPLX_TRY(addInfo.message_severity, dp::decode(dp::as_value<severity>, ctx));
-
-    DPLX_TRY(dp::decode(ctx, addInfo.timestamp));
-
-    DPLX_TRY(auto messageInfo, dp::parse_item_head(ctx));
-    if (messageInfo.type != dp::type_code::text || messageInfo.indefinite())
+    if (dp::decode(ctx, parsed.message_severity).has_failure())
     {
-        return dp::errc::item_type_mismatch;
+        info = serialized_malformed_message_info{{rawMessage}};
     }
-    if (messageInfo.value > buffer.input_size())
+    if (dp::skip_item(ctx).has_failure())
     {
-        return dp::errc::missing_data;
+        info = serialized_malformed_message_info{{rawMessage}};
     }
-
-    buffer.discard_buffered(messageInfo.value);
-    addInfo.message_size = messageInfo.encoded_length
-                         + static_cast<unsigned>(messageInfo.value);
-
-    if (tupleInfo.num_properties > 3)
+    if (dp::decode(ctx, parsed.timestamp).has_failure())
     {
-        DPLX_TRY(buffer.sync_input());
-        addInfo.attributes_size = -messageView.consumed_size();
-
-        DPLX_TRY(dp::skip_item(ctx));
-
-        DPLX_TRY(buffer.sync_input());
-        addInfo.attributes_size += messageView.consumed_size();
+        info = serialized_malformed_message_info{{rawMessage}};
     }
-    if (tupleInfo.num_properties > 4)
+    return parsed;
+}
+auto preparse_span_start(dp::parse_context &ctx,
+                         bytes const rawMessage) noexcept
+        -> serialized_message_info
+{
+    (void)ctx;
+    return serialized_span_start_info{{rawMessage}};
+}
+auto preparse_span_end(dp::parse_context &ctx, bytes const rawMessage) noexcept
+        -> serialized_message_info
+{
+    (void)ctx;
+    return serialized_span_end_info{{rawMessage}};
+}
+
+} // namespace
+
+auto preparse_messages(std::span<bytes const> const &records,
+                       std::span<serialized_message_info> parses) noexcept
+        -> std::size_t
+{
+    std::size_t binarySize = 0U;
+    for (std::size_t i = 0, limit = records.size(); i < limit; ++i)
     {
-        DPLX_TRY(buffer.sync_input());
-        addInfo.format_args_size = -messageView.consumed_size();
+        binarySize += records[i].size();
+        auto &info = (parses[i] = serialized_message_info{});
+        auto &&buffer = dp::get_input_buffer(bytes(records[i]));
+        dp::parse_context ctx{buffer};
 
-        DPLX_TRY(dp::skip_item(ctx));
+        if (auto decodeTupleHeadRx = dp::decode_tuple_head(ctx);
+            decodeTupleHeadRx.has_value())
+        {
+            switch (decodeTupleHeadRx.assume_value().num_properties)
+            {
+            case 6U: // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+                info = detail::preparse_record(ctx, records[i]);
+                break;
 
-        DPLX_TRY(buffer.sync_input());
-        addInfo.format_args_size += messageView.consumed_size();
+            case 7U: // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+                info = detail::preparse_span_start(ctx, records[i]);
+                break;
+            case 2U: // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+                info = detail::preparse_span_end(ctx, records[i]);
+                break;
+
+            default:
+                break;
+            }
+        }
+        else
+        {
+            info = serialized_malformed_message_info{{records[i]}};
+        }
     }
+    return binarySize;
+}
 
-    for (auto const &sink : sinks)
-    {
-        sink->push(message, addInfo);
-    }
+void multicast_messages(
+        std::span<std::unique_ptr<sink_frontend_base>> &sinks,
+        std::size_t const binarySize,
+        std::span<serialized_message_info> const parses) noexcept
+{
+    auto begin = sinks.begin();
+    auto newEnd
+            = std::partition(begin, sinks.end(),
+                             [parses, binarySize](auto &sink)
+                             { return sink->try_consume(binarySize, parses); });
 
-    return oc::success();
+    sinks = std::span(begin, newEnd);
+}
+
+void sync_sinks(
+        std::span<std::unique_ptr<sink_frontend_base>> const sinks) noexcept
+{
+    std::partition(sinks.begin(), sinks.end(),
+                   [](auto &sink) { return sink->try_sync(); });
 }
 
 } // namespace dplx::dlog::detail
