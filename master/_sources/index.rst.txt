@@ -7,7 +7,8 @@
    :maxdepth: 2
    :caption: Contents:
 
-
+   modules/user-types
+   modules/data-formats
 
 
 --------------------
