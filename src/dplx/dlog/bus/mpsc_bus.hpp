@@ -124,6 +124,21 @@ public:
                          std::uint32_t regionSize) noexcept
             -> result<mpsc_bus_handle>;
 
+    [[nodiscard]] auto release() noexcept -> llfio::mapped_file_handle
+    {
+        mNumRegions = 0U;
+        mRegionSize = 0U;
+        return std::move(mBackingFile);
+    }
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+    auto unlink(llfio::deadline deadline = std::chrono::seconds(30)) noexcept
+            -> result<void>
+    {
+        DPLX_TRY(mBackingFile.unlink(deadline));
+        (void)release();
+        return oc::success();
+    }
+
     static inline constexpr std::string_view extension{".dmsb"};
     static inline constexpr std::uint8_t magic[16]
             = {0x82, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64,

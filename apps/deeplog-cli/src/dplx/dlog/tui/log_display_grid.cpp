@@ -19,16 +19,37 @@ auto LogDisplayGridComponent::derive_severity_infos(theme const &t)
 {
     using namespace std::string_literals;
 
+    auto fatalColor = [&]
+    {
+        return color(t.inverse_support_01) | bgcolor(t.inverse_02);
+    };
     return {
-            {     "N/A"s,                                 color(t.text_error),ftxui::nothing                                                                              },
-            {"CRITICAL"s, color(t.inverse_support_01) | bgcolor(t.inverse_02),
-             color(t.text_01)                                                                  },
-            {   "ERROR"s,                                 color(t.support_01), color(t.text_01)},
-            { "WARNING"s,                                 color(t.support_03),   ftxui::nothing},
-            {    "Info"s,                                 color(t.support_04),   ftxui::nothing},
-            {   "Debug"s,                                    color(t.text_02),   ftxui::nothing},
-            {   "Trace"s,                                    color(t.text_03), color(t.text_03)},
-            { "INVALID"s,                                 color(t.text_error),   ftxui::nothing},
+            {   "N/A"s, color(t.text_error),   ftxui::nothing},
+            { "Trace"s,    color(t.text_03), color(t.text_03)},
+            {"Trace2"s,    color(t.text_03), color(t.text_03)},
+            {"Trace3"s,    color(t.text_03), color(t.text_03)},
+            {"Trace4"s,    color(t.text_03), color(t.text_03)},
+            { "Debug"s,    color(t.text_02),   ftxui::nothing},
+            {"Debug2"s,    color(t.text_02),   ftxui::nothing},
+            {"Debug3"s,    color(t.text_02),   ftxui::nothing},
+            {"Debug4"s,    color(t.text_02),   ftxui::nothing},
+            {  "Info"s, color(t.support_04),   ftxui::nothing},
+            { "Info2"s, color(t.support_04),   ftxui::nothing},
+            { "Info3"s, color(t.support_04),   ftxui::nothing},
+            { "Info4"s, color(t.support_04),   ftxui::nothing},
+            {  "WARN"s, color(t.support_03),   ftxui::nothing},
+            { "WARN2"s, color(t.support_03),   ftxui::nothing},
+            { "WARN3"s, color(t.support_03),   ftxui::nothing},
+            { "WARN4"s, color(t.support_03),   ftxui::nothing},
+            { "ERROR"s, color(t.support_01), color(t.text_01)},
+            {"ERROR2"s, color(t.support_01), color(t.text_01)},
+            {"ERROR3"s, color(t.support_01), color(t.text_01)},
+            {"ERROR4"s, color(t.support_01), color(t.text_01)},
+            { "FATAL"s,        fatalColor(), color(t.text_01)},
+            {"FATAL2"s,        fatalColor(), color(t.text_01)},
+            {"FATAL3"s,        fatalColor(), color(t.text_01)},
+            {"FATAL4"s,        fatalColor(), color(t.text_01)},
+            {"INVDAT"s, color(t.text_error),   ftxui::nothing},
     };
 }
 
@@ -55,7 +76,7 @@ static auto compute_render_window(std::size_t selected,
 
 auto LogDisplayGridComponent::Render() -> ftxui::Element
 {
-    constexpr int layout_size_level = 8;
+    constexpr int layout_size_level = 6;
     constexpr int layout_size_timestamp = detail::iso8601_datetime_long_size;
 
     auto spaceSeperator = ftxui::separator(ftxui::Pixel{});
@@ -86,7 +107,7 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
         auto const focused = i == mSelected;
 
         auto const normalizedLevel
-                = std::min<unsigned>(cncr::to_underlying(record.severity), 7U);
+                = std::min<unsigned>(cncr::to_underlying(record.severity), 24U);
 
         auto const &[severityName, severityFormat, lineDecoratorBase]
                 = mSeverities[normalizedLevel];

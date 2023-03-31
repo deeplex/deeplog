@@ -18,8 +18,6 @@ jobs:
         exclude:
           - os: windows-2022
             compiler: gcc
-          - os: windows-2022
-            compiler: clang
           - os: ubuntu-22.04
             compiler: msvc
         include:

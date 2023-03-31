@@ -96,8 +96,10 @@
 
 #endif // _MSVC_TRADITIONAL
 
-#define DLOG_CRITICAL(message, ...)                                            \
-    DLOG_GENERIC(::dplx::dlog::severity::critical, message, __VA_ARGS__)
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+
+#define DLOG_FATAL(message, ...)                                               \
+    DLOG_GENERIC(::dplx::dlog::severity::fatal, message, __VA_ARGS__)
 #define DLOG_ERROR(message, ...)                                               \
     DLOG_GENERIC(::dplx::dlog::severity::error, message, __VA_ARGS__)
 #define DLOG_WARN(message, ...)                                                \
@@ -109,8 +111,10 @@
 #define DLOG_TRACE(message, ...)                                               \
     DLOG_GENERIC(::dplx::dlog::severity::trace, message, __VA_ARGS__)
 
-#define DLOG_CRITICAL_EX(ctx, message, ...)                                    \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::critical, message, __VA_ARGS__)
+#endif
+
+#define DLOG_FATAL_EX(ctx, message, ...)                                       \
+    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::fatal, message, __VA_ARGS__)
 #define DLOG_ERROR_EX(ctx, message, ...)                                       \
     DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::error, message, __VA_ARGS__)
 #define DLOG_WARN_EX(ctx, message, ...)                                        \
@@ -170,7 +174,7 @@
 #define DLOG_SPAN_ATTACH_ROOT(name, ...)                                       \
     DPLX_DLOG_XDEF_SPAN_SCOPE(root, name, yes, __VA_ARGS__)
 #define DLOG_SPAN_ATTACH_ROOT_EX(ctx, name, ...)                               \
-    DPLX_DLOG_XDEF_SPAN_SCOPE(root, ctx, name, yes, __VA_ARGS__)
+    DPLX_DLOG_XDEF_SPAN_SCOPE_EX(root, ctx, name, yes, __VA_ARGS__)
 
 #endif
 
