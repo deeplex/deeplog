@@ -34,8 +34,8 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::encode(
 auto dplx::dp::codec<dplx::dlog::severity>::encode(
         emit_context &ctx, dplx::dlog::severity value) noexcept -> result<void>
 {
-    auto const bits = cncr::to_underlying(value);
-    if (bits > cncr::to_underlying(dlog::severity::trace)) [[unlikely]]
+    auto const bits = static_cast<underlying_type>(value) - encoding_offset;
+    if (bits > encoded_max) [[unlikely]]
     {
         return errc::item_value_out_of_range;
     }
@@ -180,8 +180,12 @@ inline auto encode_any_loggable(dp::emit_context &ctx,
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
 {
-    if (static_cast<unsigned>(args.sev)
-        > static_cast<unsigned>(severity::trace))
+    if (args.sev == severity::none)
+    {
+        return oc::success();
+    }
+    constexpr severity severity_max{24};
+    if (args.sev > severity_max)
     {
         return errc::invalid_argument;
     }

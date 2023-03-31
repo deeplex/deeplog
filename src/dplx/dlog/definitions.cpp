@@ -39,14 +39,13 @@ auto dplx::dp::codec<dplx::dlog::severity>::decode(
         -> result<void>
 {
     underlying_type underlyingValue; // NOLINT(cppcoreguidelines-init-variables)
-    if (result<void> parseRx = dp::parse_integer<underlying_type>(
-                ctx, underlyingValue,
-                cncr::to_underlying(dlog::severity::trace));
+    if (result<void> parseRx
+        = dp::parse_integer<underlying_type>(ctx, underlyingValue, encoded_max);
         parseRx.has_failure())
     {
         return static_cast<result<void> &&>(parseRx).as_failure();
     }
-    outValue = static_cast<dlog::severity>(underlyingValue);
+    outValue = static_cast<dlog::severity>(underlyingValue + encoding_offset);
     return oc::success();
 }
 

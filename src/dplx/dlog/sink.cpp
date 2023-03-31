@@ -26,7 +26,7 @@ struct copy_message_fn
     inline auto operator()(serialized_record_info const &message) const
             -> dp::result<void>
     {
-        if (message.message_severity < threshold)
+        if (message.message_severity >= threshold)
         {
             return out.bulk_write(message.raw_data);
         }
