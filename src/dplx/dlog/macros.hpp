@@ -96,6 +96,8 @@
 
 #endif // _MSVC_TRADITIONAL
 
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+
 #define DLOG_FATAL(message, ...)                                               \
     DLOG_GENERIC(::dplx::dlog::severity::fatal, message, __VA_ARGS__)
 #define DLOG_ERROR(message, ...)                                               \
@@ -108,6 +110,8 @@
     DLOG_GENERIC(::dplx::dlog::severity::debug, message, __VA_ARGS__)
 #define DLOG_TRACE(message, ...)                                               \
     DLOG_GENERIC(::dplx::dlog::severity::trace, message, __VA_ARGS__)
+
+#endif
 
 #define DLOG_FATAL_EX(ctx, message, ...)                                       \
     DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::fatal, message, __VA_ARGS__)
