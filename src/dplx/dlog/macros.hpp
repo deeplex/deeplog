@@ -170,7 +170,7 @@
 #define DLOG_SPAN_ATTACH_ROOT(name, ...)                                       \
     DPLX_DLOG_XDEF_SPAN_SCOPE(root, name, yes, __VA_ARGS__)
 #define DLOG_SPAN_ATTACH_ROOT_EX(ctx, name, ...)                               \
-    DPLX_DLOG_XDEF_SPAN_SCOPE(root, ctx, name, yes, __VA_ARGS__)
+    DPLX_DLOG_XDEF_SPAN_SCOPE_EX(root, ctx, name, yes, __VA_ARGS__)
 
 #endif
 
