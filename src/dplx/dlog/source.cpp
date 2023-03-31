@@ -261,7 +261,8 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     // write to output buffer
     (void)dp::emit_array(ctx, numArrayElements);
     // severity
-    *ctx.out.data() = static_cast<std::byte>(args.sev);
+    *ctx.out.data()
+            = static_cast<std::byte>(static_cast<unsigned>(args.sev) - 1U);
     ctx.out.commit_written(1U);
     (void)dp::encode(ctx, args.owner);
 
