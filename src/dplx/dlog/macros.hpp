@@ -53,7 +53,7 @@
         if (auto &&_dlog_materialized_temporary_                               \
             = (::dplx::dlog::detail::active_span);                             \
             _dlog_materialized_temporary_ != nullptr                           \
-            && _dlog_materialized_temporary_->threshold >= (severity))         \
+            && (severity) >= _dlog_materialized_temporary_->threshold)         \
             (void)::dplx::dlog::log(*_dlog_materialized_temporary_,            \
                                     (severity), (message), DPLX_DLOG_LOCATION, \
                                     __VA_ARGS__);                              \
@@ -63,7 +63,7 @@
     do                                                                         \
     { /* due to shadowing this name isn't required to be unique */             \
         if (auto &&_dlog_materialized_temporary_ = (ctx);                      \
-            _dlog_materialized_temporary_.threshold >= (severity))             \
+            (severity) >= _dlog_materialized_temporary_.threshold)             \
             (void)::dplx::dlog::log(_dlog_materialized_temporary_, (severity), \
                                     (message), DPLX_DLOG_LOCATION,             \
                                     __VA_ARGS__);                              \
@@ -78,7 +78,7 @@
         if (auto &&_dlog_materialized_temporary_                               \
             = (::dplx::dlog::detail::active_span);                             \
             _dlog_materialized_temporary_ != nullptr                           \
-            && _dlog_materialized_temporary_->threshold >= (severity))         \
+            && (severity) >= _dlog_materialized_temporary_->threshold)         \
             (void)::dplx::dlog::log(                                           \
                     *_dlog_materialized_temporary_, (severity), (message),     \
                     DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
@@ -88,7 +88,7 @@
     do                                                                         \
     { /* due to shadowing this name isn't required to be unique */             \
         if (auto &&_dlog_materialized_temporary_ = (ctx);                      \
-            _dlog_materialized_temporary_.threshold >= (severity))             \
+            (severity) >= _dlog_materialized_temporary_.threshold)             \
             (void)::dplx::dlog::log(                                           \
                     _dlog_materialized_temporary_, (severity), (message),      \
                     DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \

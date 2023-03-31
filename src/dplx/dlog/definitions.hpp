@@ -73,12 +73,12 @@ namespace dplx::dlog
 enum class severity : unsigned
 {
     none = 0,
-    critical = 1,
-    error = 2,
-    warn = 3,
-    info = 4,
+    trace = 1,
     debug = 5,
-    trace = 6,
+    info = 9,
+    warn = 13,
+    error = 17,
+    fatal = 21,
 };
 
 inline constexpr severity default_threshold = severity::warn;
@@ -89,6 +89,8 @@ template <>
 class dplx::dp::codec<dplx::dlog::severity>
 {
     using underlying_type = std::underlying_type_t<dlog::severity>;
+    static inline constexpr underlying_type encoded_max = 23;
+    static inline constexpr underlying_type encoding_offset = 1;
 
 public:
     static constexpr auto size_of(emit_context &, dplx::dlog::severity) noexcept
