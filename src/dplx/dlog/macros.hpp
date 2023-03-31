@@ -96,8 +96,8 @@
 
 #endif // _MSVC_TRADITIONAL
 
-#define DLOG_CRITICAL(message, ...)                                            \
-    DLOG_GENERIC(::dplx::dlog::severity::critical, message, __VA_ARGS__)
+#define DLOG_FATAL(message, ...)                                               \
+    DLOG_GENERIC(::dplx::dlog::severity::fatal, message, __VA_ARGS__)
 #define DLOG_ERROR(message, ...)                                               \
     DLOG_GENERIC(::dplx::dlog::severity::error, message, __VA_ARGS__)
 #define DLOG_WARN(message, ...)                                                \
@@ -109,8 +109,8 @@
 #define DLOG_TRACE(message, ...)                                               \
     DLOG_GENERIC(::dplx::dlog::severity::trace, message, __VA_ARGS__)
 
-#define DLOG_CRITICAL_EX(ctx, message, ...)                                    \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::critical, message, __VA_ARGS__)
+#define DLOG_FATAL_EX(ctx, message, ...)                                       \
+    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::fatal, message, __VA_ARGS__)
 #define DLOG_ERROR_EX(ctx, message, ...)                                       \
     DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::error, message, __VA_ARGS__)
 #define DLOG_WARN_EX(ctx, message, ...)                                        \
