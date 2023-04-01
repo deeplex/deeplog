@@ -55,6 +55,8 @@ option(DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS "Emit compiler errors for workarounds
 
 option(DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT "Disable implicit context support via TLS" OFF)
 
+option(BUILD_EXAMPLES "Build the example executables" OFF)
+
 ########################################################################
 # dependencies
 
@@ -165,6 +167,12 @@ add_subdirectory(apps/deeplog-cli)
 # source files
 include(sources.cmake)
 source_group(TREE src/dplx)
+
+########################################################################
+# examples
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
 
 ########################################################################
