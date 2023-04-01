@@ -27,7 +27,6 @@
 
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
-#include <dplx/dlog/detail/iso8601.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 
 namespace dplx::dlog
@@ -261,7 +260,8 @@ auto file_database_handle::file_name(std::string const &pattern,
                                      file_sink_id sinkId,
                                      unsigned rotationCount) -> std::string
 {
-    auto const now = std::chrono::system_clock::now();
+    auto const now = std::chrono::floor<std::chrono::seconds>(
+            std::chrono::system_clock::now());
 
     return fmt::format(fmt::runtime(pattern), fmt::arg("id", sinkId),
                        fmt::arg("now", now), fmt::arg("ctr", rotationCount));

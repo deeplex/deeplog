@@ -7,9 +7,9 @@
 
 #include "dplx/dlog/tui/log_display_grid.hpp"
 
+#include <fmt/chrono.h>
+#include <fmt/format.h>
 #include <ftxui/dom/elements.hpp>
-
-#include <dplx/dlog/detail/iso8601.hpp>
 
 namespace dplx::dlog::tui
 {
@@ -77,7 +77,8 @@ static auto compute_render_window(std::size_t selected,
 auto LogDisplayGridComponent::Render() -> ftxui::Element
 {
     constexpr int layout_size_level = 6;
-    constexpr int layout_size_timestamp = detail::iso8601_datetime_long_size;
+    constexpr int iso8601_datetime_long_size = 26;
+    constexpr int layout_size_timestamp = iso8601_datetime_long_size;
 
     auto spaceSeperator = ftxui::separator(ftxui::Pixel{});
 
@@ -132,8 +133,9 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
         auto sysTime
                 = mDisplayEpoch.to_sys<std::chrono::system_clock::duration>(
                         record.timestamp);
-        auto iso8601DateTime = detail::iso8601_datetime_long(
-                time_point_cast<std::chrono::system_clock::duration>(sysTime));
+        auto iso8601DateTime = fmt::format(
+                "{:%FT%T}",
+                std::chrono::floor<std::chrono::microseconds>(sysTime));
 
         auto mismatch
                 = std::ranges::mismatch(iso8601DateTime, previousTime).in1;

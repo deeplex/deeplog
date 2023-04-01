@@ -22,7 +22,6 @@
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/file_stream.hpp>
-#include <dplx/dlog/detail/iso8601.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/record_container.hpp>
 #include <dplx/dlog/tui/log_display_grid.hpp>
@@ -35,7 +34,7 @@ auto const current_theme = theme_carbon_grey90();
 
 struct options
 {
-    phmap::flat_hash_map<std::string, bool> enabled_containers;
+    phmap::node_hash_map<std::string, bool> enabled_containers;
     log_clock::epoch_info display_epoch;
 };
 
@@ -46,7 +45,7 @@ class OptionsComponent : public ftxui::ComponentBase
 
     ftxui::Component mFileSelection;
 
-    phmap::flat_hash_map<std::string, bool> mEnabledContainersBuilder;
+    phmap::node_hash_map<std::string, bool> mEnabledContainersBuilder;
 
 public:
     OptionsComponent(file_database_handle &fileDb, options &value)
@@ -78,7 +77,7 @@ private:
     {
         auto const &recordContainers = mFileDb.record_containers();
 
-        phmap::flat_hash_map<file_sink_id, ftxui::Component> resourcesView;
+        phmap::node_hash_map<file_sink_id, ftxui::Component> resourcesView;
 
         mEnabledContainersBuilder.clear();
         for (auto const &container : recordContainers)
@@ -133,7 +132,7 @@ class LogDisplayComponent : public ftxui::ComponentBase
     file_database_handle &mFileDb;
     options &mOptions;
 
-    phmap::flat_hash_map<std::string, record_container> mClosedContainers;
+    phmap::node_hash_map<std::string, record_container> mClosedContainers;
 
     std::vector<record *> mDisplayRecords;
     std::shared_ptr<LogDisplayGridComponent> mLogGrid;
