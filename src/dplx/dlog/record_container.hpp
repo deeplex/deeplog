@@ -74,6 +74,7 @@ public:
 
         if (tupleHead.value != 6)
         {
+            value.severity = dlog::severity::none;
             for (unsigned i = 0; i < tupleHead.value; i++)
             {
                 DPLX_TRY(dp::skip_item(ctx));
@@ -144,6 +145,8 @@ public:
                                  [this](parse_context &lctx, container &records,
                                         std::size_t const) noexcept
                                  { return parse_item(lctx, records); }));
+        std::erase_if(value.records, [](dlog::record const &r)
+                      { return r.severity == dlog::severity::none; });
 
         return oc::success();
     }
