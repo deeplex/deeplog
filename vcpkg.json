@@ -7,6 +7,7 @@
         "boost-config",
         "boost-predef",
         "boost-mp11",
+        "boost-unordered",
         "boost-variant2",
         "concrete",
         "deeppack",
@@ -16,8 +17,7 @@
             "name": "llfio",
             "features": [ "status-code" ]
         },
-        "outcome",
-        "parallel-hashmap"
+        "outcome"
     ],
     "features": {
         "tests": {

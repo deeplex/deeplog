@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <dplx/predef/library/std.h>
 #include <dplx/predef/version_number.h>
 #include <dplx/predef/workaround.h>
 
@@ -27,3 +28,10 @@
     DPLX_XDEF_WORKAROUND_TESTED_AT(DPLX_DLOG_DISABLE_WORKAROUNDS,              \
                                    DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS,        \
                                    symbol, major, minor, patch)
+
+////////////////////////////////////////////////////////////////////////////////
+
+// libstdc++ fails to forward pair members during uses_allocator construction
+// see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108952
+#define DPLX_DLOG_WORKAROUND_ISSUE_LIBSTDCPP_108952                            \
+    DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_LIB_STD_GNU, 12, 2, 0)
