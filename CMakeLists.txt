@@ -41,10 +41,6 @@ if (BUILD_TESTING)
 endif()
 
 
-set(DLOG_LLFIO_TARGET "sl" CACHE STRING "The llfio target to link against, can be 'hl', 'sl' or 'dl'")
-set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
-
-
 ########################################################################
 # options
 option(DPLX_DLOG_DISABLE_WORKAROUNDS "Disable all workarounds" OFF)
@@ -53,6 +49,10 @@ option(DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS "Emit compiler errors for workarounds
 option(DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT "Disable implicit context support via TLS" OFF)
 
 option(BUILD_EXAMPLES "Build the example executables" OFF)
+
+set(DLOG_LLFIO_TARGET "sl" CACHE STRING "The llfio target to link against, can be 'hl', 'sl' or 'dl'")
+set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
+
 
 ########################################################################
 # dependencies
