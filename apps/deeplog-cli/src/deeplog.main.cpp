@@ -180,6 +180,15 @@ public:
         return mLogGrid->Render();
     }
 
+    [[nodiscard]] auto Focusable() const -> bool override
+    {
+        return mLogGrid->Focusable();
+    }
+    [[nodiscard]] auto ActiveChild() -> ftxui::Component override
+    {
+        return mLogGrid;
+    }
+
 private:
     auto
     LoadClosedContainer(file_database_handle::record_container_meta const &meta)

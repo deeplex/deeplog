@@ -229,4 +229,14 @@ auto LogDisplayGridComponent::OnEvent(ftxui::Event event) -> bool
     return mSelected != prev;
 }
 
+auto LogDisplayGridComponent::Focusable() const -> bool
+{
+    return !mRecords.empty();
+}
+
+auto LogDisplayGridComponent::ActiveChild() -> ftxui::Component
+{
+    return nullptr;
+}
+
 } // namespace dplx::dlog::tui
