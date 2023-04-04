@@ -29,10 +29,11 @@ struct severity_info
     ftxui::Decorator line_decorator;
 };
 
-class LogDisplayGridComponent : public ftxui::ComponentBase
+class LogDisplayGridComponent final : public ftxui::ComponentBase
 {
     std::vector<record *> &mRecords;
     std::size_t mSelected;
+    std::size_t mLastLines;
     ftxui::Box mDisplayBox;
     ftxui::Box mSelectedRowBox;
 
@@ -48,6 +49,7 @@ public:
         : ComponentBase()
         , mRecords(records)
         , mSelected(0)
+        , mLastLines(0)
         , mDisplayBox{.x_min = 0,
                       .x_max = INT_MAX,
                       .y_min = 0,
@@ -64,6 +66,9 @@ public:
 
     auto Render() -> ftxui::Element override;
     auto OnEvent(ftxui::Event event) -> bool override;
+
+    [[nodiscard]] auto Focusable() const -> bool override;
+    [[nodiscard]] auto ActiveChild() -> ftxui::Component override;
 };
 
 } // namespace dplx::dlog::tui

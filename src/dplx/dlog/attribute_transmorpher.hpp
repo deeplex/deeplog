@@ -10,7 +10,7 @@
 #include <memory>
 #include <memory_resource>
 
-#include <parallel_hashmap/phmap.h>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include <dplx/dp/fwd.hpp>
 #include <dplx/dp/state.hpp>
@@ -31,11 +31,11 @@ public:
             std::pair<resource_id const, any_attribute>>;
 
 private:
-    using map_type = phmap::flat_hash_map<resource_id,
-                                          any_attribute,
-                                          std::hash<resource_id>,
-                                          std::equal_to<>,
-                                          allocator_type>;
+    using map_type = boost::unordered_flat_map<resource_id,
+                                               any_attribute,
+                                               std::hash<resource_id>,
+                                               std::equal_to<>,
+                                               allocator_type>;
 
     map_type mAttributes;
 
@@ -58,11 +58,11 @@ public:
             std::pair<key_type const, revive_fn>>;
 
 private:
-    using reviver_map_type = phmap::flat_hash_map<key_type,
-                                                  revive_fn,
-                                                  std::hash<key_type>,
-                                                  std::equal_to<>,
-                                                  allocator_type>;
+    using reviver_map_type = boost::unordered_flat_map<key_type,
+                                                       revive_fn,
+                                                       std::hash<key_type>,
+                                                       std::equal_to<>,
+                                                       allocator_type>;
 
     reviver_map_type mKnownTypes;
 

@@ -143,6 +143,7 @@ struct trace_id
 template <>
 struct std::hash<dplx::dlog::trace_id>
 {
+    using is_avalanching = void;
     using value_type = dplx::dlog::trace_id;
 
     auto operator()(value_type const value) const noexcept -> std::size_t
@@ -247,6 +248,7 @@ struct span_id
 template <>
 struct std::hash<dplx::dlog::span_id>
 {
+    using is_avalanching = void;
     using value_type = dplx::dlog::span_id;
 
     auto operator()(value_type const value) const noexcept -> std::size_t

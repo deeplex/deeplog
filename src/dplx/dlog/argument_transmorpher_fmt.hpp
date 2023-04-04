@@ -11,10 +11,11 @@
 #include <deque>
 #include <string>
 
+#include <boost/unordered/unordered_flat_map.hpp>
+
 #include <fmt/args.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <parallel_hashmap/phmap.h>
 
 #include <dplx/dp.hpp>
 #include <dplx/dp/api.hpp>
@@ -75,7 +76,7 @@ class argument_transmorpher
                                        dynamic_arg_store &store,
                                        char const *name) noexcept;
 
-    phmap::flat_hash_map<key_type, revive_fn> mKnownTypes;
+    boost::unordered_flat_map<key_type, revive_fn> mKnownTypes;
 
 public:
     auto operator()(parse_context &ctx, dynamic_arg_store &store)

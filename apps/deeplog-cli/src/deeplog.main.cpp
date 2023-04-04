@@ -9,12 +9,13 @@
 #include <numeric>
 #include <ranges>
 
+#include <boost/unordered/unordered_map.hpp>
+
 #include <fmt/format.h>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
-#include <parallel_hashmap/phmap.h>
 
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/codecs/std-string.hpp>
@@ -22,7 +23,6 @@
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/file_stream.hpp>
-#include <dplx/dlog/detail/iso8601.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/record_container.hpp>
 #include <dplx/dlog/tui/log_display_grid.hpp>
@@ -35,7 +35,7 @@ auto const current_theme = theme_carbon_grey90();
 
 struct options
 {
-    phmap::flat_hash_map<std::string, bool> enabled_containers;
+    boost::unordered_map<std::string, bool> enabled_containers;
     log_clock::epoch_info display_epoch;
 };
 
@@ -46,7 +46,7 @@ class OptionsComponent : public ftxui::ComponentBase
 
     ftxui::Component mFileSelection;
 
-    phmap::flat_hash_map<std::string, bool> mEnabledContainersBuilder;
+    boost::unordered_map<std::string, bool> mEnabledContainersBuilder;
 
 public:
     OptionsComponent(file_database_handle &fileDb, options &value)
@@ -78,7 +78,7 @@ private:
     {
         auto const &recordContainers = mFileDb.record_containers();
 
-        phmap::flat_hash_map<file_sink_id, ftxui::Component> resourcesView;
+        boost::unordered_map<file_sink_id, ftxui::Component> resourcesView;
 
         mEnabledContainersBuilder.clear();
         for (auto const &container : recordContainers)
@@ -133,7 +133,7 @@ class LogDisplayComponent : public ftxui::ComponentBase
     file_database_handle &mFileDb;
     options &mOptions;
 
-    phmap::flat_hash_map<std::string, record_container> mClosedContainers;
+    boost::unordered_map<std::string, record_container> mClosedContainers;
 
     std::vector<record *> mDisplayRecords;
     std::shared_ptr<LogDisplayGridComponent> mLogGrid;
@@ -178,6 +178,15 @@ public:
     auto Render() -> ftxui::Element override
     {
         return mLogGrid->Render();
+    }
+
+    [[nodiscard]] auto Focusable() const -> bool override
+    {
+        return mLogGrid->Focusable();
+    }
+    [[nodiscard]] auto ActiveChild() -> ftxui::Component override
+    {
+        return mLogGrid;
     }
 
 private:

@@ -15,6 +15,7 @@
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/any_reified.hpp>
+#include <dplx/dlog/detail/workaround.hpp>
 
 namespace dplx::dlog
 {
@@ -111,6 +112,18 @@ public:
             operator=(static_cast<any_attribute &&>(other));
         }
     }
+#if DPLX_DLOG_WORKAROUND_ISSUE_LIBSTDCPP_108952
+    any_attribute(any_attribute &other, allocator_type const &allocator)
+        : any_attribute(other.mOtlpId.get_allocator() == allocator
+                                ? static_cast<any_attribute &&>(other)
+                                : any_attribute{allocator})
+    {
+        if (other.mOtlpId.get_allocator() != allocator)
+        {
+            operator=(static_cast<any_attribute &&>(other));
+        }
+    }
+#endif
 
 private:
     any_attribute(resource_id id,

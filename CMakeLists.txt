@@ -55,12 +55,12 @@ option(DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS "Emit compiler errors for workarounds
 
 option(DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT "Disable implicit context support via TLS" OFF)
 
+option(BUILD_EXAMPLES "Build the example executables" OFF)
+
 ########################################################################
 # dependencies
 
 set(Boost_NO_WARN_NEW_VERSIONS ON)
-
-find_path(PARALLEL_HASHMAP_INCLUDE_DIRS "parallel_hashmap/phmap.h")
 
 find_package(fmt CONFIG REQUIRED)
 
@@ -73,7 +73,7 @@ find_package(llfio CONFIG REQUIRED)
 find_package(concrete CONFIG REQUIRED)
 find_package(deeppack CONFIG REQUIRED)
 
-find_package(Boost 1.73 REQUIRED)
+find_package(Boost 1.81 REQUIRED)
 
 find_package(Catch2 CONFIG)
 set_package_properties(Catch2 PROPERTIES
@@ -125,8 +125,6 @@ target_include_directories(deeplog PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated/src>
     $<INSTALL_INTERFACE:include>
-
-    $<BUILD_INTERFACE:${PARALLEL_HASHMAP_INCLUDE_DIRS}>
 )
 
 target_link_libraries(deeplog PUBLIC
@@ -165,6 +163,12 @@ add_subdirectory(apps/deeplog-cli)
 # source files
 include(sources.cmake)
 source_group(TREE src/dplx)
+
+########################################################################
+# examples
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
 
 ########################################################################

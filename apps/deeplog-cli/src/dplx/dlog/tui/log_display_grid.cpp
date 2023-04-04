@@ -7,9 +7,10 @@
 
 #include "dplx/dlog/tui/log_display_grid.hpp"
 
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+#include <ftxui/component/animation.hpp>
 #include <ftxui/dom/elements.hpp>
-
-#include <dplx/dlog/detail/iso8601.hpp>
 
 namespace dplx::dlog::tui
 {
@@ -62,7 +63,7 @@ static auto compute_render_window(std::size_t selected,
     {
         return {0U, numElements};
     }
-    auto const lineSplit = lines / 2U;
+    auto const lineSplit = (lines + 1U) / 2U;
     if (selected <= lineSplit)
     {
         return {0U, lines};
@@ -77,7 +78,8 @@ static auto compute_render_window(std::size_t selected,
 auto LogDisplayGridComponent::Render() -> ftxui::Element
 {
     constexpr int layout_size_level = 6;
-    constexpr int layout_size_timestamp = detail::iso8601_datetime_long_size;
+    constexpr int iso8601_datetime_long_size = 26;
+    constexpr int layout_size_timestamp = iso8601_datetime_long_size;
 
     auto spaceSeperator = ftxui::separator(ftxui::Pixel{});
 
@@ -96,9 +98,12 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
     std::string previousTime;
     ftxui::Elements formattedRecords;
 
-    auto const lines
-            = static_cast<std::size_t>(mDisplayBox.y_max - mDisplayBox.y_min)
-            + 3U;
+    auto lines = static_cast<std::size_t>(mDisplayBox.y_max - mDisplayBox.y_min)
+               + 2U;
+    if (lines > mLastLines)
+    {
+        lines = lines * 3 / 2;
+    }
     for (auto [i, limit]
          = tui::compute_render_window(mSelected, mRecords.size(), lines);
          i < limit; ++i)
@@ -132,8 +137,9 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
         auto sysTime
                 = mDisplayEpoch.to_sys<std::chrono::system_clock::duration>(
                         record.timestamp);
-        auto iso8601DateTime = detail::iso8601_datetime_long(
-                time_point_cast<std::chrono::system_clock::duration>(sysTime));
+        auto iso8601DateTime = fmt::format(
+                "{:%FT%T}",
+                std::chrono::floor<std::chrono::microseconds>(sysTime));
 
         auto mismatch
                 = std::ranges::mismatch(iso8601DateTime, previousTime).in1;
@@ -175,6 +181,11 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
 
         previousTime = std::move(iso8601DateTime);
         formattedRecords.push_back(std::move(formattedRecord));
+    }
+    if (lines != mLastLines)
+    {
+        mLastLines = lines;
+        ftxui::animation::RequestAnimationFrame();
     }
 
     return ftxui::vbox({header, ftxui::separator(),
@@ -225,6 +236,16 @@ auto LogDisplayGridComponent::OnEvent(ftxui::Event event) -> bool
     mSelected = std::min(mSelected,
                          !mRecords.empty() ? mRecords.size() - 1U : 0U);
     return mSelected != prev;
+}
+
+auto LogDisplayGridComponent::Focusable() const -> bool
+{
+    return !mRecords.empty();
+}
+
+auto LogDisplayGridComponent::ActiveChild() -> ftxui::Component
+{
+    return nullptr;
 }
 
 } // namespace dplx::dlog::tui
