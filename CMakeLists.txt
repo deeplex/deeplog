@@ -44,9 +44,6 @@ endif()
 set(DLOG_LLFIO_TARGET "sl" CACHE STRING "The llfio target to link against, can be 'hl', 'sl' or 'dl'")
 set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
 
-if (BUILD_TESTING)
-    enable_testing()
-endif()
 
 ########################################################################
 # options
@@ -151,8 +148,7 @@ if (BUILD_TESTING)
         src/dlog_tests
     )
 
-    # TODO: uncomment this as soon as some tests have been migrated to catch2
-    # add_test(NAME deeplog-tests COMMAND deeplog-tests)
+    add_test(NAME deeplog-tests COMMAND deeplog-tests)
 endif()
 
 ########################################################################

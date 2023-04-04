@@ -64,6 +64,8 @@ if (BUILD_TESTING)
     target_include_directories(deeplog-cli-tests PRIVATE
         src/dlog_cli_tests
     )
+
+    add_test(NAME deeplog-cli-tests COMMAND deeplog-cli-tests)
 endif()
 # TODO add a catch2 test suite
 
