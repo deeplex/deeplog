@@ -9,6 +9,7 @@
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+#include <ftxui/component/animation.hpp>
 #include <ftxui/dom/elements.hpp>
 
 namespace dplx::dlog::tui
@@ -62,7 +63,7 @@ static auto compute_render_window(std::size_t selected,
     {
         return {0U, numElements};
     }
-    auto const lineSplit = lines / 2U;
+    auto const lineSplit = (lines + 1U) / 2U;
     if (selected <= lineSplit)
     {
         return {0U, lines};
@@ -97,9 +98,12 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
     std::string previousTime;
     ftxui::Elements formattedRecords;
 
-    auto const lines
-            = static_cast<std::size_t>(mDisplayBox.y_max - mDisplayBox.y_min)
-            + 3U;
+    auto lines = static_cast<std::size_t>(mDisplayBox.y_max - mDisplayBox.y_min)
+               + 2U;
+    if (lines > mLastLines)
+    {
+        lines = lines * 3 / 2;
+    }
     for (auto [i, limit]
          = tui::compute_render_window(mSelected, mRecords.size(), lines);
          i < limit; ++i)
@@ -177,6 +181,11 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
 
         previousTime = std::move(iso8601DateTime);
         formattedRecords.push_back(std::move(formattedRecord));
+    }
+    if (lines != mLastLines)
+    {
+        mLastLines = lines;
+        ftxui::animation::RequestAnimationFrame();
     }
 
     return ftxui::vbox({header, ftxui::separator(),

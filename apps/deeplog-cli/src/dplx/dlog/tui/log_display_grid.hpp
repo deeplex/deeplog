@@ -33,6 +33,7 @@ class LogDisplayGridComponent final : public ftxui::ComponentBase
 {
     std::vector<record *> &mRecords;
     std::size_t mSelected;
+    std::size_t mLastLines;
     ftxui::Box mDisplayBox;
     ftxui::Box mSelectedRowBox;
 
@@ -48,6 +49,7 @@ public:
         : ComponentBase()
         , mRecords(records)
         , mSelected(0)
+        , mLastLines(0)
         , mDisplayBox{.x_min = 0,
                       .x_max = INT_MAX,
                       .y_min = 0,
