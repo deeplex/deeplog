@@ -11,9 +11,15 @@
 #include <string_view>
 #include <type_traits>
 
+#include <status-code/status_code_domain.hpp>
+
 #include <dplx/cncr/math_supplement.hpp>
+#include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/concepts.hpp>
 #include <dplx/dp/fwd.hpp>
+
+#include <dplx/dlog/detail/system_error2_fmt.hpp>
 
 namespace dplx::dlog
 {
@@ -148,6 +154,11 @@ template <>
 struct remap_c_string<char8_t const *>
 {
     using type = std::u8string;
+};
+template <>
+struct remap_c_string<SYSTEM_ERROR2_NAMESPACE::status_code_domain::string_ref>
+{
+    using type = std::string;
 };
 
 template <typename T>

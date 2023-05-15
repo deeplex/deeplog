@@ -19,6 +19,8 @@ namespace dlog_tests
 
 static_assert(dlog::loggable<int>);
 static_assert(dlog::loggable<std::int64_t>);
+static_assert(
+        dlog::loggable<dlog::system_error::status_code_domain::string_ref>);
 static_assert(std::same_as<dlog::reification_type_of_t<int>, std::int64_t>);
 
 static_assert(dlog::reification_tag_v<std::int64_t>
@@ -30,5 +32,7 @@ static_assert(dlog::detail::effective_reification_tag_v<int>
 
 static_assert(dlog::reifiable<std::int64_t>);
 static_assert(!dlog::reifiable<int>);
+static_assert(
+        !dlog::reifiable<dlog::system_error::status_code_domain::string_ref>);
 
 } // namespace dlog_tests

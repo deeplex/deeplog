@@ -61,6 +61,13 @@ struct basic_trivial_string_view // NOLINT(cppcoreguidelines-pro-type-member-ini
         , size(strView.size())
     {
     }
+    DPLX_ATTR_FORCE_INLINE constexpr basic_trivial_string_view(
+            system_error::status_code_domain::string_ref const &strRef) noexcept
+        requires std::is_same_v<Char, char>
+        : data(strRef.data())
+        , size(strRef.size())
+    {
+    }
 };
 using trivial_string_view = basic_trivial_string_view<char>;
 
