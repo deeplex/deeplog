@@ -11,7 +11,7 @@
 
 #include "test_utils.hpp"
 
-namespace dlog_cli_tests
+namespace dlog_tui_tests
 {
 
 TEST_CASE("Dlog TUI provides the carbon_grey90 theme")
@@ -21,4 +21,4 @@ TEST_CASE("Dlog TUI provides the carbon_grey90 theme")
     CHECK(theme.inverse_support_04 != ftxui::Color{});
 }
 
-} // namespace dlog_cli_tests
+} // namespace dlog_tui_tests

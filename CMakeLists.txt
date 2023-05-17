@@ -136,7 +136,7 @@ endif()
 
 ########################################################################
 # cmake install
-install(TARGETS deeplog compiler_settings EXPORT deeplog-targets)
+install(TARGETS deeplog deeplog_tui compiler_settings EXPORT deeplog-targets)
 install(EXPORT deeplog-targets
     NAMESPACE Deeplex::
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/deeplog"
