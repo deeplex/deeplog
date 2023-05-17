@@ -113,52 +113,12 @@ endif()
 
 ########################################################################
 # library
-add_library(deeplog)
-add_library(Deeplex::deeplog ALIAS deeplog)
-
-target_link_libraries(deeplog PUBLIC Deeplex::deeplog_compiler_settings)
-
-target_include_directories(deeplog PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated/src>
-    $<INSTALL_INTERFACE:include>
-)
-
-target_link_libraries(deeplog PUBLIC
-    Deeplex::deeppack
-
-    fmt::fmt
-    llfio::${DLOG_LLFIO_TARGET}
-    outcome::hl
-)
-
-########################################################################
-# library test project
-if (BUILD_TESTING)
-    add_executable(deeplog-tests)
-    source_group(TREE dlog_tests PREFIX test_utils)
-
-    target_link_libraries(deeplog-tests PRIVATE
-        Deeplex::deeplog
-
-        Catch2::Catch2 Catch2::Catch2WithMain
-    )
-
-    target_include_directories(deeplog-tests PRIVATE
-        src/dlog_tests
-    )
-
-    add_test(NAME deeplog-tests COMMAND deeplog-tests)
-endif()
+add_subdirectory(libs/deeplog)
+add_subdirectory(libs/deeplog_tui)
 
 ########################################################################
 # cli projects
 add_subdirectory(apps/deeplog-cli)
-
-########################################################################
-# source files
-include(sources.cmake)
-source_group(TREE src/dplx)
 
 ########################################################################
 # examples
@@ -176,12 +136,6 @@ endif()
 
 ########################################################################
 # cmake install
-install(DIRECTORY src/dplx
-    TYPE INCLUDE
-    FILES_MATCHING
-    REGEX ".*\\.(h(pp)?|inl)"
-)
-
 install(TARGETS deeplog compiler_settings EXPORT deeplog-targets)
 install(EXPORT deeplog-targets
     NAMESPACE Deeplex::
