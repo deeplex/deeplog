@@ -16,9 +16,9 @@
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
+#include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/detail/tls.hpp>
 #include <dplx/dlog/log_bus.hpp>
-#include <dplx/dlog/log_clock.hpp>
 
 #if DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 #define DPLX_DLOG_ACTIVE_SPAN nullptr

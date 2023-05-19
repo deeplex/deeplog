@@ -13,7 +13,7 @@
 #include <dplx/dp/items/item_size_of_ranges.hpp>
 #include <dplx/scope_guard.hpp>
 
-#include <dplx/dlog/log_clock.hpp>
+#include <dplx/dlog/core/log_clock.hpp>
 
 namespace dplx::dlog::detail
 {

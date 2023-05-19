@@ -59,13 +59,14 @@ dplx_target_sources(deeplog
     PUBLIC
         dlog
 
+        dlog/core/log_clock
+
         dlog/definitions
 
         dlog/attributes
         dlog/attribute_transmorpher
         dlog/core
         dlog/log_bus
-        dlog/log_clock
         dlog/sink
         dlog/source
         dlog/span_scope
