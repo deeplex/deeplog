@@ -26,9 +26,9 @@
 #include <dplx/dlog/attribute_transmorpher.hpp>
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core.hpp>
+#include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/llfio.hpp>
-#include <dplx/dlog/log_clock.hpp>
 
 namespace dplx::dlog::detail
 {

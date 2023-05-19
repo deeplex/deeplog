@@ -5,7 +5,7 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include "dplx/dlog/log_clock.hpp"
+#include "dplx/dlog/core/log_clock.hpp"
 
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/auto_tuple.hpp>
@@ -30,15 +30,16 @@ log_clock::epoch_info const log_clock::epoch_(std::chrono::system_clock::now(),
 } // namespace dplx::dlog
 
 auto dplx::dp::codec<dplx::dlog::log_clock::time_point>::size_of(
-        emit_context &ctx, dplx::dlog::log_clock::time_point value) noexcept
+        emit_context &ctx,
+        dplx::dlog::log_clock::time_point const &value) noexcept
         -> std::uint64_t
 {
     return dp::encoded_size_of(ctx, value.time_since_epoch());
 }
 
 auto dplx::dp::codec<dplx::dlog::log_clock::time_point>::encode(
-        emit_context &ctx, dplx::dlog::log_clock::time_point value) noexcept
-        -> result<void>
+        emit_context &ctx,
+        dplx::dlog::log_clock::time_point const &value) noexcept -> result<void>
 {
     return dp::encode(ctx, value.time_since_epoch());
 }
@@ -55,7 +56,8 @@ auto dplx::dp::codec<dplx::dlog::log_clock::time_point>::decode(
 }
 
 auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::size_of(
-        emit_context &ctx, dplx::dlog::log_clock::epoch_info value) noexcept
+        emit_context &ctx,
+        dplx::dlog::log_clock::epoch_info const &value) noexcept
         -> std::uint64_t
 {
     return dp::encoded_item_head_size<type_code::array>(2U)
@@ -67,8 +69,8 @@ auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::size_of(
 }
 
 auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::encode(
-        emit_context &ctx, dplx::dlog::log_clock::epoch_info value) noexcept
-        -> result<void>
+        emit_context &ctx,
+        dplx::dlog::log_clock::epoch_info const &value) noexcept -> result<void>
 {
     DPLX_TRY(dp::emit_array(ctx, 2U));
 

@@ -14,8 +14,8 @@
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/attributes.hpp>
+#include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/log_bus.hpp>
-#include <dplx/dlog/log_clock.hpp>
 
 auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::size_of(
         dp::emit_context &ctx,

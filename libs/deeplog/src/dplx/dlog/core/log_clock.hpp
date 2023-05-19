@@ -10,7 +10,8 @@
 #include <chrono>
 #include <cstdint>
 
-#include <dplx/dp.hpp>
+#include <dplx/dp/fwd.hpp>
+#include <dplx/dp/macros.hpp>
 
 namespace dplx::dlog
 {
@@ -114,32 +115,5 @@ public:
 
 } // namespace dplx::dlog
 
-template <>
-class dplx::dp::codec<dplx::dlog::log_clock::time_point>
-{
-public:
-    static auto size_of(emit_context &ctx,
-                        dplx::dlog::log_clock::time_point value) noexcept
-            -> std::uint64_t;
-    static auto encode(emit_context &ctx,
-                       dplx::dlog::log_clock::time_point value) noexcept
-            -> result<void>;
-    static auto decode(parse_context &ctx,
-                       dplx::dlog::log_clock::time_point &outValue) noexcept
-            -> result<void>;
-};
-
-template <>
-class dplx::dp::codec<dplx::dlog::log_clock::epoch_info>
-{
-public:
-    static auto size_of(emit_context &ctx,
-                        dplx::dlog::log_clock::epoch_info value) noexcept
-            -> std::uint64_t;
-    static auto encode(emit_context &ctx,
-                       dplx::dlog::log_clock::epoch_info value) noexcept
-            -> result<void>;
-    static auto decode(parse_context &ctx,
-                       dplx::dlog::log_clock::epoch_info &outValue) noexcept
-            -> result<void>;
-};
+DPLX_DP_DECLARE_CODEC_SIMPLE(dplx::dlog::log_clock::time_point);
+DPLX_DP_DECLARE_CODEC_SIMPLE(dplx::dlog::log_clock::epoch_info);

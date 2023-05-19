@@ -15,8 +15,8 @@
 #include <boost/variant2.hpp>
 
 #include <dplx/dlog/concepts.hpp>
+#include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/definitions.hpp>
-#include <dplx/dlog/log_clock.hpp>
 
 namespace dplx::dlog
 {
