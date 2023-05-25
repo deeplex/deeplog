@@ -5,4 +5,10 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include "dplx/dlog/definitions.hpp"
+#include "dplx/dlog/core/strong_types.hpp"
+
+#include "test_utils.hpp"
+
+namespace dlog_tests
+{
+}
