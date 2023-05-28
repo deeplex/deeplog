@@ -15,6 +15,6 @@
 #cmakedefine01 DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS
 
 #cmakedefine01 DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-
+#cmakedefine01 DPLX_DLOG_USE_SOURCE_LOCATION
 // NOLINTEND(cppcoreguidelines-macro-usage)
 // NOLINTEND(modernize-macro-to-enum)

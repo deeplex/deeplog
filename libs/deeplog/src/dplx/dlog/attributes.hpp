@@ -15,6 +15,7 @@
 #include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/concepts.hpp>
 
+#include <dplx/dlog/config.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/any_loggable_ref.hpp>
 #include <dplx/dlog/loggable.hpp>
@@ -101,8 +102,17 @@ using function = basic_attribute_ref<resource_id{4},
 namespace dplx::dlog::detail
 {
 
-#if 0 && DPLX_DLOG_USE_SOURCE_LOCATION
-// TODO: implement `make_attribute_function()` with `std::source_location`
+#if DPLX_DLOG_USE_SOURCE_LOCATION
+consteval auto make_attribute_function(std::source_location current
+                                       = std::source_location::current())
+        -> attr::function
+{
+    auto const function = current.function_name();
+    auto const functionSize = std::char_traits<char>::length(function);
+    return {
+            {function, functionSize}
+    };
+}
 #else
 consteval auto make_attribute_function(char const *function) noexcept
         -> attr::function

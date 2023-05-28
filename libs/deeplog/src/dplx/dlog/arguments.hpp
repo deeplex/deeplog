@@ -16,9 +16,14 @@
 #include <dplx/dp/disappointment.hpp>
 #include <dplx/dp/fwd.hpp>
 
+#include <dplx/dlog/config.hpp>
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/detail/any_loggable_ref.hpp>
 #include <dplx/dlog/loggable.hpp>
+
+#if DPLX_DLOG_USE_SOURCE_LOCATION
+#include <source_location>
+#endif
 
 namespace dplx::dlog::detail
 {
@@ -30,8 +35,17 @@ struct log_location
     std::int_least16_t filenameSize;
 };
 
-#if 0 && DPLX_DLOG_USE_SOURCE_LOCATION
-// TODO: implement `make_location()` with `std::source_location`
+#if DPLX_DLOG_USE_SOURCE_LOCATION
+consteval auto make_location(std::source_location current
+                             = std::source_location::current()) -> log_location
+{
+    auto const filenameSize
+            = std::char_traits<char>::length(current.file_name());
+    assert(filenameSize <= INT_LEAST16_MAX);
+    return {current.file_name(),
+            static_cast<std::int_least32_t>(current.line()),
+            static_cast<std::int_least16_t>(filenameSize)};
+}
 #else
 consteval auto make_location(char const *filename,
                              std::uint_least32_t line) noexcept -> log_location
