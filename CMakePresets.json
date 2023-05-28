@@ -50,7 +50,8 @@
                 "x64-windows"
             ],
             "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "cl"
+                "CMAKE_CXX_COMPILER": "cl",
+                "DPLX_DLOG_USE_SOURCE_LOCATION": true
             }
         },
         {
@@ -94,7 +95,8 @@
                 "base"
             ],
             "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-linux"
+                "VCPKG_TARGET_TRIPLET": "x64-linux",
+                "DPLX_DLOG_USE_SOURCE_LOCATION": true
             },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
@@ -128,7 +130,8 @@
             ],
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-linux-clang",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/clang-x64-linux.cmake"
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/clang-x64-linux.cmake",
+                "DPLX_DLOG_USE_SOURCE_LOCATION": false
             }
         },
         {

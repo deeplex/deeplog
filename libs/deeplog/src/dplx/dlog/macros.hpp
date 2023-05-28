@@ -21,7 +21,8 @@
 
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 #if DPLX_DLOG_USE_SOURCE_LOCATION
-#error "DPLX_DLOG_USE_SOURCE_LOCATION not implemented"
+#define DPLX_DLOG_LOCATION ::dplx::dlog::detail::make_location()
+#define DPLX_DLOG_FUNCSIG  ::dplx::dlog::detail::make_attribute_function()
 #else
 
 #define DPLX_DLOG_LOCATION                                                     \
