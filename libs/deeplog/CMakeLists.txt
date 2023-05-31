@@ -62,6 +62,8 @@ dplx_target_sources(deeplog
         dlog/core/log_clock
         dlog/core/strong_types
 
+        dlog/source/log_record_port
+
         dlog/definitions
 
         dlog/attributes
@@ -118,6 +120,8 @@ dplx_target_sources(deeplog
         dlog/detail/x_poly_types.inl
 
         dlog/detail/file_stream.hpp
+
+        dlog/source/record_output_buffer.hpp
 )
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail)

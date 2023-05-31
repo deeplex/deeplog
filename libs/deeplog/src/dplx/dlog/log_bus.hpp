@@ -18,6 +18,8 @@
 
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/disappointment.hpp>
+#include <dplx/dlog/source/log_record_port.hpp>
+#include <dplx/dlog/source/record_output_buffer.hpp>
 
 namespace dplx::dlog
 {
@@ -30,52 +32,9 @@ concept raw_message_consumer = requires(
                                    } noexcept;
                                };
 
-// the class is final and none of its base classes have public destructors
-// NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
-class bus_output_buffer : public dp::output_buffer
-{
-public:
-    virtual constexpr ~bus_output_buffer() noexcept = default;
-
-protected:
-    using output_buffer::output_buffer;
-
-private:
-    auto do_grow([[maybe_unused]] size_type requestedSize) noexcept
-            -> dp::result<void> final
-    {
-        return dp::errc::end_of_stream;
-    }
-    auto do_bulk_write([[maybe_unused]] std::byte const *src,
-                       [[maybe_unused]] std::size_t size) noexcept
-            -> dp::result<void> final
-    {
-        return dp::errc::end_of_stream;
-    }
-};
-
-class bus_output_guard
-{
-    bus_output_buffer &mOutput;
-
-public:
-    DPLX_ATTR_FORCE_INLINE ~bus_output_guard() noexcept
-    {
-        (void)mOutput.sync_output();
-        mOutput.~bus_output_buffer();
-    }
-    DPLX_ATTR_FORCE_INLINE explicit bus_output_guard(
-            bus_output_buffer &which) noexcept
-        : mOutput(which)
-    {
-    }
-};
-
-struct output_buffer_storage
-{
-    static constexpr std::size_t static_size = 128U;
-    alignas(void *) std::byte _state[static_size];
-};
+using bus_output_buffer = record_output_buffer;
+using output_buffer_storage = record_output_buffer_storage;
+using bus_output_guard = record_output_guard;
 
 class bus_handle
 {
@@ -149,12 +108,3 @@ private:
 };
 
 } // namespace dplx::dlog
-
-namespace dplx::dlog::detail
-{
-
-auto derive_span_id(std::uint64_t traceIdP0,
-                    std::uint64_t traceIdP1,
-                    std::uint64_t ctr) noexcept -> span_id;
-
-}

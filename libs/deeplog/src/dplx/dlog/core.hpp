@@ -17,6 +17,8 @@
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/source/log_record_port.hpp>
+#include <dplx/dlog/source/record_output_buffer.hpp>
 
 namespace dplx::dlog
 {
@@ -150,7 +152,7 @@ struct consume_record_fn
 } // namespace detail
 
 template <bus Bus>
-class core
+class core final : public log_record_port
 {
     using sink_owner = std::unique_ptr<sink_frontend_base>;
 
@@ -216,6 +218,32 @@ public:
     }
 
 private:
+    // Inherited via log_record_port
+    auto do_allocate_record_buffer_inplace(
+            record_output_buffer_storage &bufferPlacementStorage,
+            std::size_t messageSize,
+            span_id spanId) noexcept -> result<record_output_buffer *> override
+    {
+        return mBus.create_output_buffer_inplace(bufferPlacementStorage,
+                                                 messageSize, spanId);
+    }
+    auto do_create_span_context(std::string_view name,
+                                severity &thresholdOut) noexcept
+            -> span_context override
+    {
+        thresholdOut = default_threshold;
+        (void)name;
+        return mBus.allocate_span_context();
+    }
+    auto do_create_span_context(trace_id id,
+                                std::string_view name,
+                                severity &thresholdInOut) noexcept
+            -> span_context override
+    {
+        (void)name;
+        (void)thresholdInOut;
+        return {id, mBus.allocate_span_id(id)};
+    }
 };
 
 } // namespace dplx::dlog

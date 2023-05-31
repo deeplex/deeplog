@@ -199,67 +199,6 @@ auto mpsc_bus_handle::do_allocate_trace_id() noexcept -> trace_id
     return trace_id::random();
 }
 
-namespace
-{
-
-// derivative of xxHASH64
-// https://github.com/Cyan4973/xxHash/blob/2b328a10983d232364ceda15df1d33531b5f0eb5/doc/xxhash_spec.md
-constexpr std::uint64_t PRIME64_1 = 0x9e3779b185ebca87U;
-constexpr std::uint64_t PRIME64_2 = 0xc2b2ae3d27d4eb4fU;
-constexpr std::uint64_t PRIME64_3 = 0x165667b19e3779f9U;
-constexpr std::uint64_t PRIME64_4 = 0x85ebca77c2b2ae63U;
-constexpr std::uint64_t PRIME64_5 = 0x27d4eb2f165667c5U;
-
-DPLX_ATTR_FORCE_INLINE constexpr auto
-xxHash64_round(std::uint64_t accN, std::uint64_t const laneN) noexcept
-        -> std::uint64_t
-{
-    accN += laneN * PRIME64_2;
-    accN <<= 31; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
-    return accN * PRIME64_1;
-}
-
-} // namespace
-
-namespace detail
-{
-
-auto derive_span_id(std::uint64_t traceIdP0,
-                    std::uint64_t traceIdP1,
-                    std::uint64_t ctr) noexcept -> span_id
-{
-    // initialize
-    std::uint64_t acc = PRIME64_5;
-    // add input length
-    acc += 3 * sizeof(std::uint64_t);
-
-    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
-
-    // "remaining" input
-    acc ^= xxHash64_round(0U, traceIdP0);
-    acc = (acc << 27) * PRIME64_1;
-    acc += PRIME64_4;
-    acc ^= xxHash64_round(0U, traceIdP1);
-    acc = (acc << 27) * PRIME64_1;
-    acc += PRIME64_4;
-    acc ^= xxHash64_round(0U, ctr);
-    acc = (acc << 27) * PRIME64_1;
-    acc += PRIME64_4;
-
-    // mix
-    acc ^= acc >> 33;
-    acc *= PRIME64_2;
-    acc ^= acc >> 29;
-    acc *= PRIME64_3;
-    acc ^= acc >> 32;
-
-    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
-
-    return std::bit_cast<span_id>(acc);
-}
-
-} // namespace detail
-
 auto dplx::dlog::mpsc_bus_handle::do_allocate_span_id(trace_id trace) noexcept
         -> span_id
 {
@@ -268,15 +207,22 @@ auto dplx::dlog::mpsc_bus_handle::do_allocate_span_id(trace_id trace) noexcept
         return span_id::invalid();
     }
 
+    auto const traceBlob
+            = std::bit_cast<cncr::blob<std::uint32_t, 4, alignof(trace_id)>>(
+                    trace);
     auto const regionId = detail::hash_to_index(
-            static_cast<std::uint32_t>(std::hash<trace_id>()(trace)),
+            traceBlob.values[0] ^ traceBlob.values[1] ^ traceBlob.values[2]
+                    ^ traceBlob.values[3],
             mNumRegions);
     auto const ctr
             = std::atomic_ref<std::uint64_t>(region(regionId)->span_prng_ctr)
                       .fetch_add(1U, std::memory_order_relaxed);
-    auto const rawTraceId = std::bit_cast<std::array<std::uint64_t, 2>>(trace);
+    auto const rawTraceId
+            = std::bit_cast<cncr::blob<std::uint64_t, 2, alignof(trace_id)>>(
+                    trace);
 
-    return detail::derive_span_id(rawTraceId[0], rawTraceId[1], ctr);
+    return detail::derive_span_id(rawTraceId.values[0], rawTraceId.values[1],
+                                  ctr);
 }
 
 } // namespace dplx::dlog
