@@ -178,14 +178,15 @@ inline auto encode_any_loggable(dp::emit_context &ctx,
 } // namespace
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
+auto vlog(log_context const &logCtx, log_args const &args) noexcept
+        -> result<void>
 {
-    if (args.sev == severity::none)
+    if (args.sev == severity::none) [[unlikely]]
     {
         return oc::success();
     }
     constexpr severity severity_max{24};
-    if (args.sev > severity_max)
+    if (args.sev > severity_max) [[unlikely]]
     {
         return errc::invalid_argument;
     }
@@ -218,8 +219,9 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     auto encodedSize
             = static_cast<unsigned>(encodedArraySize + encodedMetaSize);
 
-    encodedSize
-            += static_cast<unsigned>(dp::encoded_size_of(sizeCtx, args.owner));
+    auto const owner = logCtx.span();
+    auto const ownerId = owner == nullptr ? span_context{} : owner->context();
+    encodedSize += static_cast<unsigned>(dp::encoded_size_of(sizeCtx, ownerId));
 
     encodedSize += static_cast<unsigned>(
             dp::item_size_of_u8string(sizeCtx, args.message.size()));
@@ -252,8 +254,8 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     // allocate an output buffer on the message bus
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     dlog::output_buffer_storage outStorage;
-    DPLX_TRY(auto *out, messageBus.create_output_buffer_inplace(
-                                outStorage, encodedSize, args.owner.spanId));
+    DPLX_TRY(auto *out, logCtx.port()->allocate_record_buffer_inplace(
+                                outStorage, encodedSize, ownerId.spanId));
     bus_output_guard outGuard(*out);
 
     dp::emit_context ctx{*out};
@@ -264,7 +266,7 @@ auto vlog(bus_handle &messageBus, log_args const &args) noexcept -> result<void>
     *ctx.out.data()
             = static_cast<std::byte>(static_cast<unsigned>(args.sev) - 1U);
     ctx.out.commit_written(1U);
-    (void)dp::encode(ctx, args.owner);
+    (void)dp::encode(ctx, ownerId);
 
     // timestamp
     *ctx.out.data() = static_cast<std::byte>(27U); // NOLINT

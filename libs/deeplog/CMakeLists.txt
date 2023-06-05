@@ -62,6 +62,7 @@ dplx_target_sources(deeplog
         dlog/core/log_clock
         dlog/core/strong_types
 
+        dlog/source/log_context
         dlog/source/log_record_port
 
         dlog/definitions

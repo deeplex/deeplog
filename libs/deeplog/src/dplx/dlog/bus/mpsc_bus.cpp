@@ -188,23 +188,21 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
                            static_cast<std::uint32_t>(realRegionSize)};
 }
 
-auto mpsc_bus_handle::do_allocate_span_context() noexcept -> span_context
+auto mpsc_bus_handle::do_create_span_context(std::string_view name,
+                                             severity &thresholdOut) noexcept
+        -> span_context
 {
-    auto const traceId = mpsc_bus_handle::do_allocate_trace_id();
-    return {traceId, mpsc_bus_handle::do_allocate_span_id(traceId)};
+    return create_span_context(trace_id::random(), name, thresholdOut);
 }
 
-auto mpsc_bus_handle::do_allocate_trace_id() noexcept -> trace_id
-{
-    return trace_id::random();
-}
-
-auto dplx::dlog::mpsc_bus_handle::do_allocate_span_id(trace_id trace) noexcept
-        -> span_id
+auto dplx::dlog::mpsc_bus_handle::do_create_span_context(trace_id trace,
+                                                         std::string_view,
+                                                         severity &) noexcept
+        -> span_context
 {
     if (trace == trace_id::invalid())
     {
-        return span_id::invalid();
+        return span_context{};
     }
 
     auto const traceBlob
@@ -221,8 +219,8 @@ auto dplx::dlog::mpsc_bus_handle::do_allocate_span_id(trace_id trace) noexcept
             = std::bit_cast<cncr::blob<std::uint64_t, 2, alignof(trace_id)>>(
                     trace);
 
-    return detail::derive_span_id(rawTraceId.values[0], rawTraceId.values[1],
-                                  ctr);
+    return {trace, detail::derive_span_id(rawTraceId.values[0],
+                                          rawTraceId.values[1], ctr)};
 }
 
 } // namespace dplx::dlog

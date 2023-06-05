@@ -40,7 +40,7 @@ TEST_CASE("bufferbus buffers messages and outputs them afterwards")
         // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
         dlog::bus_output_buffer *out;
         if (auto createRx
-            = bufferbus.create_output_buffer_inplace(outStorage, size, {});
+            = bufferbus.allocate_record_buffer_inplace(outStorage, size, {});
             createRx.has_value())
         {
             out = createRx.assume_value();

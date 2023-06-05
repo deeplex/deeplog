@@ -18,6 +18,9 @@ namespace dplx::dlog::detail
 extern thread_local constinit span_scope const *active_span;
 
 void deactivate_span() noexcept;
+
+auto active_context() noexcept -> log_context;
+void active_context(log_context nextActiveContext) noexcept;
 #endif
 
 } // namespace dplx::dlog::detail

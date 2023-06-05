@@ -160,7 +160,7 @@ public:
     }
 
 private:
-    auto do_create_output_buffer_inplace(
+    auto do_allocate_record_buffer_inplace(
             output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
             span_id) noexcept -> result<bus_output_buffer *> override
@@ -183,9 +183,12 @@ private:
                 output_buffer(static_cast<output_buffer &&>(out));
     }
 
-    auto do_allocate_span_context() noexcept -> span_context override;
-    auto do_allocate_trace_id() noexcept -> trace_id override;
-    auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
+    auto do_create_span_context(std::string_view name,
+                                severity &thresholdOut) noexcept
+            -> span_context override;
+    auto do_create_span_context(trace_id trace,
+                                std::string_view,
+                                severity &) noexcept -> span_context override;
 };
 
 inline auto bufferbus(llfio::path_handle const &base,

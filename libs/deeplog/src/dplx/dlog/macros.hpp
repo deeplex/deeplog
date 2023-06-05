@@ -12,6 +12,7 @@
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/source.hpp>
+#include <dplx/dlog/source/log_context.hpp>
 #include <dplx/dlog/span_scope.hpp>
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
@@ -70,6 +71,22 @@
                                     __VA_ARGS__);                              \
     } while (0)
 
+#define DLOG_TO(ctx, severity, message, ...)                                   \
+    do                                                                         \
+    { /* due to shadowing this name isn't required to be unique */             \
+        if (auto &&_dlog_materialized_temporary_ = (ctx);                      \
+            (severity) >= _dlog_materialized_temporary_.threshold())           \
+            (void)::dplx::dlog::log(_dlog_materialized_temporary_, (severity), \
+                                    (message), DPLX_DLOG_LOCATION,             \
+                                    __VA_ARGS__);                              \
+    } while (0)
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#define DLOG_(severityName, message, ...)                                      \
+    DLOG_TO(::dplx::dlog::detail::active_context(),                            \
+            (::dplx::dlog::severity::severityName), message, __VA_ARGS__)
+#endif
+
 #else // _MSVC_TRADITIONAL
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
@@ -94,6 +111,23 @@
                     _dlog_materialized_temporary_, (severity), (message),      \
                     DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
     } while (0)
+
+#define DLOG_TO(ctx, severity, message, ...)                                   \
+    do                                                                         \
+    { /* due to shadowing this name isn't required to be unique */             \
+        if (auto &&_dlog_materialized_temporary_ = (ctx);                      \
+            (severity) >= _dlog_materialized_temporary_.threshold())           \
+            (void)::dplx::dlog::log(                                           \
+                    _dlog_materialized_temporary_, (severity), (message),      \
+                    DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
+    } while (0)
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#define DLOG_(severityName, message, ...)                                      \
+    DLOG_TO(::dplx::dlog::detail::active_context(),                            \
+            (::dplx::dlog::severity::severityName),                            \
+            message __VA_OPT__(, __VA_ARGS__))
+#endif
 
 #endif // _MSVC_TRADITIONAL
 

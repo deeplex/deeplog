@@ -16,7 +16,11 @@
 #include <dplx/dlog/detail/tls.hpp>
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/loggable.hpp>
+#include <dplx/dlog/source/log_context.hpp>
 #include <dplx/dlog/span_scope.hpp>
+
+// soon obsolete
+#include <dplx/dlog/log_bus.hpp>
 
 namespace dplx::dlog
 {
@@ -24,7 +28,7 @@ namespace dplx::dlog
 namespace detail
 {
 
-auto vlog(bus_handle &messageBus, log_args const &args) noexcept
+auto vlog(log_context const &logCtx, log_args const &args) noexcept
         -> result<void>;
 
 } // namespace detail
@@ -40,9 +44,9 @@ inline constexpr struct log_fn
                detail::log_location location,
                Args const &...args) const noexcept -> result<void>
     {
-        return detail::vlog(msgBus, detail::stack_log_args<Args...>{
-                                            message, sev, span_context{},
-                                            location, args...});
+        log_context logCtx(msgBus);
+        return detail::vlog(logCtx, detail::stack_log_args<Args...>{
+                                            message, sev, location, args...});
     }
     template <typename... Args>
         requires(... && loggable<Args>)
@@ -59,9 +63,27 @@ inline constexpr struct log_fn
             return oc::success();
         }
 
-        return detail::vlog(*msgBus, detail::stack_log_args<Args...>{
-                                             message, sev, scope.context(),
-                                             location, args...});
+        log_context logCtx(*msgBus, &scope);
+        return detail::vlog(logCtx, detail::stack_log_args<Args...>{
+                                            message, sev, location, args...});
+    }
+
+    template <typename... Args>
+        requires(... && loggable<Args>)
+    [[nodiscard]] auto
+    operator()(log_context const &ctx,
+               severity sev,
+               fmt::format_string<reification_type_of_t<Args>...> message,
+               detail::log_location location,
+               Args const &...args) const noexcept -> result<void>
+    {
+        if (sev < ctx.threshold()) [[unlikely]]
+        {
+            return oc::success();
+        }
+
+        return detail::vlog(ctx, detail::stack_log_args<Args...>{
+                                         message, sev, location, args...});
     }
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT

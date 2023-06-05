@@ -10,26 +10,26 @@
 namespace dplx::dlog
 {
 
-auto bufferbus_handle::do_allocate_span_context() noexcept -> span_context
+auto bufferbus_handle::do_create_span_context(std::string_view name,
+                                              severity &thresholdOut) noexcept
+        -> span_context
 {
-    auto const traceId = bufferbus_handle::do_allocate_trace_id();
-    return {traceId, bufferbus_handle::do_allocate_span_id(traceId)};
+    return create_span_context(trace_id::random(), name, thresholdOut);
 }
-auto bufferbus_handle::do_allocate_trace_id() noexcept -> trace_id
-{
-    return trace_id::random();
-}
-auto bufferbus_handle::do_allocate_span_id(trace_id trace) noexcept -> span_id
+auto bufferbus_handle::do_create_span_context(trace_id trace,
+                                              std::string_view,
+                                              severity &) noexcept
+        -> span_context
 {
     if (trace == trace_id::invalid())
     {
-        return span_id::invalid();
+        return span_context{};
     }
 
     auto const ctr = mSpanPrngCtr++;
     auto const rawTraceId = std::bit_cast<std::array<std::uint64_t, 2>>(trace);
 
-    return detail::derive_span_id(rawTraceId[0], rawTraceId[1], ctr);
+    return {trace, detail::derive_span_id(rawTraceId[0], rawTraceId[1], ctr)};
 }
 
 } // namespace dplx::dlog

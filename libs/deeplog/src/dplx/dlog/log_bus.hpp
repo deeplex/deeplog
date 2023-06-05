@@ -36,7 +36,7 @@ using bus_output_buffer = record_output_buffer;
 using output_buffer_storage = record_output_buffer_storage;
 using bus_output_guard = record_output_guard;
 
-class bus_handle
+class bus_handle : public log_record_port
 {
 public:
     severity threshold{default_threshold};
@@ -58,53 +58,26 @@ protected:
     }
 
 public:
-    DPLX_ATTR_FORCE_INLINE auto
-    create_output_buffer_inplace(output_buffer_storage &bufferPlacementStorage,
-                                 std::size_t messageSize,
-                                 span_id spanId) noexcept
-            -> result<bus_output_buffer *>
-    {
-        return do_create_output_buffer_inplace(bufferPlacementStorage,
-                                               messageSize, spanId);
-    }
-
     [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto allocate_span_context() noexcept
             -> span_context
     {
-        return do_allocate_span_context();
-    }
-    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto allocate_trace_id() noexcept
-            -> trace_id
-    {
-        return do_allocate_trace_id();
+        severity dummy{};
+        return create_span_context("", dummy);
     }
     [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto
     allocate_span_id(trace_id trace) noexcept -> span_id
     {
-        return do_allocate_span_id(trace);
+        severity dummy{};
+        return create_span_context(trace, "", dummy).spanId;
     }
 
     template <dp::encodable T>
     auto write(span_id sid, T const &msg) noexcept -> result<void>
     {
-        auto const msgSize = dp::encoded_size_of(msg);
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        output_buffer_storage outStorage;
-        DPLX_TRY(auto *out,
-                 do_create_output_buffer_inplace(outStorage, msgSize, sid));
-        bus_output_guard outGuard{*out};
-        return dp::encode(*out, msg);
+        return enqueue_message(*this, sid, msg);
     }
 
 private:
-    virtual auto do_create_output_buffer_inplace(
-            output_buffer_storage &bufferPlacementStorage,
-            std::size_t messageSize,
-            span_id spanId) noexcept -> result<bus_output_buffer *>
-            = 0;
-    virtual auto do_allocate_span_context() noexcept -> span_context = 0;
-    virtual auto do_allocate_trace_id() noexcept -> trace_id = 0;
-    virtual auto do_allocate_span_id(trace_id trace) noexcept -> span_id = 0;
 };
 
 } // namespace dplx::dlog

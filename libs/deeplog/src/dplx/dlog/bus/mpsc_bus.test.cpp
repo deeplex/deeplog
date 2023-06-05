@@ -60,7 +60,7 @@ TEST_CASE("mpsc_bus can be filled and drained")
         // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
         dlog::bus_output_buffer *out;
         if (auto createRx
-            = bufferbus.create_output_buffer_inplace(outStorage, size, {});
+            = bufferbus.allocate_record_buffer_inplace(outStorage, size, {});
             createRx.has_value())
         {
             out = createRx.assume_value();
@@ -122,8 +122,8 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
                 = static_cast<unsigned>(dplx::dp::encoded_size_of(i));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
         dlog::output_buffer_storage outStorage;
-        DPLX_TRY(auto *outStream,
-                 bus.create_output_buffer_inplace(outStorage, encodedSize, {}));
+        DPLX_TRY(auto *outStream, bus.allocate_record_buffer_inplace(
+                                          outStorage, encodedSize, {}));
 
         dlog::bus_output_guard busLock(*outStream);
         DPLX_TRY(dplx::dp::encode(*outStream, i));
