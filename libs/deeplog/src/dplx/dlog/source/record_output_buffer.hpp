@@ -10,6 +10,7 @@
 #include <cstddef>
 
 #include <dplx/cncr/utils.hpp>
+#include <dplx/dp.hpp>
 #include <dplx/dp/streams/output_buffer.hpp>
 
 namespace dplx::dlog
@@ -59,5 +60,22 @@ public:
     {
     }
 };
+
+inline constexpr struct enqueue_message_fn
+{
+    template <dp::encodable T>
+    inline auto operator()(log_record_port &destination,
+                           span_id sid,
+                           T const &msg) const noexcept -> result<void>
+    {
+        auto const msgSize = dp::encoded_size_of(msg);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        record_output_buffer_storage outStorage;
+        DPLX_TRY(auto *out, destination.allocate_record_buffer_inplace(
+                                    outStorage, msgSize, sid));
+        record_output_guard outGuard{*out};
+        return dp::encode(*out, msg);
+    }
+} enqueue_message{};
 
 } // namespace dplx::dlog

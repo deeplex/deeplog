@@ -224,25 +224,21 @@ private:
             std::size_t messageSize,
             span_id spanId) noexcept -> result<record_output_buffer *> override
     {
-        return mBus.create_output_buffer_inplace(bufferPlacementStorage,
-                                                 messageSize, spanId);
+        return mBus.allocate_record_buffer_inplace(bufferPlacementStorage,
+                                                   messageSize, spanId);
     }
     auto do_create_span_context(std::string_view name,
                                 severity &thresholdOut) noexcept
             -> span_context override
     {
-        thresholdOut = default_threshold;
-        (void)name;
-        return mBus.allocate_span_context();
+        return mBus.create_span_context(name, thresholdOut);
     }
     auto do_create_span_context(trace_id id,
                                 std::string_view name,
                                 severity &thresholdInOut) noexcept
             -> span_context override
     {
-        (void)name;
-        (void)thresholdInOut;
-        return {id, mBus.allocate_span_id(id)};
+        return mBus.create_span_context(id, name, thresholdInOut);
     }
 };
 

@@ -69,7 +69,6 @@ public:
     fmt::string_view message;
     detail::any_loggable_ref_storage const *message_parts;
     detail::any_loggable_ref_storage_id const *part_types;
-    span_context owner;
     log_location location;
     std::uint_least16_t num_arguments;
     severity sev;
@@ -87,14 +86,12 @@ public:
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     stack_log_args(fmt::string_view msg,
                    severity xsev,
-                   span_context ctxId,
                    detail::log_location loc,
                    Args const &...args)
         : log_args(log_args{
                 msg,
                 values,
                 types,
-                ctxId,
                 loc,
                 static_cast<std::uint_least16_t>(sizeof...(Args)),
                 xsev,
@@ -116,13 +113,11 @@ class stack_log_args<> : public log_args
 public:
     stack_log_args(fmt::string_view msg,
                    severity xsev,
-                   span_context ctxId,
                    detail::log_location loc)
         : log_args(log_args{
                 msg,
                 nullptr,
                 nullptr,
-                ctxId,
                 loc,
                 0U,
                 xsev,

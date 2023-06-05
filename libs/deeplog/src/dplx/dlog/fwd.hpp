@@ -16,4 +16,7 @@ class bus_handle;
 
 class span_scope;
 
+class log_context;
+class log_record_port;
+
 } // namespace dplx::dlog

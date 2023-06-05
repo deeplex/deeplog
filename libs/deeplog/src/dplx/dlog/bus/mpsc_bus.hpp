@@ -168,9 +168,12 @@ public:
     static constexpr unsigned consume_batch_size = 64U;
 
 private:
-    auto do_allocate_span_context() noexcept -> span_context override;
-    auto do_allocate_trace_id() noexcept -> trace_id override;
-    auto do_allocate_span_id(trace_id trace) noexcept -> span_id override;
+    auto do_create_span_context(std::string_view name,
+                                severity &thresholdOut) noexcept
+            -> span_context override;
+    auto do_create_span_context(trace_id trace,
+                                std::string_view,
+                                severity &) noexcept -> span_context override;
 
 public:
     class output_buffer final : public bus_output_buffer
@@ -304,7 +307,7 @@ private:
         return oc::success();
     }
 
-    auto do_create_output_buffer_inplace(
+    auto do_allocate_record_buffer_inplace(
             output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
             span_id spanId) noexcept -> result<bus_output_buffer *> override

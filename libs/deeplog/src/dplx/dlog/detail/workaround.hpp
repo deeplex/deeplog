@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <dplx/predef/compiler/visualc.h>
 #include <dplx/predef/library/std.h>
 #include <dplx/predef/version_number.h>
 #include <dplx/predef/workaround.h>
@@ -35,3 +36,8 @@
 // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108952
 #define DPLX_DLOG_WORKAROUND_ISSUE_LIBSTDCPP_108952                            \
     DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_LIB_STD_GNU, 12, 2, 0)
+
+// msvc fails to constinit thread_local variables with a constexpr constructor
+// https://developercommunity.visualstudio.com/t/C:-constinit-for-an-optional-fails-if/1406069
+#define DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069                              \
+    DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_COMP_MSVC, 19, 36, 32532)
