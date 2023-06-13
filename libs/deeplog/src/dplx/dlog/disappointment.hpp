@@ -53,8 +53,23 @@ enum class [[nodiscard]] errc
     LIMIT,
 };
 
+// we use a distinct policy type in order to shorten the symbol length
+template <typename T>
+struct status_throw_policy
+    : oc::experimental::policy::status_code_throw<
+              T,
+              system_error::errored_status_code<system_error::erased<
+                      typename system_error::system_code::value_type>>,
+              void>
+{
+};
+
 template <typename R>
-using result = oc::experimental::status_result<R>;
+using result = oc::experimental::status_result<
+        R,
+        system_error::errored_status_code<system_error::erased<
+                typename system_error::system_code::value_type>>,
+        status_throw_policy<R>>;
 
 template <typename R>
 using pure_result = oc::experimental::status_result<R, errc>;

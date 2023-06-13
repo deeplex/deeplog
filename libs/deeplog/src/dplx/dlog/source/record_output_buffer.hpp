@@ -66,7 +66,7 @@ inline constexpr struct enqueue_message_fn
     template <dp::encodable T>
     inline auto operator()(log_record_port &destination,
                            span_id sid,
-                           T const &msg) const noexcept -> result<void>
+                           T const &msg) const noexcept -> dp::result<void>
     {
         auto const msgSize = dp::encoded_size_of(msg);
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)

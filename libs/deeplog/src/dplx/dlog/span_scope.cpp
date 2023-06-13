@@ -288,7 +288,8 @@ auto span_scope::send_close_msg() noexcept -> result<void>
             .id = mId,
             .timestamp = log_clock::now(),
     };
-    return mBus->write(mId.spanId, msg);
+    DPLX_TRY(mBus->write(mId.spanId, msg));
+    return oc::success();
 }
 
 } // namespace dplx::dlog
