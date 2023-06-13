@@ -46,7 +46,8 @@ public:
         : mTargetPort{}
         , mCurrentSpan{}
         , mInstrumentationScope{}
-        , mThresholdCache{0xffU}
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+        , mThresholdCache{0x7f}
     {
     }
     explicit log_context(scope_name name) noexcept
@@ -79,6 +80,11 @@ public:
             -> span_scope const *
     {
         return mCurrentSpan;
+    }
+    DPLX_ATTR_FORCE_INLINE constexpr auto instrumentation_scope() const noexcept
+            -> std::string_view
+    {
+        return mInstrumentationScope;
     }
 };
 
