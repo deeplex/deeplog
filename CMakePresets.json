@@ -15,6 +15,7 @@
             "cacheVariables": {
                 "BUILD_TESTING": true,
                 "BUILD_EXAMPLES": true,
+                "DPLX_DLOG_USE_SOURCE_LOCATION": true,
                 "WARNINGS_AS_ERRORS": true,
                 "CMAKE_DEBUG_POSTFIX": "-dbg",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/zinstall"
@@ -50,8 +51,7 @@
                 "x64-windows"
             ],
             "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "cl",
-                "DPLX_DLOG_USE_SOURCE_LOCATION": true
+                "CMAKE_CXX_COMPILER": "cl"
             }
         },
         {
@@ -74,6 +74,7 @@
                 "x64-windows"
             ],
             "cacheVariables": {
+                "DPLX_DLOG_USE_SOURCE_LOCATION": false,
                 "CMAKE_DEBUG_POSTFIX": "-ClangDebug",
                 "CMAKE_RELWITHDEBINFO_POSTFIX": "-Clang",
                 "CMAKE_CXX_COMPILER": "clang-cl"
@@ -95,8 +96,7 @@
                 "base"
             ],
             "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-linux",
-                "DPLX_DLOG_USE_SOURCE_LOCATION": true
+                "VCPKG_TARGET_TRIPLET": "x64-linux"
             },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
