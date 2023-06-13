@@ -18,7 +18,7 @@
 thread_local constinit dplx::dlog::span_scope const
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
         *dplx::dlog::detail::active_span{};
-#endif
+#endif // ^^^ !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT ^^^
 
 namespace dplx::dlog::detail
 {
@@ -29,6 +29,10 @@ void deactivate_span() noexcept
     active_span = active_span->parent_scope();
 }
 #endif
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+
+#if defined(DPLX_OS_WINDOWS_AVAILABLE)
 
 #if DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069
 
@@ -50,8 +54,13 @@ static_assert(std::is_layout_compatible_v<log_context, log_context_>);
 static_assert(std::is_layout_compatible_v<log_context_, log_context>);
 #endif
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static thread_local constinit log_context_ active_context_{
-        nullptr, nullptr, {}, severity{0xffU}};
+        nullptr,
+        nullptr,
+        {},
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+        severity{0x7fU}};
 
 auto active_context() noexcept -> log_context
 {
@@ -64,6 +73,7 @@ void active_context(log_context nextActiveContext) noexcept
 
 #else // ^^^ workaround DevCom-1406069 / no workaround vvv
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static thread_local constinit log_context active_context_{};
 
 auto active_context() noexcept -> log_context
@@ -76,5 +86,14 @@ void active_context(log_context nextActiveContext) noexcept
 }
 
 #endif // ^^^ no workaround ^^^
+
+#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+thread_local constinit log_context active_context_{};
+
+#endif // ^^^ no workaround ^^^
+
+#endif // ^^^ !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT ^^^
 
 } // namespace dplx::dlog::detail
