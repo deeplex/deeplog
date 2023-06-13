@@ -179,7 +179,7 @@ private:
         return dp::oc::success();
     }
 
-    auto read_next_chunk() -> result<void>
+    auto read_next_chunk() -> dp::result<void>
     {
         if (mBufferAllocation.size() == 0U)
         {

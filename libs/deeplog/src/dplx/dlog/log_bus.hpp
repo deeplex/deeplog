@@ -72,7 +72,7 @@ public:
     }
 
     template <dp::encodable T>
-    auto write(span_id sid, T const &msg) noexcept -> result<void>
+    auto write(span_id sid, T const &msg) noexcept -> dp::result<void>
     {
         return enqueue_message(*this, sid, msg);
     }
