@@ -21,6 +21,7 @@
 #include <dplx/dp/codecs/auto_tuple.hpp>
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/codecs/std-string.hpp>
+#include <dplx/dp/items/parse_core.hpp>
 
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/attribute_transmorpher.hpp>
@@ -35,6 +36,7 @@ class record
 {
 public:
     dlog::severity severity;
+    std::string instrumentationScope;
     span_context context;
     std::uint64_t timestamp; // FIXME: correct timestamp type
     std::string message;
@@ -84,7 +86,20 @@ public:
         // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
         DPLX_TRY(decode(ctx, value.severity));
-        DPLX_TRY(decode(ctx, value.context));
+        DPLX_TRY(auto &&contextHead, dp::parse_item_head(ctx));
+        if (contextHead.type != dp::type_code::array || contextHead.value > 3U)
+        {
+            return dp::errc::item_type_mismatch;
+        }
+        if ((contextHead.value & 1U) != 0U)
+        {
+            DPLX_TRY(dp::decode(ctx, value.instrumentationScope));
+        }
+        if ((contextHead.value & 2U) != 0U)
+        {
+            DPLX_TRY(decode(ctx, value.context.traceId));
+            DPLX_TRY(decode(ctx, value.context.spanId));
+        }
         DPLX_TRY(decode(ctx, value.timestamp));
         DPLX_TRY(dp::parse_text_finite(ctx, value.message));
 
@@ -156,6 +171,7 @@ private:
     {
         auto &record = records.emplace_back(
                 dlog::record{.severity = dlog::severity::none,
+                             .instrumentationScope = {},
                              .context = {},
                              .timestamp = {},
                              .message = {},

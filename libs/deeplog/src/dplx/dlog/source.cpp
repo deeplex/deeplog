@@ -219,9 +219,15 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     auto encodedSize
             = static_cast<unsigned>(encodedArraySize + encodedMetaSize);
 
-    auto const owner = logCtx.span();
-    auto const ownerId = owner == nullptr ? span_context{} : owner->context();
-    encodedSize += static_cast<unsigned>(dp::encoded_size_of(sizeCtx, ownerId));
+    encodedSize += /* ctx array/tuple prefix */ 1U;
+    auto const instrumentationScope = logCtx.instrumentation_scope();
+    encodedSize += instrumentationScope.size() == 0
+                         ? 0U
+                         : static_cast<unsigned>(dp::item_size_of_u8string(
+                                 sizeCtx, instrumentationScope.size()));
+    auto const *const owner = logCtx.span();
+    auto const ownerId = owner != nullptr ? owner->context() : span_context{};
+    encodedSize += owner == nullptr ? 0U : 17U + 9U;
 
     encodedSize += static_cast<unsigned>(
             dp::item_size_of_u8string(sizeCtx, args.message.size()));
@@ -266,7 +272,23 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     *ctx.out.data()
             = static_cast<std::byte>(static_cast<unsigned>(args.sev) - 1U);
     ctx.out.commit_written(1U);
-    (void)dp::encode(ctx, ownerId);
+
+    // logCtx
+    *ctx.out.data() = static_cast<std::byte>(
+            static_cast<unsigned>(dp::type_code::array)
+            | (instrumentationScope.data() != nullptr ? 1U : 0U)
+            | (owner != nullptr ? 2U : 0U));
+    ctx.out.commit_written(1U);
+    if (instrumentationScope.data() != nullptr)
+    {
+        (void)dp::emit_u8string(ctx, instrumentationScope.data(),
+                                instrumentationScope.size());
+    }
+    if (owner != nullptr)
+    {
+        (void)dp::encode(ctx, ownerId.traceId);
+        (void)dp::encode(ctx, ownerId.spanId);
+    }
 
     // timestamp
     *ctx.out.data() = static_cast<std::byte>(27U); // NOLINT
