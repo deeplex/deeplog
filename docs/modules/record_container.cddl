@@ -24,7 +24,10 @@ entry = record / span_start / span_end
 
 record = [
     severity,
-    span_context / null,
+    ctx: [
+        ? name: dupe_tstr,
+        ? ( trace_id, span_id ),
+    ],
     timestamp,
     message: dupe_tstr,
     fmtArgs: [* any],
