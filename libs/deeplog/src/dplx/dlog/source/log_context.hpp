@@ -36,34 +36,32 @@ public:
 
 class log_context
 {
-    log_record_port *mTargetPort;
-    span_scope const *mCurrentSpan;
-    std::string_view mInstrumentationScope;
     severity mThresholdCache;
+    log_record_port *mTargetPort;
+    std::string_view mInstrumentationScope;
+    span_context mCurrentSpan;
 
 public:
     constexpr log_context() noexcept
-        : mTargetPort{}
-        , mCurrentSpan{}
+        : mThresholdCache{detail::disable_threshold}
+        , mTargetPort{}
         , mInstrumentationScope{}
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-        , mThresholdCache{0x7f}
+        , mCurrentSpan{}
     {
     }
     explicit log_context(scope_name name) noexcept
-        : mTargetPort{}
-        , mCurrentSpan{}
+        : mThresholdCache{detail::disable_threshold}
+        , mTargetPort{}
         , mInstrumentationScope(name)
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-        , mThresholdCache{0x7f}
+        , mCurrentSpan{}
     {
     }
     explicit log_context(log_record_port &targetPort,
-                         span_scope const *span = nullptr)
-        : mTargetPort(&targetPort)
-        , mCurrentSpan(span)
+                         span_context span = span_context{})
+        : mThresholdCache{}
+        , mTargetPort(&targetPort)
         , mInstrumentationScope{}
-        , mThresholdCache{}
+        , mCurrentSpan(span)
     {
     }
 
@@ -76,8 +74,7 @@ public:
     {
         return mThresholdCache;
     }
-    DPLX_ATTR_FORCE_INLINE constexpr auto span() const noexcept
-            -> span_scope const *
+    DPLX_ATTR_FORCE_INLINE constexpr auto span() const noexcept -> span_context
     {
         return mCurrentSpan;
     }

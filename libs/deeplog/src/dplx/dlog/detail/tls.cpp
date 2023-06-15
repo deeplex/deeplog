@@ -43,10 +43,10 @@ struct most_trivial_string_view
 };
 struct log_context_
 {
-    log_record_port *mTargetPort;
-    span_scope const *scope;
-    most_trivial_string_view x;
     severity mThresholdCache;
+    log_record_port *mTargetPort;
+    most_trivial_string_view mInstrumentationScope;
+    span_context mCurrentSpan;
 };
 
 #if __cpp_lib_is_layout_compatible >= 201907L
@@ -56,11 +56,11 @@ static_assert(std::is_layout_compatible_v<log_context_, log_context>);
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static thread_local constinit log_context_ active_context_{
-        nullptr,
+        disable_threshold,
         nullptr,
         {},
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-        severity{0x7fU}};
+        {},
+};
 
 auto active_context() noexcept -> log_context
 {
