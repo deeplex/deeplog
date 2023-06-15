@@ -39,6 +39,11 @@ enum class severity : unsigned
 };
 inline constexpr severity default_threshold = severity::warn;
 
+namespace detail
+{
+inline constexpr severity disable_threshold{0x19};
+}
+
 struct trace_id
 {
     static constexpr std::size_t state_size = 16;

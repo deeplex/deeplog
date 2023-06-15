@@ -225,9 +225,9 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
                          ? 0U
                          : static_cast<unsigned>(dp::item_size_of_u8string(
                                  sizeCtx, instrumentationScope.size()));
-    auto const *const owner = logCtx.span();
-    auto const ownerId = owner != nullptr ? owner->context() : span_context{};
-    encodedSize += owner == nullptr ? 0U : 17U + 9U;
+    auto const ownerId = logCtx.span();
+    auto const hasOwnerSpan = ownerId.spanId != span_id::invalid();
+    encodedSize += hasOwnerSpan ? 0U : 17U + 9U;
 
     encodedSize += static_cast<unsigned>(
             dp::item_size_of_u8string(sizeCtx, args.message.size()));
@@ -271,20 +271,19 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     // severity
     *ctx.out.data()
             = static_cast<std::byte>(static_cast<unsigned>(args.sev) - 1U);
-    ctx.out.commit_written(1U);
 
     // logCtx
-    *ctx.out.data() = static_cast<std::byte>(
+    ctx.out.data()[1] = static_cast<std::byte>(
             static_cast<unsigned>(dp::type_code::array)
             | (instrumentationScope.data() != nullptr ? 1U : 0U)
-            | (owner != nullptr ? 2U : 0U));
-    ctx.out.commit_written(1U);
+            | (hasOwnerSpan ? 2U : 0U));
+    ctx.out.commit_written(2U);
     if (instrumentationScope.data() != nullptr)
     {
         (void)dp::emit_u8string(ctx, instrumentationScope.data(),
                                 instrumentationScope.size());
     }
-    if (owner != nullptr)
+    if (hasOwnerSpan)
     {
         (void)dp::encode(ctx, ownerId.traceId);
         (void)dp::encode(ctx, ownerId.spanId);

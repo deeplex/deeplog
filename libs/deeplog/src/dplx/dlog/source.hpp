@@ -63,7 +63,7 @@ inline constexpr struct log_fn
             return oc::success();
         }
 
-        log_context logCtx(*msgBus, &scope);
+        log_context logCtx(*msgBus, scope.context());
         return detail::vlog(logCtx, detail::stack_log_args<Args...>{
                                             message, sev, location, args...});
     }
