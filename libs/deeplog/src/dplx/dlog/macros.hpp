@@ -48,29 +48,6 @@
 
 #if _MSVC_TRADITIONAL
 
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-#define DLOG_GENERIC(severity, message, ...)                                   \
-    do                                                                         \
-    { /* due to shadowing this name isn't required to be unique */             \
-        if (auto &&_dlog_materialized_temporary_                               \
-            = (::dplx::dlog::detail::active_span);                             \
-            _dlog_materialized_temporary_ != nullptr                           \
-            && (severity) >= _dlog_materialized_temporary_->threshold)         \
-            (void)::dplx::dlog::log(*_dlog_materialized_temporary_,            \
-                                    (severity), (message), DPLX_DLOG_LOCATION, \
-                                    __VA_ARGS__);                              \
-    } while (0)
-#endif
-#define DLOG_GENERIC_EX(ctx, severity, message, ...)                           \
-    do                                                                         \
-    { /* due to shadowing this name isn't required to be unique */             \
-        if (auto &&_dlog_materialized_temporary_ = (ctx);                      \
-            (severity) >= _dlog_materialized_temporary_.threshold)             \
-            (void)::dplx::dlog::log(_dlog_materialized_temporary_, (severity), \
-                                    (message), DPLX_DLOG_LOCATION,             \
-                                    __VA_ARGS__);                              \
-    } while (0)
-
 #define DLOG_TO(ctx, severity, message, ...)                                   \
     do                                                                         \
     { /* due to shadowing this name isn't required to be unique */             \
@@ -88,29 +65,6 @@
 #endif
 
 #else // _MSVC_TRADITIONAL
-
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-#define DLOG_GENERIC(severity, message, ...)                                   \
-    do                                                                         \
-    { /* due to shadowing this name isn't required to be unique */             \
-        if (auto &&_dlog_materialized_temporary_                               \
-            = (::dplx::dlog::detail::active_span);                             \
-            _dlog_materialized_temporary_ != nullptr                           \
-            && (severity) >= _dlog_materialized_temporary_->threshold)         \
-            (void)::dplx::dlog::log(                                           \
-                    *_dlog_materialized_temporary_, (severity), (message),     \
-                    DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
-    } while (0)
-#endif
-#define DLOG_GENERIC_EX(ctx, severity, message, ...)                           \
-    do                                                                         \
-    { /* due to shadowing this name isn't required to be unique */             \
-        if (auto &&_dlog_materialized_temporary_ = (ctx);                      \
-            (severity) >= _dlog_materialized_temporary_.threshold)             \
-            (void)::dplx::dlog::log(                                           \
-                    _dlog_materialized_temporary_, (severity), (message),      \
-                    DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
-    } while (0)
 
 #define DLOG_TO(ctx, severity, message, ...)                                   \
     do                                                                         \
@@ -130,36 +84,6 @@
 #endif
 
 #endif // _MSVC_TRADITIONAL
-
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-
-#define DLOG_FATAL(message, ...)                                               \
-    DLOG_GENERIC(::dplx::dlog::severity::fatal, message, __VA_ARGS__)
-#define DLOG_ERROR(message, ...)                                               \
-    DLOG_GENERIC(::dplx::dlog::severity::error, message, __VA_ARGS__)
-#define DLOG_WARN(message, ...)                                                \
-    DLOG_GENERIC(::dplx::dlog::severity::warn, message, __VA_ARGS__)
-#define DLOG_INFO(message, ...)                                                \
-    DLOG_GENERIC(::dplx::dlog::severity::info, message, __VA_ARGS__)
-#define DLOG_DEBUG(message, ...)                                               \
-    DLOG_GENERIC(::dplx::dlog::severity::debug, message, __VA_ARGS__)
-#define DLOG_TRACE(message, ...)                                               \
-    DLOG_GENERIC(::dplx::dlog::severity::trace, message, __VA_ARGS__)
-
-#endif
-
-#define DLOG_FATAL_EX(ctx, message, ...)                                       \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::fatal, message, __VA_ARGS__)
-#define DLOG_ERROR_EX(ctx, message, ...)                                       \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::error, message, __VA_ARGS__)
-#define DLOG_WARN_EX(ctx, message, ...)                                        \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::warn, message, __VA_ARGS__)
-#define DLOG_INFO_EX(ctx, message, ...)                                        \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::info, message, __VA_ARGS__)
-#define DLOG_DEBUG_EX(ctx, message, ...)                                       \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::debug, message, __VA_ARGS__)
-#define DLOG_TRACE_EX(ctx, message, ...)                                       \
-    DLOG_GENERIC_EX(ctx, ::dplx::dlog::severity::trace, message, __VA_ARGS__)
 
 ////////////////////////////////////////////////////////////////////////////////
 // span scope macros

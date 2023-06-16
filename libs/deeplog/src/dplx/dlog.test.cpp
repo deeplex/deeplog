@@ -48,7 +48,8 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     auto *sink = core.attach_sink(std::make_unique<sink_type>(
             dlog::severity::info, std::move(sinkBackendOpenRx).assume_value()));
 
-    DLOG_WARN_EX(core.connector(), "important msg with arg {}", 1);
+    dlog::log_context ctx(core);
+    DLOG_TO(ctx, dlog::severity::warn, "important msg with arg {}", 1);
     // DLOG_GENERIC(xlog, dlog::severity::warn,
     //              "important msg with arg {} and {}", 1, dlog::arg("argx",
     //              2));
