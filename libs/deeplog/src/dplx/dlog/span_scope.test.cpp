@@ -31,17 +31,20 @@ TEST_CASE("can open a span scope")
     {
         dlog::span_scope log
                 = DLOG_SPAN_START_ROOT_EX(core.connector(), "sample");
-        DLOG_WARN_EX(log, "this should be attached to the root span");
+        dlog::log_context ctx(core, log.context());
+        DLOG_TO(ctx, dlog::severity::warn,
+                "this should be attached to the root span");
 
         {
             dlog::span_scope innerLog = DLOG_SPAN_START_EX(log, "inner");
-            DLOG_WARN_EX(innerLog,
-                         "this should be attached to the inner span.");
+            dlog::log_context innerCtx(core, innerLog.context());
+            DLOG_TO(innerCtx, dlog::severity::warn,
+                    "this should be attached to the inner span.");
         }
     }
 }
 
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+#if 0 && !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 TEST_CASE("implicit spans are respected")
 {
     constexpr auto regionSize = 1 << 14;

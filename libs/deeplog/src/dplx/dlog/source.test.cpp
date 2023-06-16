@@ -89,9 +89,9 @@ TEST_CASE("The logger can write a message")
     constexpr auto regionSize = 1 << 14;
     dlog::core core{
             dlog::mpsc_bus(test_dir, "t1.dmsb", 4U, regionSize).value()};
+    dlog::log_context ctx{core};
 
-    DLOG_GENERIC_EX(core.connector(), dlog::severity::warn,
-                    "important msg without arg");
+    DLOG_TO(ctx, dlog::severity::warn, "important msg without arg");
 
     auto retireRx = core.retire_log_records();
     REQUIRE(retireRx);
@@ -102,9 +102,10 @@ TEST_CASE("The logger can write a message with an int and a string")
     constexpr auto regionSize = 1 << 14;
     dlog::core core{
             dlog::mpsc_bus(test_dir, "t2.dmsb", 4U, regionSize).value()};
+    dlog::log_context ctx{core};
 
-    DLOG_GENERIC_EX(core.connector(), dlog::severity::warn,
-                    "important msg with arg {} and {}", 1, "it's me Mario");
+    DLOG_TO(ctx, dlog::severity::warn, "important msg with arg {} and {}", 1,
+            "it's me Mario");
 
     auto retireRx = core.retire_log_records();
     REQUIRE(retireRx);
@@ -115,9 +116,10 @@ TEST_CASE("The logger can write a message with a custom type")
     constexpr auto regionSize = 1 << 14;
     dlog::core core{
             dlog::mpsc_bus(test_dir, "t3.dmsb", 4U, regionSize).value()};
+    dlog::log_context ctx{core};
 
-    DLOG_GENERIC_EX(core.connector(), dlog::severity::warn,
-                    "important msg with arg {}", custom_loggable{});
+    DLOG_TO(ctx, dlog::severity::warn, "important msg with arg {}",
+            custom_loggable{});
 
     auto retireRx = core.retire_log_records();
     REQUIRE(retireRx);

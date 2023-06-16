@@ -59,9 +59,9 @@ public:
 
 inline void do_output()
 {
-    DLOG_WARN("important msg with arg {}", 1);
-    DLOG_INFO("here happens something else");
-    DLOG_ERROR("oh no something bad happened");
+    DLOG_(warn, "important msg with arg {}", 1);
+    DLOG_(info, "here happens something else");
+    DLOG_(error, "oh no something bad happened");
 
     // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
     jsf_engine gen(0xdead'beefU);
@@ -70,19 +70,19 @@ inline void do_output()
     {
         if (auto v = gen(); (v & 0x800'0000U) != 0)
         {
-            DLOG_WARN("{} is a pretty big number", v);
+            DLOG_(warn, "{} is a pretty big number", v);
         }
         if (auto v = gen(); (v & 1U) != 0)
         {
-            DLOG_INFO("{} is a real oddity", v);
+            DLOG_(info, "{} is a real oddity", v);
         }
-        DLOG_DEBUG("I'm still alive");
+        DLOG_(debug, "I'm still alive");
         if (auto v = gen(); (v & 0x7) == 0x7)
         {
-            DLOG_ERROR("this is not good");
+            DLOG_(error, "this is not good");
         }
     }
-    DLOG_FATAL("this is the end");
+    DLOG_(fatal, "this is the end");
     // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 }
 
