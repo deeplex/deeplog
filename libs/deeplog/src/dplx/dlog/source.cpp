@@ -227,6 +227,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
                                  sizeCtx, instrumentationScope.size()));
     auto const ownerId = logCtx.span();
     auto const hasOwnerSpan = ownerId.spanId != span_id::invalid();
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
     encodedSize += hasOwnerSpan ? 0U : 17U + 9U;
 
     encodedSize += static_cast<unsigned>(
