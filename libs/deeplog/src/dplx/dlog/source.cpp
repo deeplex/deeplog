@@ -221,7 +221,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
 
     encodedSize += /* ctx array/tuple prefix */ 1U;
     auto const instrumentationScope = logCtx.instrumentation_scope();
-    encodedSize += instrumentationScope.size() == 0
+    encodedSize += instrumentationScope.empty()
                          ? 0U
                          : static_cast<unsigned>(dp::item_size_of_u8string(
                                  sizeCtx, instrumentationScope.size()));
