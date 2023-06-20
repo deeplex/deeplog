@@ -5,7 +5,7 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include "dplx/dlog/span_scope.hpp"
+#include "dplx/dlog/source/span_scope.hpp"
 
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/auto_tuple.hpp>
@@ -16,15 +16,11 @@
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
+#include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/detail/tls.hpp>
-#include <dplx/dlog/log_bus.hpp>
-
-#if DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-#define DPLX_DLOG_ACTIVE_SPAN nullptr
-#else
-#define DPLX_DLOG_ACTIVE_SPAN ::dplx::dlog::detail::active_span
-#endif
+#include <dplx/dlog/source/log_record_port.hpp>
+#include <dplx/dlog/source/record_output_buffer.hpp>
 
 namespace dplx::dlog
 {
@@ -149,57 +145,74 @@ auto dplx::dp::codec<dplx::dlog::span_kind>::encode(
 namespace dplx::dlog
 {
 
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-auto span_scope::none(attach const mode) noexcept -> span_scope
+span_scope::span_scope(log_context *const ctx,
+                       span_context const id,
+                       severity const threshold) noexcept
+    : mSpanThreshold{threshold}
+    , mPreviousThreshold{ctx->threshold()}
+    , mContext{ctx}
+    , mId{id}
+    , mPreviousId{ctx->span()}
 {
-    if (auto const *prev = detail::active_span; prev != nullptr)
-    {
-        return none(*prev->bus(), mode);
-    }
-    return span_scope{};
+    ctx->span(id);
+    ctx->threshold(threshold);
+}
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+auto span_scope::none() noexcept -> span_scope
+{
+    return none(DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT);
 }
 #endif
-auto span_scope::none(bus_handle &targetBus, attach const mode) noexcept
+
+auto span_scope::none(log_context &ctx) noexcept -> span_scope
+{
+    auto *const port = ctx.port();
+    return span_scope(&ctx, span_context{},
+                      nullptr == port ? detail::disable_threshold
+                                      : port->default_threshold());
+}
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+auto span_scope::do_open(std::string_view name,
+                         span_kind kind,
+                         detail::attribute_args const &attrs) noexcept
         -> span_scope
 {
-    return {{}, targetBus, nullptr, targetBus.threshold, mode};
+    auto &&activeContext = DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT;
+    return do_open(activeContext, name, activeContext.span(), kind, attrs);
 }
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-auto span_scope::root(std::string_view const name,
-                      attach const mode,
-                      detail::attribute_args const &attrs,
-                      span_kind const kind) noexcept -> span_scope
+auto span_scope::do_open(std::string_view name,
+                         span_context parent,
+                         span_kind kind,
+                         detail::attribute_args const &attrs) noexcept
+        -> span_scope
 {
-    if (auto const *prev = detail::active_span; prev != nullptr)
-    {
-        return root(*prev->bus(), name, mode, attrs, kind);
-    }
-    return span_scope{};
-}
-auto span_scope::start(std::string_view const name,
-                       attach const mode,
-                       detail::attribute_args const &attrs,
-                       span_kind const kind) noexcept -> span_scope
-{
-    if (auto const *prev = detail::active_span; prev != nullptr)
-    {
-        return start(*prev->bus(), prev->context(), name, mode, attrs, kind);
-    }
-    return span_scope{};
+    return do_open(DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT, name, parent, kind,
+                   attrs);
 }
 #endif
-auto span_scope::root(bus_handle &targetBus,
-                      std::string_view const name,
-                      attach const mode,
-                      detail::attribute_args const &attrs,
-                      span_kind const kind) noexcept -> span_scope
+
+auto span_scope::do_open(log_context &ctx,
+                         std::string_view name,
+                         span_context parent,
+                         span_kind kind,
+                         detail::attribute_args const &attrs) noexcept
+        -> span_scope
 {
     using namespace std::string_view_literals;
+    auto *const port = ctx.port();
+    if (nullptr == port)
+    {
+        return span_scope{};
+    }
 
+    severity newThreshold = ctx.threshold();
     span_start_msg msg{
-            .id = targetBus.allocate_span_context(),
+            .id = ctx.port()->create_span_context(parent.traceId, name,
+                                                  newThreshold),
             .kind = kind,
-            .parent = {},
+            .parent = parent,
             .timestamp = {},
             .name = name.data() == nullptr ? ""sv : name,
             .links = {},
@@ -208,78 +221,12 @@ auto span_scope::root(bus_handle &targetBus,
     if (msg.id.traceId != trace_id::invalid())
     {
         msg.timestamp = log_clock::now();
-        if (targetBus.write(msg.id.spanId, msg).has_value())
+        if (enqueue_message(*ctx.port(), msg.id.spanId, msg).has_value())
         {
-            return {msg.id, targetBus, DPLX_DLOG_ACTIVE_SPAN,
-                    targetBus.threshold, mode};
+            return {&ctx, msg.id, newThreshold};
         }
     }
-
     return {};
-}
-auto span_scope::start(span_scope const &parent,
-                       std::string_view name,
-                       attach const mode,
-                       detail::attribute_args const &attrs,
-                       span_kind const kind) noexcept -> span_scope
-{
-    using namespace std::string_view_literals;
-    if (parent.mBus == nullptr)
-    {
-        return {};
-    }
-    if (parent.mId.traceId == trace_id::invalid())
-    {
-        return root(*parent.mBus, name, mode, attrs);
-    }
-
-    span_start_msg msg{
-            .id = {parent.mId.traceId,
-                   parent.mBus->allocate_span_id(parent.mId.traceId)},
-            .kind = kind,
-            .parent = parent.mId,
-            .timestamp = log_clock::now(),
-            .name = name.data() == nullptr ? ""sv : name,
-            .links = {},
-            .attributes = attrs,
-    };
-    if (parent.mBus->write(msg.id.spanId, msg).has_failure())
-    {
-        return {};
-    }
-
-    return {msg.id, *parent.mBus, DPLX_DLOG_ACTIVE_SPAN, parent.threshold,
-            mode};
-}
-auto span_scope::start(bus_handle &targetBus,
-                       span_context const parent,
-                       std::string_view const name,
-                       attach const mode,
-                       detail::attribute_args const &attrs,
-                       span_kind const kind) noexcept -> span_scope
-{
-    using namespace std::string_view_literals;
-    if (parent.traceId == trace_id::invalid())
-    {
-        return root(targetBus, name, mode, attrs);
-    }
-
-    span_start_msg msg{
-            .id = {parent.traceId, targetBus.allocate_span_id(parent.traceId)},
-            .kind = kind,
-            .parent = parent,
-            .timestamp = log_clock::now(),
-            .name = name.data() == nullptr ? ""sv : name,
-            .links = {},
-            .attributes = attrs,
-    };
-    if (targetBus.write(msg.id.spanId, msg).has_failure())
-    {
-        return {};
-    }
-
-    return {msg.id, targetBus, DPLX_DLOG_ACTIVE_SPAN, targetBus.threshold,
-            mode};
 }
 
 auto span_scope::send_close_msg() noexcept -> result<void>
@@ -288,7 +235,7 @@ auto span_scope::send_close_msg() noexcept -> result<void>
             .id = mId,
             .timestamp = log_clock::now(),
     };
-    DPLX_TRY(mBus->write(mId.spanId, msg));
+    DPLX_TRY(enqueue_message(*mContext->port(), mId.spanId, msg));
     return oc::success();
 }
 

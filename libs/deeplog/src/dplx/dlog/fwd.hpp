@@ -19,4 +19,11 @@ class span_scope;
 class log_context;
 class log_record_port;
 
+namespace detail
+{
+
+class attribute_args;
+
+}
+
 } // namespace dplx::dlog

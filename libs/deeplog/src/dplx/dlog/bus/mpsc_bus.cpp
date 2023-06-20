@@ -202,7 +202,7 @@ auto dplx::dlog::mpsc_bus_handle::do_create_span_context(trace_id trace,
 {
     if (trace == trace_id::invalid())
     {
-        return span_context{};
+        trace = trace_id::random();
     }
 
     auto const traceBlob

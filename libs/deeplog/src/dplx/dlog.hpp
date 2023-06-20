@@ -11,4 +11,4 @@
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/macros.hpp>
 #include <dplx/dlog/source.hpp>
-#include <dplx/dlog/span_scope.hpp>
+#include <dplx/dlog/source/span_scope.hpp>
