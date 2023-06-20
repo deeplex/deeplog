@@ -36,8 +36,8 @@ struct log_location
 };
 
 #if DPLX_DLOG_USE_SOURCE_LOCATION
-consteval auto make_location(std::source_location current
-                             = std::source_location::current()) -> log_location
+constexpr auto from_source_location(std::source_location const &current)
+        -> log_location
 {
     auto const filenameSize
             = std::char_traits<char>::length(current.file_name());
@@ -84,6 +84,25 @@ public:
     detail::any_loggable_ref_storage_id const types[sizeof...(Args)];
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+#if DPLX_DLOG_USE_SOURCE_LOCATION
+    stack_log_args(fmt::string_view msg,
+                   severity xsev,
+                   std::source_location const &loc,
+                   Args const &...args)
+        : log_args(log_args{
+                msg,
+                values,
+                types,
+                detail::from_source_location(loc),
+                static_cast<std::uint_least16_t>(sizeof...(Args)),
+                xsev,
+        })
+        , values{detail::any_loggable_ref_storage_type_of_t<
+                  detail::any_loggable_ref_storage_tag<Args>>(args)...}
+        , types{detail::any_loggable_ref_storage_tag<Args>...}
+    {
+    }
+#else
     stack_log_args(fmt::string_view msg,
                    severity xsev,
                    detail::log_location loc,
@@ -101,6 +120,7 @@ public:
         , types{detail::any_loggable_ref_storage_tag<Args>...}
     {
     }
+#endif
     // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 
     stack_log_args(stack_log_args const &) = delete;
@@ -111,6 +131,21 @@ template <>
 class stack_log_args<> : public log_args
 {
 public:
+#if DPLX_DLOG_USE_SOURCE_LOCATION
+    stack_log_args(fmt::string_view msg,
+                   severity xsev,
+                   std::source_location const &loc)
+        : log_args(log_args{
+                msg,
+                nullptr,
+                nullptr,
+                detail::from_source_location(loc),
+                0U,
+                xsev,
+        })
+    {
+    }
+#else
     stack_log_args(fmt::string_view msg,
                    severity xsev,
                    detail::log_location loc)
@@ -124,6 +159,7 @@ public:
         })
     {
     }
+#endif
 };
 
 } // namespace dplx::dlog::detail

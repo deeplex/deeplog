@@ -15,9 +15,7 @@
 #include <dplx/dlog/definitions.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
-#include <dplx/dlog/macros.hpp>
 #include <dplx/dlog/sink.hpp>
-#include <dplx/dlog/source.hpp>
 
 namespace dlog_ex
 {
