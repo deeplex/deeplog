@@ -8,10 +8,13 @@
 #pragma once
 
 #include <string_view>
+#include <utility>
 
 #include <dplx/cncr/utils.hpp>
+#include <dplx/predef/os/windows.h>
 
 #include <dplx/dlog/core/strong_types.hpp>
+#include <dplx/dlog/detail/workaround.hpp>
 #include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog
@@ -74,9 +77,18 @@ public:
     {
         return mThresholdCache;
     }
+    DPLX_ATTR_FORCE_INLINE constexpr void
+    threshold(severity nextThreshold) noexcept
+    {
+        mThresholdCache = nextThreshold;
+    }
     DPLX_ATTR_FORCE_INLINE constexpr auto span() const noexcept -> span_context
     {
         return mCurrentSpan;
+    }
+    DPLX_ATTR_FORCE_INLINE constexpr void span(span_context next) noexcept
+    {
+        mCurrentSpan = next;
     }
     DPLX_ATTR_FORCE_INLINE constexpr auto instrumentation_scope() const noexcept
             -> std::string_view
@@ -86,3 +98,64 @@ public:
 };
 
 } // namespace dplx::dlog
+
+#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+
+#if defined(DPLX_OS_WINDOWS_AVAILABLE)
+// Windows DLLs cannot export thread_local symbols
+
+namespace dplx::dlog
+{
+
+namespace detail
+{
+
+auto active_context() noexcept -> log_context &;
+
+}
+
+inline auto set_thread_context(log_context next) noexcept -> log_context
+{
+    return std::exchange(detail::active_context(), next);
+}
+
+} // namespace dplx::dlog
+
+#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+
+namespace dplx::dlog
+{
+
+namespace detail
+{
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern thread_local constinit log_context active_context_;
+
+inline auto active_context() noexcept -> log_context &
+{
+    return active_context_;
+}
+
+} // namespace detail
+
+inline auto set_thread_context(log_context next) noexcept -> log_context
+{
+    return std::exchange(detail::active_context_, next);
+}
+
+} // namespace dplx::dlog
+
+#endif // ^^^ no workaround ^^^
+
+#else // ^^^ !DISABLE_IMPLICIT_CONTEXT / DISABLE_IMPLICIT_CONTEXT vvv
+
+namespace dplx::dlog
+{
+
+inline auto set_thread_context(log_context next) noexcept -> log_context
+        = delete;
+
+}
+
+#endif // ^^^ DISABLE_IMPLICIT_CONTEXT ^^^

@@ -11,7 +11,11 @@
 
 #include <dplx/cncr/utils.hpp>
 #include <dplx/dp.hpp>
+#include <dplx/dp/api.hpp>
 #include <dplx/dp/streams/output_buffer.hpp>
+
+#include <dplx/dlog/core/strong_types.hpp>
+#include <dplx/dlog/source/log_record_port.hpp>
 
 namespace dplx::dlog
 {

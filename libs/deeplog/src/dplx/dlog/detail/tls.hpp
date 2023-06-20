@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <type_traits>
+
 #include <dplx/predef/os/windows.h>
 
 #include <dplx/dlog/config.hpp>
@@ -14,41 +17,47 @@
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/source/log_context.hpp>
 
+#if defined(DPLX_DLOG_BUILDING) && !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
+
 namespace dplx::dlog::detail
 {
 
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-extern thread_local constinit span_scope const *active_span;
-
-void deactivate_span() noexcept;
-
-#endif
-
-#if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
-
 #if defined(DPLX_OS_WINDOWS_AVAILABLE)
-// Windows DLLs cannot export threadlocal symbols
 
-auto active_context() noexcept -> log_context;
-void active_context(log_context nextActiveContext) noexcept;
+#if DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069
 
-#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+struct most_trivial_string_view
+{
+    char const *data_;
+    std::size_t size_;
+};
+struct log_context_
+{
+    severity mThresholdCache;
+    log_record_port *mTargetPort;
+    most_trivial_string_view mInstrumentationScope;
+    span_context mCurrentSpan;
+};
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern thread_local constinit log_context_ active_context_;
+#define DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT                                      \
+    *reinterpret_cast<log_context *>(&::dplx::dlog::detail::active_context_)
+
+#else // ^^^ workaround DevCom-1406069 / no workaround vvv
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern thread_local constinit log_context active_context_;
-
-inline auto active_context() noexcept -> log_context
-{
-    return active_context_;
-}
-inline void active_context(log_context nextActiveContext) noexcept
-{
-    active_context_ = nextActiveContext;
-}
+#define DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT ::dplx::dlog::detail::active_context_
 
 #endif // ^^^ no workaround ^^^
 
-#endif // ^^^ !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT ^^^
+#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+
+#define DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT ::dplx::dlog::detail::active_context_
+
+#endif // ^^^ no workaround ^^^
 
 } // namespace dplx::dlog::detail
+
+#endif // ^^^ DPLX_DLOG_BUILDING && !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT ^^^

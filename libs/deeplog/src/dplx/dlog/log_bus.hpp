@@ -39,7 +39,7 @@ using bus_output_guard = record_output_guard;
 class bus_handle : public log_record_port
 {
 public:
-    severity threshold{default_threshold};
+    severity threshold{dlog::default_threshold};
 
 protected:
     constexpr ~bus_handle() noexcept = default;

@@ -15,6 +15,15 @@ add_library(deeplog)
 add_library(Deeplex::deeplog ALIAS deeplog)
 
 target_link_libraries(deeplog PUBLIC Deeplex::deeplog_compiler_settings)
+target_compile_definitions(deeplog
+    PRIVATE DPLX_DLOG_BUILDING
+)
+if (BUILD_SHARED_LIBS)
+    target_compile_definitions(deeplog 
+        PUBLIC DPLX_DLOG_DYNAMIC
+        PRIVATE DPLX_DLOG_DYNAMIC_EXPORTS
+    )
+endif()
 
 target_include_directories(deeplog PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
@@ -64,6 +73,7 @@ dplx_target_sources(deeplog
 
         dlog/source/log_context
         dlog/source/log_record_port
+        dlog/source/span_scope
 
         dlog/definitions
 
@@ -73,7 +83,6 @@ dplx_target_sources(deeplog
         dlog/log_bus
         dlog/sink
         dlog/source
-        dlog/span_scope
 
         dlog/bus/buffer_bus
         dlog/bus/mpsc_bus

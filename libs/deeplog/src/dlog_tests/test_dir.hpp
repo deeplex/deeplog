@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <fmt/format.h>
+
 #include <dplx/dlog/llfio.hpp>
 
 #include "test_utils.hpp"
@@ -21,4 +23,21 @@ namespace llfio = dlog::llfio;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern llfio::directory_handle test_dir;
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline int test_file_ctr{0};
+
+inline auto make_file_name(char const *testfile, char const *suffix)
+        -> std::string
+{
+    auto const filename = llfio::path_view::zero_terminated_rendered_path<char>(
+            llfio::path_view(testfile).filename().stem());
+
+    return fmt::format("{}.{}.{}", filename.data(), test_file_ctr++, suffix);
+}
+
+inline constexpr std::size_t small_buffer_bus_size = 4096;
+
 } // namespace dlog_tests
+
+#define TEST_FILE_DMSB (::dlog_tests::make_file_name(__FILE__, ".dmsb"))
+#define TEST_FILE_BB   (::dlog_tests::make_file_name(__FILE__, ".dbb"))

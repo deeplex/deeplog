@@ -23,7 +23,7 @@ auto bufferbus_handle::do_create_span_context(trace_id trace,
 {
     if (trace == trace_id::invalid())
     {
-        return span_context{};
+        trace = trace_id::random();
     }
 
     auto const ctr = mSpanPrngCtr++;

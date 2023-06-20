@@ -57,6 +57,12 @@ public:
     {
         return do_create_span_context(traceId, name, thresholdInOut);
     }
+    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto default_threshold() noexcept
+            -> severity
+    {
+        // TODO: make virtual and configurable
+        return dlog::default_threshold;
+    }
 
 private:
     virtual auto do_allocate_record_buffer_inplace(
