@@ -17,7 +17,6 @@
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/sink.hpp>
-#include <dplx/dlog/source.hpp>
 
 #include "test_dir.hpp"
 #include "test_utils.hpp"

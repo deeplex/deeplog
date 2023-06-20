@@ -11,7 +11,8 @@
 
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/attributes.hpp>
-#include <dplx/dlog/source.hpp>
+#include <dplx/dlog/config.hpp>
+#include <dplx/dlog/source/log.hpp>
 #include <dplx/dlog/source/log_context.hpp>
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
@@ -21,23 +22,11 @@
 
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 #if DPLX_DLOG_USE_SOURCE_LOCATION
-#define DPLX_DLOG_LOCATION ::dplx::dlog::detail::make_location()
-#define DPLX_DLOG_FUNCSIG  ::dplx::dlog::detail::make_attribute_function()
-#else
+#define DPLX_DLOG_LOCATION ::std::source_location::current()
 
+#else
 #define DPLX_DLOG_LOCATION                                                     \
     ::dplx::dlog::detail::make_location(__FILE__, __LINE__)
-
-#if defined(DPLX_COMP_MSVC_AVAILABLE)
-#define DPLX_DLOG_FUNCSIG                                                      \
-    ::dplx::dlog::detail::make_attribute_function(__FUNCSIG__)
-#elif defined(DPLX_COMP_GNUC_AVAILABLE) || defined(DPLX_COMP_CLANG_AVAILABLE)
-#define DPLX_DLOG_FUNCSIG                                                      \
-    ::dplx::dlog::detail::make_attribute_function(__PRETTY_FUNCTION__)
-#else
-#define DPLX_DLOG_FUNCSIG                                                      \
-    ::dplx::dlog::detail::make_attribute_function("<unsupported compiler>")
-#endif
 
 #endif
 // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

@@ -10,5 +10,5 @@
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/macros.hpp>
-#include <dplx/dlog/source.hpp>
+#include <dplx/dlog/source/log.hpp>
 #include <dplx/dlog/source/span_scope.hpp>
