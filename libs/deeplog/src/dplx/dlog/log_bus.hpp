@@ -16,7 +16,7 @@
 #include <dplx/dp/disappointment.hpp>
 #include <dplx/dp/streams/output_buffer.hpp>
 
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/source/log_record_port.hpp>
 #include <dplx/dlog/source/record_output_buffer.hpp>

@@ -9,7 +9,7 @@
 
 #include <type_traits>
 
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/workaround.hpp>
 #include <dplx/dlog/source/log_context.hpp>
 

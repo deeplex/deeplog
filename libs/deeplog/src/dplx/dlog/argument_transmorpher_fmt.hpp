@@ -24,7 +24,7 @@
 #include <dplx/dp/items/parse_ranges.hpp>
 
 #include <dplx/dlog/arguments.hpp>
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/loggable.hpp>

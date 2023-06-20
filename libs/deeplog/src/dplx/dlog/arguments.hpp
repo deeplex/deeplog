@@ -17,7 +17,7 @@
 #include <dplx/dp/fwd.hpp>
 
 #include <dplx/dlog/config.hpp>
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/any_loggable_ref.hpp>
 #include <dplx/dlog/loggable.hpp>
 

@@ -26,7 +26,7 @@
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/attribute_transmorpher.hpp>
 #include <dplx/dlog/attributes.hpp>
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/sink.hpp>
 
 namespace dplx::dlog

@@ -17,7 +17,7 @@
 
 #include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/config.hpp>
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/loggable.hpp>
 #include <dplx/dlog/source/log_context.hpp>

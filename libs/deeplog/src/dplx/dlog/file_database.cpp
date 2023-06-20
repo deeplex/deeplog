@@ -25,7 +25,7 @@
 #include <dplx/dp/codecs/std-filesystem.hpp>
 #include <dplx/dp/legacy/memory_buffer.hpp>
 
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 
