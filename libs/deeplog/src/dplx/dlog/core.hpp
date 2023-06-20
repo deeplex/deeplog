@@ -16,7 +16,7 @@
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/source/log_record_port.hpp>
 #include <dplx/dlog/source/record_output_buffer.hpp>
 

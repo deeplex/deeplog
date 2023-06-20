@@ -13,7 +13,7 @@
 #include <utility>
 
 #include <dplx/dlog/attributes.hpp>
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/any_reified.hpp>
 #include <dplx/dlog/detail/workaround.hpp>
 

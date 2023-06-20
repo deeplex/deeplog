@@ -20,7 +20,8 @@
 #include <dplx/dp/streams/memory_output_stream.hpp>
 #include <dplx/scope_guard.hpp>
 
-#include <dplx/dlog/definitions.hpp>
+#include <dplx/dlog/concepts.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/utils.hpp> // declare_codec
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
