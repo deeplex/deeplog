@@ -10,16 +10,9 @@
 namespace dplx::dlog
 {
 
-auto bufferbus_handle::do_create_span_context(std::string_view name,
-                                              severity &thresholdOut) noexcept
-        -> span_context
-{
-    return create_span_context(trace_id::random(), name, thresholdOut);
-}
-auto bufferbus_handle::do_create_span_context(trace_id trace,
-                                              std::string_view,
-                                              severity &) noexcept
-        -> span_context
+auto bufferbus_handle::create_span_context(trace_id trace,
+                                           std::string_view,
+                                           severity &) noexcept -> span_context
 {
     if (trace == trace_id::invalid())
     {

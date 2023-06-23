@@ -24,7 +24,7 @@
 namespace dplx::dlog
 {
 
-class bufferbus_handle final : public bus_handle
+class bufferbus_handle final
 {
     llfio::mapped_file_handle mBackingFile;
     std::span<std::byte> mBuffer;
@@ -159,11 +159,10 @@ public:
         return oc::success();
     }
 
-private:
-    auto do_allocate_record_buffer_inplace(
+    auto allocate_record_buffer_inplace(
             output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
-            span_id) noexcept -> result<bus_output_buffer *> override
+            span_id) noexcept -> result<bus_output_buffer *>
     {
         auto const overhead = dp::detail::var_uint_encoded_size(messageSize);
         auto const totalSize = overhead + messageSize;
@@ -183,12 +182,9 @@ private:
                 output_buffer(static_cast<output_buffer &&>(out));
     }
 
-    auto do_create_span_context(std::string_view name,
-                                severity &thresholdOut) noexcept
-            -> span_context override;
-    auto do_create_span_context(trace_id trace,
-                                std::string_view,
-                                severity &) noexcept -> span_context override;
+    auto create_span_context(trace_id trace,
+                             std::string_view,
+                             severity &) noexcept -> span_context;
 };
 
 inline auto bufferbus(llfio::path_handle const &base,
