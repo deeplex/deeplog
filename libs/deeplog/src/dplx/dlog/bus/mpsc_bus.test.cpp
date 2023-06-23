@@ -22,7 +22,6 @@
 #include <dplx/dp/streams/memory_input_stream.hpp>
 
 #include <dplx/dlog/concepts.hpp>
-#include <dplx/dlog/log_bus.hpp>
 
 #include "test_dir.hpp"
 #include "test_utils.hpp"
@@ -56,9 +55,9 @@ TEST_CASE("mpsc_bus can be filled and drained")
     {
         auto const size = static_cast<unsigned>(dp::encoded_size_of(msgId));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        dlog::output_buffer_storage outStorage;
+        dlog::record_output_buffer_storage outStorage;
         // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
-        dlog::bus_output_buffer *out;
+        dlog::record_output_buffer *out;
         if (auto createRx
             = bufferbus.allocate_record_buffer_inplace(outStorage, size, {});
             createRx.has_value())
@@ -73,7 +72,7 @@ TEST_CASE("mpsc_bus can be filled and drained")
             }
             createRx.assume_error().throw_exception();
         }
-        dlog::bus_output_guard busLock(*out);
+        dlog::record_output_guard busLock(*out);
 
         dp::encode(*out, msgId).value();
         msgId += 1;
@@ -118,14 +117,15 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
         }
         */
 
+        DPLX_TRY(dlog::enqueue_message(bus, {}, i));
         auto const encodedSize
                 = static_cast<unsigned>(dplx::dp::encoded_size_of(i));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        dlog::output_buffer_storage outStorage;
+        dlog::record_output_buffer_storage outStorage;
         DPLX_TRY(auto *outStream, bus.allocate_record_buffer_inplace(
                                           outStorage, encodedSize, {}));
 
-        dlog::bus_output_guard busLock(*outStream);
+        dlog::record_output_guard busLock(*outStream);
         DPLX_TRY(dplx::dp::encode(*outStream, i));
     }
     return dlog::oc::success();

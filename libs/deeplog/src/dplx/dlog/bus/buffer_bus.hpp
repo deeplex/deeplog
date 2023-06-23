@@ -17,9 +17,10 @@
 #include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 
+#include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
-#include <dplx/dlog/log_bus.hpp>
+#include <dplx/dlog/source/record_output_buffer.hpp>
 
 namespace dplx::dlog
 {
@@ -65,11 +66,11 @@ public:
 
     static constexpr std::size_t consume_batch_size = 1U;
 
-    class output_buffer final : public bus_output_buffer
+    class output_buffer final : public record_output_buffer
     {
         friend class bufferbus_handle;
 
-        using bus_output_buffer::bus_output_buffer;
+        using record_output_buffer::record_output_buffer;
 
     public:
     };
@@ -160,9 +161,9 @@ public:
     }
 
     auto allocate_record_buffer_inplace(
-            output_buffer_storage &bufferPlacementStorage,
+            record_output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
-            span_id) noexcept -> result<bus_output_buffer *>
+            span_id) noexcept -> result<record_output_buffer *>
     {
         auto const overhead = dp::detail::var_uint_encoded_size(messageSize);
         auto const totalSize = overhead + messageSize;
