@@ -16,6 +16,7 @@
 #include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/workaround.hpp>
 #include <dplx/dlog/fwd.hpp>
+#include <dplx/dlog/source/log_record_port.hpp>
 
 namespace dplx::dlog
 {
@@ -61,7 +62,7 @@ public:
     }
     explicit log_context(log_record_port &targetPort,
                          span_context span = span_context{})
-        : mThresholdCache{}
+        : mThresholdCache{targetPort.default_threshold()}
         , mTargetPort(&targetPort)
         , mInstrumentationScope{}
         , mCurrentSpan(span)

@@ -188,16 +188,9 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
                            static_cast<std::uint32_t>(realRegionSize)};
 }
 
-auto mpsc_bus_handle::do_create_span_context(std::string_view name,
-                                             severity &thresholdOut) noexcept
-        -> span_context
-{
-    return create_span_context(trace_id::random(), name, thresholdOut);
-}
-
-auto dplx::dlog::mpsc_bus_handle::do_create_span_context(trace_id trace,
-                                                         std::string_view,
-                                                         severity &) noexcept
+auto dplx::dlog::mpsc_bus_handle::create_span_context(trace_id trace,
+                                                      std::string_view,
+                                                      severity &) noexcept
         -> span_context
 {
     if (trace == trace_id::invalid())

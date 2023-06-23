@@ -26,4 +26,7 @@ class attribute_args;
 
 }
 
+class record_output_buffer;
+struct record_output_buffer_storage;
+
 } // namespace dplx::dlog

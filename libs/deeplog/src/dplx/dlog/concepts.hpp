@@ -12,10 +12,10 @@
 
 #include <dplx/dp/api.hpp>
 
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/codec_dummy.hpp>
 #include <dplx/dlog/detail/utils.hpp>
-#include <dplx/dlog/disappointment.hpp>
-#include <dplx/dlog/log_bus.hpp>
+#include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog
 {
@@ -37,12 +37,31 @@ concept source
 // clang-format off
 template <typename T>
 concept bus
-        = std::derived_from<T, bus_handle>
-        && requires(T t,
-                    void (&dummy_consumer)(std::span<std::span<std::byte const> const>) noexcept)
+        = requires(T instance,
+                   record_output_buffer_storage &bufferPlacementStorage,
+                   std::size_t const messageSize,
+                   span_id const spanId,
+                   void (&dummy_consumer)(std::span<bytes const>) noexcept)
         {
-            { t.consume_messages(dummy_consumer) }
+            { instance.allocate_record_buffer_inplace(
+                bufferPlacementStorage, messageSize, spanId) }
+                    -> detail::tryable_result<record_output_buffer *>;
+            { instance.consume_messages(dummy_consumer) }
                     -> detail::tryable;
+        };
+// clang-format on
+
+// clang-format off
+template <typename T>
+concept bus_ex
+    = bus<T>
+    && requires(T instance,
+                trace_id const traceId,
+                std::string_view const name,
+                severity thresholdInOut)
+        {
+            { instance.create_span_context(traceId, name, thresholdInOut) }
+                    ->  std::same_as<span_context>;
         };
 // clang-format on
 

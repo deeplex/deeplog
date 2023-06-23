@@ -19,9 +19,6 @@
 namespace dplx::dlog
 {
 
-class record_output_buffer;
-struct record_output_buffer_storage;
-
 class log_record_port
 {
 protected:

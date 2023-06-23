@@ -104,7 +104,6 @@ inline auto main() -> dlog::result<void>
     dlog::core core{std::move(mpscBus)};
     auto *sink = core.attach_sink(std::make_unique<sink_type>(
             dlog::severity::debug, std::move(sinkBackend)));
-    core.connector().threshold = dlog::severity::debug;
     dlog::set_thread_context(dlog::log_context{core});
 
     {
