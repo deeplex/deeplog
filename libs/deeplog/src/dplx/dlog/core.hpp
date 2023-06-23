@@ -231,7 +231,7 @@ private:
                                 severity &thresholdOut) noexcept
             -> span_context override
     {
-        return mBus.create_span_context(name, thresholdOut);
+        return mBus.create_span_context(trace_id{}, name, thresholdOut);
     }
     auto do_create_span_context(trace_id id,
                                 std::string_view name,

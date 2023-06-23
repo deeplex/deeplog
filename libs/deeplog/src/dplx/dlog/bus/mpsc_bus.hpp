@@ -69,7 +69,7 @@ struct mpsc_bus_region_ctrl
     std::uint8_t padding[48]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 };
 
-class mpsc_bus_handle final : public bus_handle
+class mpsc_bus_handle final
 {
     llfio::mapped_file_handle mBackingFile;
     std::uint32_t mNumRegions;
@@ -168,13 +168,9 @@ public:
 
     static constexpr unsigned consume_batch_size = 64U;
 
-private:
-    auto do_create_span_context(std::string_view name,
-                                severity &thresholdOut) noexcept
-            -> span_context override;
-    auto do_create_span_context(trace_id trace,
-                                std::string_view,
-                                severity &) noexcept -> span_context override;
+    auto create_span_context(trace_id trace,
+                             std::string_view,
+                             severity &) noexcept -> span_context;
 
 public:
     class output_buffer final : public bus_output_buffer
@@ -308,10 +304,11 @@ private:
         return oc::success();
     }
 
-    auto do_allocate_record_buffer_inplace(
+public:
+    auto allocate_record_buffer_inplace(
             output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
-            span_id spanId) noexcept -> result<bus_output_buffer *> override
+            span_id spanId) noexcept -> result<bus_output_buffer *>
     {
         static_assert(sizeof(output_buffer_storage) >= sizeof(output_buffer));
 
@@ -347,6 +344,7 @@ private:
                 output_buffer(out);
     }
 
+private:
     auto allocate(output_buffer &out,
                   std::uint32_t const payloadSize,
                   std::uint32_t const regionId) noexcept -> errc
