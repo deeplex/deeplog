@@ -65,4 +65,12 @@ concept bus_ex
         };
 // clang-format on
 
+template <typename Fn>
+concept raw_message_consumer
+        = requires(Fn fn, std::span<bytes const> const msgs) {
+              {
+                  static_cast<Fn &&>(fn)(msgs)
+              } noexcept;
+          };
+
 } // namespace dplx::dlog

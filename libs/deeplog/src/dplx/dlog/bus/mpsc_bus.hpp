@@ -25,7 +25,7 @@
 #include <dplx/dlog/detail/utils.hpp> // declare_codec
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
-#include <dplx/dlog/log_bus.hpp>
+#include <dplx/dlog/source/record_output_buffer.hpp>
 
 namespace dplx::dlog::detail
 {
@@ -172,14 +172,13 @@ public:
                              std::string_view,
                              severity &) noexcept -> span_context;
 
-public:
-    class output_buffer final : public bus_output_buffer
+    class output_buffer final : public record_output_buffer
     {
         friend class mpsc_bus_handle;
 
         std::uint32_t *mMsgCtrl{nullptr};
 
-        using bus_output_buffer::bus_output_buffer;
+        using record_output_buffer::record_output_buffer;
 
         auto do_sync_output() noexcept -> dp::result<void> final
         {
@@ -306,11 +305,12 @@ private:
 
 public:
     auto allocate_record_buffer_inplace(
-            output_buffer_storage &bufferPlacementStorage,
+            record_output_buffer_storage &bufferPlacementStorage,
             std::size_t messageSize,
-            span_id spanId) noexcept -> result<bus_output_buffer *>
+            span_id spanId) noexcept -> result<record_output_buffer *>
     {
-        static_assert(sizeof(output_buffer_storage) >= sizeof(output_buffer));
+        static_assert(sizeof(record_output_buffer_storage)
+                      >= sizeof(output_buffer));
 
         if (messageSize > max_message_size) [[unlikely]]
         {

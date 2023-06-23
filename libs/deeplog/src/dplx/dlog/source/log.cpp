@@ -15,7 +15,7 @@
 
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
-#include <dplx/dlog/log_bus.hpp>
+#include <dplx/dlog/source/record_output_buffer.hpp>
 
 auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::size_of(
         dp::emit_context &ctx,
@@ -260,10 +260,10 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
 
     // allocate an output buffer on the message bus
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-    dlog::output_buffer_storage outStorage;
+    record_output_buffer_storage outStorage;
     DPLX_TRY(auto *out, logCtx.port()->allocate_record_buffer_inplace(
                                 outStorage, encodedSize, ownerId.spanId));
-    bus_output_guard outGuard(*out);
+    record_output_guard outGuard(*out);
 
     dp::emit_context ctx{*out};
 

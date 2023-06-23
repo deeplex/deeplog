@@ -79,7 +79,6 @@ dplx_target_sources(deeplog
         dlog/attributes
         dlog/attribute_transmorpher
         dlog/core
-        dlog/log_bus
         dlog/sink
 
         dlog/bus/buffer_bus
