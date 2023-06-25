@@ -27,5 +27,7 @@ target_link_libraries(example-log-complete PUBLIC
 
 target_sources(example-log-complete PRIVATE
     log-complete/log-complete.main.cpp
+    log-complete/ecomponent.cpp
+    log-complete/ecomponent.hpp
 )
 
