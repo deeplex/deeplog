@@ -34,4 +34,11 @@ struct record_output_buffer_storage;
 
 class sink_frontend_base;
 
+namespace detail
+{
+
+[[noreturn]] void throw_fmt_format_error(char const *message);
+
+}
+
 } // namespace dplx::dlog
