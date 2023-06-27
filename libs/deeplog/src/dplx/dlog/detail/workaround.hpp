@@ -35,7 +35,9 @@
 // libstdc++ fails to forward pair members during uses_allocator construction
 // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108952
 #define DPLX_DLOG_WORKAROUND_ISSUE_LIBSTDCPP_108952                            \
-    DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_LIB_STD_GNU, 12, 2, 0)
+    (DPLX_LIB_STD_GNU < DPLX_VERSION_NUMBER(12, 0, 0)                          \
+     && DPLX_DLOG_WORKAROUND(DPLX_LIB_STD_GNU, >=, 11, 4, 0))                  \
+            || DPLX_DLOG_WORKAROUND(DPLX_LIB_STD_GNU, >=, 12, 3, 0)
 
 // msvc fails to constinit thread_local variables with a constexpr constructor
 // https://developercommunity.visualstudio.com/t/C:-constinit-for-an-optional-fails-if/1406069
