@@ -68,6 +68,7 @@ dplx_target_sources(deeplog
     PUBLIC
         dlog
 
+        dlog/core/file_database
         dlog/core/log_clock
         dlog/core/serialized_messages
         dlog/core/strong_types
@@ -86,8 +87,6 @@ dplx_target_sources(deeplog
         dlog/bus/mpsc_bus
 
         dlog/record_container
-
-        dlog/file_database
 
         dlog/detail/interleaving_stream
         dlog/detail/tls

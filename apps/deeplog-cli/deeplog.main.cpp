@@ -21,8 +21,8 @@
 #include <dplx/dp/codecs/std-string.hpp>
 
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
+#include <dplx/dlog/core/file_database.hpp>
 #include <dplx/dlog/detail/file_stream.hpp>
-#include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/record_container.hpp>
 #include <dplx/dlog/tui/log_display_grid.hpp>
 #include <dplx/dlog/tui/theme.hpp>
