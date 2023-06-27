@@ -68,6 +68,15 @@ public:
         , mCurrentSpan(span)
     {
     }
+    explicit log_context(log_record_port &targetPort,
+                         scope_name name,
+                         span_context span = span_context{})
+        : mThresholdCache{targetPort.default_threshold()}
+        , mTargetPort(&targetPort)
+        , mInstrumentationScope(name)
+        , mCurrentSpan(span)
+    {
+    }
 
     DPLX_ATTR_FORCE_INLINE constexpr auto port() const noexcept
             -> log_record_port *
