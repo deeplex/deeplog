@@ -12,6 +12,11 @@
 namespace dplx::dlog
 {
 
+enum class severity : unsigned;
+struct span_id;
+struct trace_id;
+struct span_context;
+
 class span_scope;
 
 class log_context;

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include <boost/variant2.hpp>
 
 #include <dplx/dlog/concepts.hpp>

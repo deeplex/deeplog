@@ -7,13 +7,11 @@
 
 #pragma once
 
+#include <concepts>
 #include <cstddef>
 #include <span>
+#include <string_view>
 
-#include <dplx/dp/api.hpp>
-
-#include <dplx/dlog/core/strong_types.hpp>
-#include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog

@@ -6,3 +6,5 @@
 //           https://www.boost.org/LICENSE_1_0.txt)
 
 #include "dplx/dlog/fwd.hpp"
+
+#include <dplx/dlog/concepts.hpp>
