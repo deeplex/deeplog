@@ -19,6 +19,7 @@
 #include <dplx/dp/fwd.hpp>
 
 #include <dplx/dlog/detail/hex.hpp>
+#include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog
 {
@@ -188,7 +189,7 @@ public:
         auto &&it = ctx.begin();
         if (it != ctx.end() && *it != '}')
         {
-            ctx.on_error("invalid format");
+            dplx::dlog::detail::throw_fmt_format_error("invalid format");
         }
         return it;
     }
@@ -219,7 +220,7 @@ public:
         auto &&it = ctx.begin();
         if (it != ctx.end() && *it != '}')
         {
-            ctx.on_error("invalid format");
+            dplx::dlog::detail::throw_fmt_format_error("invalid format");
         }
         return it;
     }
