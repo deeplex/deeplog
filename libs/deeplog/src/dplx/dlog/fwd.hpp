@@ -12,8 +12,6 @@
 namespace dplx::dlog
 {
 
-class bus_handle;
-
 class span_scope;
 
 class log_context;
@@ -28,5 +26,7 @@ class attribute_args;
 
 class record_output_buffer;
 struct record_output_buffer_storage;
+
+class sink_frontend_base;
 
 } // namespace dplx::dlog

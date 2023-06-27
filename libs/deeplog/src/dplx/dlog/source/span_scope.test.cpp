@@ -11,7 +11,7 @@
 
 #include <dplx/dlog/bus/buffer_bus.hpp>
 #include <dplx/dlog/bus/mpsc_bus.hpp>
-#include <dplx/dlog/core.hpp>
+#include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/macros.hpp>
 #include <dplx/dlog/source/log_record_port.hpp>
 
@@ -26,7 +26,7 @@ static_assert(!std::is_copy_constructible_v<dlog::span_scope>);
 
 TEST_CASE("a span scope can attach to a context")
 {
-    dlog::core core{
+    dlog::log_fabric core{
             dlog::bufferbus(test_dir, TEST_FILE_BB, small_buffer_bus_size)
                     .value()};
     dlog::log_context ctx(core);
@@ -85,7 +85,7 @@ TEST_CASE("a span scope can attach to a context")
 
 TEST_CASE("the correct explicit span scope is attached to log records")
 {
-    dlog::core core{
+    dlog::log_fabric core{
             dlog::bufferbus(test_dir, TEST_FILE_BB, small_buffer_bus_size)
                     .value()};
     dlog::log_context ctx(core);
@@ -109,7 +109,7 @@ TEST_CASE("the correct explicit span scope is attached to log records")
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 TEST_CASE("the correct implicit span scope is attached to log records")
 {
-    dlog::core core{
+    dlog::log_fabric core{
             dlog::bufferbus(test_dir, TEST_FILE_BB, small_buffer_bus_size)
                     .value()};
     dlog::set_thread_context(dlog::log_context(core));

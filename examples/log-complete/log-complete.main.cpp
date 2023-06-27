@@ -14,6 +14,7 @@
 #include <dplx/dlog/bus/mpsc_bus.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/sink.hpp>
 
 #include "ecomponent.hpp"
@@ -42,7 +43,7 @@ inline auto main() -> dlog::result<void>
     constexpr auto regionSize = 1 << 14;
     DPLX_TRY(auto &&mpscBus,
              dlog::mpsc_bus(baseDir, "log-test.dmsb", 4U, regionSize));
-    dlog::core core{std::move(mpscBus)};
+    dlog::log_fabric core{std::move(mpscBus)};
     auto *sink = core.attach_sink(std::make_unique<sink_type>(
             dlog::severity::debug, std::move(sinkBackend)));
     dlog::set_thread_context(dlog::log_context{core});
@@ -59,7 +60,7 @@ inline auto main() -> dlog::result<void>
     std::unique_ptr<sink_type> sinkOwner(static_cast<sink_type *>(sink));
     DPLX_TRY(sinkOwner->backend().finalize());
 
-    DPLX_TRY(core.connector().unlink());
+    DPLX_TRY(core.message_bus().unlink());
     return dlog::oc::success();
 }
 

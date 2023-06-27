@@ -69,6 +69,7 @@ dplx_target_sources(deeplog
         dlog
 
         dlog/core/log_clock
+        dlog/core/serialized_messages
         dlog/core/strong_types
 
         dlog/source/log
@@ -78,7 +79,7 @@ dplx_target_sources(deeplog
 
         dlog/attributes
         dlog/attribute_transmorpher
-        dlog/core
+        dlog/log_fabric
         dlog/sink
 
         dlog/bus/buffer_bus
