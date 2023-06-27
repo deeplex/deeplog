@@ -78,6 +78,8 @@ dplx_target_sources(deeplog
         dlog/source/log_record_port
         dlog/source/span_scope
 
+        dlog/sinks/sink_frontend
+
         dlog/attributes
         dlog/attribute_transmorpher
         dlog/log_fabric
