@@ -1,27 +1,18 @@
 
-// Copyright Henrik Steffen Gaßmann 2021
+// Copyright Henrik Steffen Gaßmann 2023
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include "dplx/dlog/core.hpp"
-
-#include <algorithm>
-
-#include <boost/predef/compiler.h>
+#include "dplx/dlog/core/serialized_messages.hpp"
 
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/auto_tuple.hpp>
 #include <dplx/dp/items/skip_item.hpp>
 #include <dplx/dp/streams/memory_input_stream.hpp>
 
-#if defined BOOST_COMP_MSVC_AVAILABLE
-/*
-#pragma warning(disable : 4146) // C4146: unary minus operator applied to
-                                // unsigned type, result still unsigned
-*/
-#endif
+#include <dplx/dlog/sink.hpp>
 
 namespace dplx::dlog::detail
 {
@@ -119,13 +110,6 @@ void multicast_messages(
                              { return sink->try_consume(binarySize, parses); });
 
     sinks = std::span(begin, newEnd);
-}
-
-void sync_sinks(
-        std::span<std::unique_ptr<sink_frontend_base>> const sinks) noexcept
-{
-    std::partition(sinks.begin(), sinks.end(),
-                   [](auto &sink) { return sink->try_sync(); });
 }
 
 } // namespace dplx::dlog::detail

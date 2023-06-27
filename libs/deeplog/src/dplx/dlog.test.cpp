@@ -15,6 +15,7 @@
 #include <dplx/dlog/bus/mpsc_bus.hpp>
 #include <dplx/dlog/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/sink.hpp>
 
 #include "test_dir.hpp"
@@ -42,7 +43,8 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     REQUIRE(sinkBackendOpenRx);
 
     constexpr auto regionSize = 1 << 14;
-    dlog::core core{dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
+    dlog::log_fabric core{
+            dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
     auto *sink = core.attach_sink(std::make_unique<sink_type>(
             dlog::severity::info, std::move(sinkBackendOpenRx).assume_value()));
 

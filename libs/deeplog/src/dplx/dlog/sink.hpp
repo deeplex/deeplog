@@ -25,8 +25,8 @@
 
 #include <dplx/dlog/attribute_transmorpher.hpp>
 #include <dplx/dlog/concepts.hpp>
-#include <dplx/dlog/core.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
+#include <dplx/dlog/core/serialized_messages.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/llfio.hpp>
 
@@ -41,6 +41,71 @@ auto concate_messages(dp::output_buffer &out,
 
 namespace dplx::dlog
 {
+
+class sink_frontend_base
+{
+protected:
+    // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes)
+    severity mThreshold;
+    bool mActive;
+    // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
+
+public:
+    virtual ~sink_frontend_base() = default;
+
+protected:
+    sink_frontend_base(sink_frontend_base const &) = default;
+    auto operator=(sink_frontend_base const &)
+            -> sink_frontend_base & = default;
+
+    sink_frontend_base(sink_frontend_base &&) noexcept = default;
+    auto operator=(sink_frontend_base &&) noexcept
+            -> sink_frontend_base & = default;
+
+    explicit sink_frontend_base(severity threshold) noexcept
+        : mThreshold(threshold)
+        , mActive(true)
+    {
+    }
+
+public:
+    [[nodiscard]] auto try_consume(
+            std::size_t const binarySize,
+            std::span<serialized_message_info const> const &messages) noexcept
+            -> bool
+    {
+        if (!mActive) [[unlikely]]
+        {
+            return false;
+        }
+        return (mActive = do_try_consume(binarySize, messages));
+    }
+    [[nodiscard]] auto is_active() const noexcept -> bool
+    {
+        return mActive;
+    }
+
+    [[nodiscard]] auto try_sync() noexcept -> bool
+    {
+        if (!mActive) [[unlikely]]
+        {
+            return false;
+        }
+        return (mActive = do_try_sync());
+    }
+
+private:
+    [[nodiscard]] virtual auto
+    do_try_consume(std::size_t binarySize,
+                   std::span<serialized_message_info const> messages) noexcept
+            -> bool
+            = 0;
+
+    [[nodiscard]] virtual auto do_try_sync() noexcept -> bool
+    {
+        return true;
+    }
+};
 
 template <typename T>
 concept sink_backend

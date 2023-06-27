@@ -14,7 +14,7 @@
 #include <dplx/dp/items/parse_core.hpp>
 
 #include <dplx/dlog/bus/mpsc_bus.hpp>
-#include <dplx/dlog/core.hpp>
+#include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/macros.hpp>
 
 #include "test_dir.hpp"
@@ -87,7 +87,7 @@ namespace dlog_tests
 TEST_CASE("The logger can write a message")
 {
     constexpr auto regionSize = 1 << 14;
-    dlog::core core{
+    dlog::log_fabric core{
             dlog::mpsc_bus(test_dir, "t1.dmsb", 4U, regionSize).value()};
     dlog::log_context ctx{core};
 
@@ -100,7 +100,7 @@ TEST_CASE("The logger can write a message")
 TEST_CASE("The logger can write a message with an int and a string")
 {
     constexpr auto regionSize = 1 << 14;
-    dlog::core core{
+    dlog::log_fabric core{
             dlog::mpsc_bus(test_dir, "t2.dmsb", 4U, regionSize).value()};
     dlog::log_context ctx{core};
 
@@ -114,7 +114,7 @@ TEST_CASE("The logger can write a message with an int and a string")
 TEST_CASE("The logger can write a message with a custom type")
 {
     constexpr auto regionSize = 1 << 14;
-    dlog::core core{
+    dlog::log_fabric core{
             dlog::mpsc_bus(test_dir, "t3.dmsb", 4U, regionSize).value()};
     dlog::log_context ctx{core};
 
