@@ -120,7 +120,6 @@ dplx_target_sources(deeplog
         dlog/attributes.hpp
         dlog/macros.hpp
 
-        dlog/detail/codec_dummy.hpp
         dlog/detail/hex.hpp
         dlog/detail/utils.hpp
         dlog/detail/x_poly_types.inl

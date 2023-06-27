@@ -13,7 +13,6 @@
 #include <dplx/dp/api.hpp>
 
 #include <dplx/dlog/core/strong_types.hpp>
-#include <dplx/dlog/detail/codec_dummy.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/fwd.hpp>
 
@@ -22,17 +21,6 @@ namespace dplx::dlog
 
 using bytes = std::span<std::byte const>;
 using writable_bytes = std::span<std::byte>;
-
-// clang-format off
-template <typename T>
-concept source
-    = requires (T t, detail::encodable_dummy const dummy)
-        {
-            { t.static_resource(dummy) }
-                    -> detail::tryable_result<std::uint64_t>;
-
-        };
-// clang-format on
 
 // clang-format off
 template <typename T>
