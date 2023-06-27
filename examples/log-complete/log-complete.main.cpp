@@ -12,7 +12,7 @@
 
 #include <dplx/dlog.hpp>
 #include <dplx/dlog/bus/mpsc_bus.hpp>
-#include <dplx/dlog/file_database.hpp>
+#include <dplx/dlog/core/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/sink.hpp>
