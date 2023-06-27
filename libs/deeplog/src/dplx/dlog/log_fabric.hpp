@@ -99,12 +99,6 @@ private:
         return mMessageBus.allocate_record_buffer_inplace(
                 bufferPlacementStorage, messageSize, spanId);
     }
-    auto do_create_span_context(std::string_view name,
-                                severity &thresholdOut) noexcept
-            -> span_context override
-    {
-        return mMessageBus.create_span_context(trace_id{}, name, thresholdOut);
-    }
     auto do_create_span_context(trace_id id,
                                 std::string_view name,
                                 severity &thresholdInOut) noexcept
