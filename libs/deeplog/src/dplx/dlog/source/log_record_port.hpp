@@ -42,12 +42,6 @@ public:
                                                  messageSize, spanId);
     }
     [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto
-    create_span_context(std::string_view name, severity &thresholdOut) noexcept
-            -> span_context
-    {
-        return do_create_span_context(name, thresholdOut);
-    }
-    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto
     create_span_context(trace_id traceId,
                         std::string_view name,
                         severity &thresholdInOut) noexcept -> span_context
@@ -68,10 +62,6 @@ private:
             span_id spanId) noexcept -> result<record_output_buffer *>
             = 0;
 
-    virtual auto do_create_span_context(std::string_view name,
-                                        severity &thresholdOut) noexcept
-            -> span_context
-            = 0;
     virtual auto do_create_span_context(trace_id id,
                                         std::string_view name,
                                         severity &thresholdInOut) noexcept
