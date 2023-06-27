@@ -9,7 +9,6 @@
 
 #include <dplx/predef/compiler.h>
 
-#include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/config.hpp>
 #include <dplx/dlog/source/log.hpp>

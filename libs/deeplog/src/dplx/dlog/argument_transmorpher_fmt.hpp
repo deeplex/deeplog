@@ -23,7 +23,6 @@
 #include <dplx/dp/cpos/container.hpp>
 #include <dplx/dp/items/parse_ranges.hpp>
 
-#include <dplx/dlog/arguments.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>

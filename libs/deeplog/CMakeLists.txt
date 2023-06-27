@@ -116,7 +116,6 @@ dplx_target_sources(deeplog
     PUBLIC
         dlog/concepts.hpp
 
-        dlog/arguments.hpp
         dlog/argument_transmorpher_fmt.hpp
         dlog/attributes.hpp
         dlog/macros.hpp
