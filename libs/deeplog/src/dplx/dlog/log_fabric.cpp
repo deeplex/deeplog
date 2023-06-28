@@ -9,36 +9,8 @@
 
 #include <algorithm>
 
-#include <dplx/dlog/sinks/sink_frontend.hpp>
-
 namespace dplx::dlog::detail
 {
-
-log_fabric_base::~log_fabric_base()
-{
-}
-
-log_fabric_base::log_fabric_base() noexcept
-{
-}
-
-log_fabric_base::log_fabric_base(log_fabric_base &&other) noexcept
-    : log_record_port(std::move(other))
-    , mSinks(std::move(other.mSinks))
-{
-}
-
-auto log_fabric_base::operator=(log_fabric_base &&other) noexcept
-        -> log_fabric_base &
-{
-    if (&other == this)
-    {
-        return *this;
-    }
-    log_record_port::operator=(std::move(other));
-    mSinks = std::move(other.mSinks);
-    return *this;
-}
 
 void log_fabric_base::sync_sinks() noexcept
 {

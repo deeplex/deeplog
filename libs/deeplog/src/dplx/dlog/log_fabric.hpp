@@ -18,6 +18,7 @@
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/core/serialized_messages.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
+#include <dplx/dlog/sinks/sink_frontend.hpp>
 #include <dplx/dlog/source/log_record_port.hpp>
 
 namespace dplx::dlog
@@ -35,16 +36,30 @@ private:
     std::vector<sink_owner> mSinks;
 
 protected:
-    ~log_fabric_base();
-    log_fabric_base() noexcept;
+    ~log_fabric_base() = default;
+    log_fabric_base() noexcept = default;
 
 public:
     log_fabric_base(log_fabric_base const &) noexcept = delete;
     auto operator=(log_fabric_base const &) noexcept = delete;
 
 protected:
-    log_fabric_base(log_fabric_base &&other) noexcept;
-    auto operator=(log_fabric_base &&other) noexcept -> log_fabric_base &;
+    log_fabric_base(log_fabric_base &&other) noexcept
+        : log_record_port(std::move(other))
+        , mSinks(std::move(other.mSinks))
+    {
+    }
+    auto operator=(log_fabric_base &&other) noexcept -> log_fabric_base &
+    {
+        if (&other == this)
+        {
+            return *this;
+        }
+        log_record_port::operator=(std::move(other));
+        // the above move slices
+        mSinks = std::move(other.mSinks); // NOLINT(bugprone-use-after-move)
+        return *this;
+    }
 
     auto sinks() noexcept -> std::vector<sink_owner> &
     {
@@ -55,8 +70,8 @@ protected:
 public:
     auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
             -> sink_frontend_base *;
-    void remove_sink(sink_frontend_base *const which) noexcept;
-    auto release_sink(sink_frontend_base *const which) noexcept
+    void remove_sink(sink_frontend_base *which) noexcept;
+    auto release_sink(sink_frontend_base *which) noexcept
             -> sink_frontend_base *;
     void clear_sinks() noexcept;
 };
