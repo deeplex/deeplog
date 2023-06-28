@@ -48,6 +48,7 @@ public:
     {
         return do_create_span_context(traceId, name, thresholdInOut);
     }
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
     [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto default_threshold() noexcept
             -> severity
     {
