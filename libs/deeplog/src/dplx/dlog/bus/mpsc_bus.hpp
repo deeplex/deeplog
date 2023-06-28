@@ -17,12 +17,12 @@
 
 #include <dplx/cncr/math_supplement.hpp>
 #include <dplx/dp.hpp>
+#include <dplx/dp/macros.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
-#include <dplx/dlog/detail/utils.hpp> // declare_codec
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/source/record_output_buffer.hpp>
@@ -442,4 +442,4 @@ inline auto mpsc_bus(llfio::mapped_file_handle &&backingFile,
 
 } // namespace dplx::dlog
 
-DPLX_DLOG_DECLARE_CODEC(dplx::dlog::mpsc_bus_info_v00);
+DPLX_DP_DECLARE_CODEC_SIMPLE(dplx::dlog::mpsc_bus_info_v00);
