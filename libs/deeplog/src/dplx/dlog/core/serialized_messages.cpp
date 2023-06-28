@@ -12,7 +12,8 @@
 #include <dplx/dp/items/skip_item.hpp>
 #include <dplx/dp/streams/memory_input_stream.hpp>
 
-#include <dplx/dlog/sink.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
+#include <dplx/dlog/sinks/sink_frontend.hpp>
 
 namespace dplx::dlog::detail
 {
