@@ -73,6 +73,13 @@ auto file_sink_backend::finalize() noexcept -> result<void>
     return oc::success();
 }
 
+auto file_sink_backend::resize(std::size_t const requestedSize) noexcept
+        -> dp::result<void>
+{
+    reset();
+    return mBufferAllocation.resize(static_cast<unsigned>(requestedSize));
+}
+
 auto file_sink_backend::do_grow(size_type requestedSize) noexcept
         -> dp::result<void>
 {
@@ -131,12 +138,12 @@ auto file_sink_backend::do_sync_output() noexcept -> dp::result<void>
         };
 
         DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
-        reset(buffer);
     }
     if (mBufferAllocation.size() != mTargetBufferSize)
     {
         DPLX_TRY(resize(mTargetBufferSize));
     }
+    reset(mBufferAllocation.as_span());
 
     if (mRotateBackingFile)
     {

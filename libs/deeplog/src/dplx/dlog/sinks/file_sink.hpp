@@ -71,10 +71,7 @@ public:
     auto finalize() noexcept -> result<void>;
 
 private:
-    auto resize(std::size_t requestedSize) noexcept -> dp::result<void>
-    {
-        return mBufferAllocation.resize(static_cast<unsigned>(requestedSize));
-    }
+    auto resize(std::size_t requestedSize) noexcept -> dp::result<void>;
     auto do_grow(size_type requestedSize) noexcept -> dp::result<void> override;
     auto do_bulk_write(std::byte const *src, std::size_t srcSize) noexcept
             -> dp::result<void> override;
