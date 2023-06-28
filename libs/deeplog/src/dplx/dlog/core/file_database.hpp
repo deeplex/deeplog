@@ -15,10 +15,10 @@
 
 #include <fmt/format.h>
 
+#include <dplx/dp/macros.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/tuple_def.hpp>
 
-#include <dplx/dlog/detail/utils.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
 
@@ -141,6 +141,6 @@ private:
 
 } // namespace dplx::dlog
 
-DPLX_DLOG_DECLARE_CODEC(
+DPLX_DP_DECLARE_CODEC_SIMPLE(
         ::dplx::dlog::file_database_handle::record_container_meta);
-DPLX_DLOG_DECLARE_CODEC(::dplx::dlog::file_database_handle::contents_t);
+DPLX_DP_DECLARE_CODEC_SIMPLE(::dplx::dlog::file_database_handle::contents_t);
