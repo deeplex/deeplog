@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-#include <dplx/dlog/sink.hpp>
+#include <dplx/dlog/sinks/sink_frontend.hpp>
 
 namespace dplx::dlog::detail
 {
