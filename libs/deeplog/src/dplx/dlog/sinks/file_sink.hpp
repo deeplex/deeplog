@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <span>
 #include <string_view>
 
@@ -50,6 +53,11 @@ class file_sink_backend final : public dp::output_buffer
 
 public:
     file_sink_backend() noexcept = default;
+    ~file_sink_backend();
+
+    file_sink_backend(file_sink_backend &&) noexcept = default;
+    auto operator=(file_sink_backend &&) noexcept
+            -> file_sink_backend & = default;
 
     static auto file_sink(llfio::file_handle backingFile,
                           unsigned targetBufferSize,
@@ -78,8 +86,8 @@ private:
     auto do_sync_output() noexcept -> dp::result<void> override;
 };
 
-using file_sink = basic_sink_frontend<file_sink_backend>;
 extern template class basic_sink_frontend<file_sink_backend>;
+using file_sink = basic_sink_frontend<file_sink_backend>;
 
 } // namespace dplx::dlog
 
