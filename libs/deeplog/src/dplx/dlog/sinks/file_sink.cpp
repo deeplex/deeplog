@@ -21,6 +21,11 @@
 namespace dplx::dlog
 {
 
+file_sink_backend::~file_sink_backend()
+{
+    (void)finalize();
+}
+
 auto file_sink_backend::file_sink(llfio::file_handle backingFile,
                                   unsigned targetBufferSize,
                                   rotate_fn &&rotate) noexcept
