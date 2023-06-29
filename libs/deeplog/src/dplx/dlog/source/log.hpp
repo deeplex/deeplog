@@ -198,7 +198,7 @@ template <typename... Args>
 template <typename... Args>
     requires(... && loggable<Args>)
 [[nodiscard]] inline auto log(
-        log_record_port const &port,
+        log_record_port &port,
         severity sev,
         fmt::format_string<reification_type_of_t<Args>...> message,
 #if DPLX_DLOG_USE_SOURCE_LOCATION
