@@ -191,7 +191,7 @@ private:
 
         llfio::byte_io_handle::buffer_type ioBuffers[] = {{readSpan}};
         DPLX_TRY(llfio::byte_io_handle::buffers_type const buffers,
-                 dataSource->read({ioBuffers, readPos}));
+                 detail::xread(*dataSource, {ioBuffers, readPos}));
         if (buffers.size() != 1 || buffers[0].size() != readSpan.size())
         {
             return dp::errc::end_of_stream;
