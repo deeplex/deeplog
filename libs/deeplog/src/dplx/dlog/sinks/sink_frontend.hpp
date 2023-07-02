@@ -15,6 +15,7 @@
 #include <dplx/dp/fwd.hpp>
 
 #include <dplx/dlog/core/serialized_messages.hpp>
+#include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog::detail
@@ -33,25 +34,25 @@ class sink_frontend_base
 {
 protected:
     // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes)
+    system_error2::system_code mLastStatus;
     severity mThreshold;
-    bool mActive;
     // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 
 public:
     virtual ~sink_frontend_base() = default;
 
-protected:
-    sink_frontend_base(sink_frontend_base const &) = default;
-    auto operator=(sink_frontend_base const &)
-            -> sink_frontend_base & = default;
+    sink_frontend_base(sink_frontend_base const &) = delete;
+    auto operator=(sink_frontend_base const &) -> sink_frontend_base & = delete;
 
+protected:
     sink_frontend_base(sink_frontend_base &&) noexcept = default;
     auto operator=(sink_frontend_base &&) noexcept
             -> sink_frontend_base & = default;
 
     explicit sink_frontend_base(severity threshold) noexcept
-        : mThreshold(threshold)
-        , mActive(true)
+        : mLastStatus{}
+        , mThreshold(threshold)
+
     {
     }
 
@@ -61,36 +62,78 @@ public:
             std::span<serialized_message_info const> const &messages) noexcept
             -> bool
     {
-        if (!mActive) [[unlikely]]
+        if (!is_active()) [[unlikely]]
         {
             return false;
         }
-        return (mActive = do_try_consume(binarySize, messages));
+        auto consumeRx = do_consume(binarySize, messages);
+        if (consumeRx.has_value()) [[likely]]
+        {
+            return true;
+        }
+        mLastStatus = std::move(consumeRx).assume_error();
+        return false;
     }
     [[nodiscard]] auto is_active() const noexcept -> bool
     {
-        return mActive;
+        return mThreshold < detail::disable_threshold && !mLastStatus.failure();
     }
 
     [[nodiscard]] auto try_sync() noexcept -> bool
     {
-        if (!mActive) [[unlikely]]
+        if (!is_active()) [[unlikely]]
         {
             return false;
         }
-        return (mActive = do_try_sync());
+        auto syncRx = do_sync();
+        if (syncRx.has_value()) [[likely]]
+        {
+            return true;
+        }
+        mLastStatus = std::move(syncRx).assume_error();
+        return false;
+    }
+
+    [[nodiscard]] auto try_finalize() noexcept -> bool
+    {
+        if (!is_active()) [[unlikely]]
+        {
+            return false;
+        }
+        auto finalizeRx = do_finalize();
+        if (finalizeRx.has_value()) [[likely]]
+        {
+            mThreshold = detail::disable_threshold;
+            return true;
+        }
+        mLastStatus = std::move(finalizeRx).assume_error();
+        return false;
+    }
+
+    [[nodiscard]] auto last_status() const noexcept
+            -> system_error2::status_code<void> const &
+    {
+        return mLastStatus;
+    }
+    void clear_last_status() noexcept
+    {
+        mLastStatus = {};
     }
 
 private:
-    [[nodiscard]] virtual auto
-    do_try_consume(std::size_t binarySize,
-                   std::span<serialized_message_info const> messages) noexcept
-            -> bool
+    virtual auto
+    do_consume(std::size_t binarySize,
+               std::span<serialized_message_info const> messages) noexcept
+            -> result<void>
             = 0;
 
-    [[nodiscard]] virtual auto do_try_sync() noexcept -> bool
+    virtual auto do_sync() noexcept -> result<void>
     {
-        return true;
+        return oc::success();
+    }
+    virtual auto do_finalize() noexcept -> result<void>
+    {
+        return oc::success();
     }
 };
 
@@ -130,18 +173,31 @@ public:
     }
 
 private:
-    auto do_try_consume(
-            std::size_t const binarySize,
-            std::span<serialized_message_info const> const messages) noexcept
-            -> bool override
+    auto
+    do_consume(std::size_t const binarySize,
+               std::span<serialized_message_info const> const messages) noexcept
+            -> result<void> override
     {
         (void)binarySize;
-        return detail::concate_messages(mBackend, messages, mThreshold)
-                .has_value();
+        DPLX_TRY(detail::concate_messages(mBackend, messages, mThreshold));
+        return oc::success();
     }
-    auto do_try_sync() noexcept -> bool override
+    auto do_sync() noexcept -> result<void> override
     {
-        return oc::try_operation_has_value(mBackend.sync_output());
+        DPLX_TRY(mBackend.sync_output());
+        return oc::success();
+    }
+    auto do_finalize() noexcept -> result<void> override
+    {
+        if constexpr (requires {
+                          {
+                              mBackend.finalize()
+                              } -> detail::tryable;
+                      })
+        {
+            DPLX_TRY(mBackend.finalize());
+        }
+        return oc::success();
     }
 };
 
