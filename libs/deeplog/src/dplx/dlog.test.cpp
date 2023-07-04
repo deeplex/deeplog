@@ -29,14 +29,15 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
 {
     using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
 
-    auto dbOpenRx = dlog::file_database_handle::file_database(
-            test_dir, "log-test.drot", "log-test.{now:%FT%H-%M-%S}.dlog");
+    auto dbOpenRx = dlog::file_database_handle::file_database(test_dir,
+                                                              "log-test.drot");
     REQUIRE(dbOpenRx);
     auto &&db = std::move(dbOpenRx).assume_value();
 
     constexpr auto bufferSize = 64 * 1024;
     auto sinkBackendOpenRx = dlog::file_sink_backend::file_sink(
-            db.create_record_container(dlog::file_sink_id::default_,
+            db.create_record_container("log-test.{now:%FT%H-%M-%S}.dlog",
+                                       dlog::file_sink_id::default_,
                                        dlog::file_sink_backend::file_mode)
                     .value(),
             bufferSize, {});

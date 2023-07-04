@@ -292,7 +292,7 @@ try
     }
 
     llfio::path_view dbPath(args[1]);
-    auto db = dlog::file_database_handle::file_database({}, dbPath, "").value();
+    auto db = dlog::file_database_handle::file_database({}, dbPath).value();
 
     auto screen = ScreenInteractive::Fullscreen();
     auto mainComponent

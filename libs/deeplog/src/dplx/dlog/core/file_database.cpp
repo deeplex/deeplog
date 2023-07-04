@@ -33,10 +33,8 @@ namespace dplx::dlog
 {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto file_database_handle::file_database(
-        llfio::path_handle const &base,
-        llfio::path_view const path,
-        std::string sinkFileNamePattern) noexcept
+auto file_database_handle::file_database(llfio::path_handle const &base,
+                                         llfio::path_view const path) noexcept
         -> result<file_database_handle>
 {
     constexpr auto openMode = llfio::file_handle::mode::write;
@@ -56,19 +54,19 @@ auto file_database_handle::file_database(
     }
     else
     {
-        constexpr llfio::path_view dot(".", llfio::path_view::native_format);
+        constexpr llfio::path_view dot(".", llfio::path_view::native_format,
+                                       llfio::path_view::zero_terminated);
         DPLX_TRY(rootDirHandle, llfio::path(dot));
     }
 
-    file_database_handle db(std::move(root), std::move(rootDirHandle),
-                            std::move(sinkFileNamePattern));
+    file_database_handle db(std::move(root), std::move(rootDirHandle));
 
     {
         llfio::unique_file_lock dbLock{db.mRootHandle,
                                        llfio::lock_kind::exclusive};
 
         DPLX_TRY(auto maxExtent, db.mRootHandle.maximum_extent());
-        if (std::popcount(maxExtent) == 1)
+        if (maxExtent != 0)
         {
             DPLX_TRY(db.validate_magic());
             DPLX_TRY(db.fetch_content_impl());
@@ -175,10 +173,11 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
 }
 
 auto file_database_handle::create_record_container(
-        file_sink_id sinkId,
-        llfio::file_handle::mode fileMode,
-        llfio::file_handle::caching caching,
-        llfio::file_handle::flag flags) -> result<llfio::file_handle>
+        std::string_view const fileNamePattern,
+        file_sink_id const sinkId,
+        llfio::file_handle::mode const fileMode,
+        llfio::file_handle::caching const caching,
+        llfio::file_handle::flag const flags) -> result<llfio::file_handle>
 {
     llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
     DPLX_TRY(fetch_content_impl());
@@ -202,7 +201,7 @@ auto file_database_handle::create_record_container(
     llfio::file_handle file;
     do // open retry loop
     {
-        meta.path = file_name(mFileNamePattern, meta.sink_id, meta.rotation);
+        meta.path = file_name(fileNamePattern, meta.sink_id, meta.rotation);
 
         if (auto openRx
             = llfio::file(mRootDirHandle, meta.path, fileMode,
@@ -256,7 +255,7 @@ auto file_database_handle::open_record_container(
     return std::move(containerFile);
 }
 
-auto file_database_handle::file_name(std::string const &pattern,
+auto file_database_handle::file_name(std::string_view pattern,
                                      file_sink_id sinkId,
                                      unsigned rotationCount) -> std::string
 {
@@ -269,47 +268,26 @@ auto file_database_handle::file_name(std::string const &pattern,
 
 auto file_database_handle::validate_magic() noexcept -> result<void>
 {
+    constexpr auto coordinationAreaSize = 2U * 4096U;
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>> readBuffer;
-    DPLX_TRY(readBuffer.resize(8 * 1024));
+    DPLX_TRY(readBuffer.resize(coordinationAreaSize));
 
-    llfio::file_handle::buffer_type readBuffers[] = {
-            {readBuffer.as_span().data(), readBuffer.size()}
-    };
-    auto readRx = mRootHandle.read({readBuffers, 0U});
-    if (readRx.has_failure())
-    {
-        return std::move(readRx).as_failure();
-    }
-    if (readRx.bytes_transferred() != readBuffer.size())
+    llfio::file_handle::buffer_type readBuffers[] = {readBuffer.as_span()};
+    DPLX_TRY(auto const read, detail::xread(mRootHandle, {readBuffers, 0U}));
+    if (read.size() != 1 || read[0].size() != readBuffer.size())
     {
         return errc::missing_data;
     }
 
-    auto read = std::move(readRx).assume_value();
-    bytes header;
-    if (read.size() != 1U) [[unlikely]]
-    {
-        auto *out = readBuffer.as_span().data();
-        for (auto buf : read)
-        {
-            out = std::ranges::copy(buf, out).out;
-        }
-        header = readBuffer.as_span();
-    }
-    else
-    {
-        header = read[0];
-    }
-
-    if (!std::ranges::equal(header.first(std::size(magic)),
+    bytes header = read[0];
+    if (!std::ranges::equal(header.first(std::ranges::size(magic)),
                             as_bytes(std::span(magic))))
     {
         return errc::invalid_file_database_header;
     }
-    if (auto areaZero = header.subspan(std::size(magic));
-        std::ranges::find_if(areaZero,
-                             [](std::byte v) { return v != std::byte{}; })
-        != areaZero.end())
+    if (auto areaZero = header.subspan(std::ranges::size(magic));
+        std::ranges::any_of(areaZero,
+                            [](std::byte v) { return v != std::byte{}; }))
     {
         return errc::invalid_file_database_header;
     }
@@ -319,12 +297,13 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
 
 auto file_database_handle::initialize_storage() noexcept -> result<void>
 {
-    DPLX_TRY(mRootHandle.truncate(4U << 12)); // 16KiB aka 4 pages
+    constexpr auto initialSize = 4U * 4096U; // 16KiB aka 4 pages
+    DPLX_TRY(mRootHandle.truncate(initialSize));
+    DPLX_TRY(mRootHandle.zero({0U, initialSize}));
 
-    llfio::file_handle::const_buffer_type writeBuffers[] = {
-            {as_bytes(std::span(magic)).data(), std::size(magic)}
-    };
-    DPLX_TRY(mRootHandle.write({writeBuffers, 0}));
+    llfio::file_handle::const_buffer_type writeBuffers[]
+            = {as_bytes(std::span(magic))};
+    DPLX_TRY(mRootHandle.write({writeBuffers, 0U}));
 
     DPLX_TRY(retire_to_storage(mContents));
     return oc::success();
