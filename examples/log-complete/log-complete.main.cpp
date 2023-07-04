@@ -30,10 +30,10 @@ inline auto main() -> dlog::result<void>
     dlog::llfio::path_handle baseDir = {};
 
     DPLX_TRY(auto &&db, dlog::file_database_handle::file_database(
-                                baseDir, "log-test.drot",
-                                "log-test.{now:%FT%H-%M-%S}.dlog"));
+                                baseDir, "log-test.drot"));
     DPLX_TRY(auto &&sinkFile,
-             db.create_record_container(dlog::file_sink_id::default_,
+             db.create_record_container("log-test.{now:%FT%H-%M-%S}.dlog",
+                                        dlog::file_sink_id::default_,
                                         dlog::file_sink_backend::file_mode));
 
     constexpr auto bufferSize = 64 * 1024;

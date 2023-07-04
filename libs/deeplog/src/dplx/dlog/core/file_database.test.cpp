@@ -22,12 +22,12 @@ TEST_CASE("file database API integration test")
             = std::string{dbName}.append(dlog::file_database_handle::extension);
     auto const sinkFilePattern = dbName + ".{ctr}_{now:%FT%H-%M-%S}.blog";
 
-    auto createRx = dlog::file_database_handle::file_database(
-            test_dir, dbFullName, sinkFilePattern);
+    auto createRx
+            = dlog::file_database_handle::file_database(test_dir, dbFullName);
     REQUIRE(createRx);
     auto &&db = std::move(createRx).assume_value();
 
-    auto create2Rx = db.create_record_container();
+    auto create2Rx = db.create_record_container(sinkFilePattern);
     REQUIRE(create2Rx);
 
     // cleanup
@@ -44,18 +44,18 @@ TEST_CASE("file database reopen round trip")
     auto const sinkFilePattern = dbName + ".{ctr}_{now:%FT%H-%M-%S}.blog";
 
     {
-        auto createRx = dlog::file_database_handle::file_database(
-                {}, dbFullName, sinkFilePattern);
+        auto createRx
+                = dlog::file_database_handle::file_database({}, dbFullName);
         REQUIRE(createRx);
         auto &&db = std::move(createRx).assume_value();
 
-        auto create2Rx = db.create_record_container();
+        auto create2Rx = db.create_record_container(sinkFilePattern);
         REQUIRE(create2Rx);
     }
 
     {
-        auto createRx = dlog::file_database_handle::file_database(
-                {}, dbFullName, sinkFilePattern);
+        auto createRx
+                = dlog::file_database_handle::file_database({}, dbFullName);
         REQUIRE(createRx);
         auto &&db = std::move(createRx).assume_value();
 

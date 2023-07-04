@@ -75,23 +75,19 @@ private:
     llfio::file_handle mRootHandle;
     llfio::path_handle mRootDirHandle;
     contents_t mContents;
-    std::string mFileNamePattern;
 
 public:
     file_database_handle() noexcept = default;
     file_database_handle(llfio::file_handle rootHandle,
-                         llfio::path_handle rootDirHandle,
-                         std::string sinkFileNamePattern)
+                         llfio::path_handle rootDirHandle)
         : mRootHandle(std::move(rootHandle))
         , mRootDirHandle(std::move(rootDirHandle))
         , mContents{}
-        , mFileNamePattern(std::move(sinkFileNamePattern))
     {
     }
 
     static auto file_database(llfio::path_handle const &base,
-                              llfio::path_view path,
-                              std::string sinkFileNamePattern) noexcept
+                              llfio::path_view path) noexcept
             -> result<file_database_handle>;
 
     static inline constexpr std::string_view extension{".drot"};
@@ -106,7 +102,8 @@ private:
     auto fetch_content_impl() noexcept -> result<void>;
 
 public:
-    auto create_record_container(file_sink_id sinkId = file_sink_id::default_,
+    auto create_record_container(std::string_view namePattern,
+                                 file_sink_id sinkId = file_sink_id::default_,
                                  llfio::file_handle::mode fileMode
                                  = llfio::file_handle::mode::write,
                                  llfio::file_handle::caching caching
@@ -130,7 +127,7 @@ public:
     }
 
 private:
-    static auto file_name(std::string const &pattern,
+    static auto file_name(std::string_view pattern,
                           file_sink_id sinkId,
                           unsigned rotationCount) -> std::string;
 

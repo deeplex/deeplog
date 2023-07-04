@@ -32,6 +32,8 @@ class attribute_args;
 class record_output_buffer;
 struct record_output_buffer_storage;
 
+class file_database_handle;
+
 class sink_frontend_base;
 
 namespace detail
