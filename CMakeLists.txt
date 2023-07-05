@@ -59,7 +59,7 @@ set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
 
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 
-find_package(fmt 9 CONFIG REQUIRED)
+find_package(fmt 10 CONFIG REQUIRED)
 
 find_package(ftxui CONFIG REQUIRED)
 

@@ -31,14 +31,16 @@ inline auto main() -> dlog::result<void>
 
     DPLX_TRY(auto &&db, dlog::file_database_handle::file_database(
                                 baseDir, "log-test.drot"));
-    DPLX_TRY(auto &&sinkFile,
-             db.create_record_container("log-test.{now:%FT%H-%M-%S}.dlog",
-                                        dlog::file_sink_id::default_,
-                                        dlog::file_sink_backend::file_mode));
 
     constexpr auto bufferSize = 64 * 1024;
-    DPLX_TRY(auto &&sinkBackend, dlog::file_sink_backend::file_sink(
-                                         std::move(sinkFile), bufferSize, {}));
+    DPLX_TRY(auto &&sinkBackend,
+             dlog::file_sink_db_backend::create({
+                     .max_file_size = UINT64_MAX,
+                     .database = db,
+                     .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
+                     .target_buffer_size = bufferSize,
+                     .sink_id = dlog::file_sink_id::default_,
+             }));
 
     constexpr auto regionSize = 1 << 14;
     DPLX_TRY(auto &&mpscBus,

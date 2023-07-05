@@ -32,6 +32,23 @@
 namespace dplx::dlog
 {
 
+auto file_database_handle::clone() const noexcept
+        -> result<file_database_handle>
+{
+    DPLX_TRY(auto &&rootHandle, mRootHandle.reopen());
+    DPLX_TRY(auto &&rootDirHandle, mRootDirHandle.clone_to_path_handle());
+    file_database_handle db(std::move(rootHandle), std::move(rootDirHandle));
+    try
+    {
+        db.mContents = mContents;
+    }
+    catch (std::bad_alloc const &)
+    {
+        return system_error2::errc::not_enough_memory;
+    }
+    return db;
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto file_database_handle::file_database(llfio::path_handle const &base,
                                          llfio::path_view const path) noexcept
@@ -209,6 +226,7 @@ auto file_database_handle::create_record_container(
                           caching, flags);
             openRx.has_value())
         {
+            DPLX_TRY(openRx.assume_value().lock_file());
             file = std::move(openRx).assume_value();
         }
         else if (openRx.assume_error() == system_error::errc::file_exists)
@@ -233,6 +251,7 @@ auto file_database_handle::create_record_container(
 
     if (auto retireRx = retire_to_storage(contents); retireRx.has_failure())
     {
+        file.unlock_file();
         (void)file.unlink();
         return std::move(retireRx).as_failure();
     }

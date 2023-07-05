@@ -86,6 +86,8 @@ public:
     {
     }
 
+    auto clone() const noexcept -> result<file_database_handle>;
+
     static auto file_database(llfio::path_handle const &base,
                               llfio::path_view path) noexcept
             -> result<file_database_handle>;
