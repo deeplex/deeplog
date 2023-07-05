@@ -35,12 +35,13 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     auto &&db = std::move(dbOpenRx).assume_value();
 
     constexpr auto bufferSize = 64 * 1024;
-    auto sinkBackendOpenRx = dlog::file_sink_backend::file_sink(
-            db.create_record_container("log-test.{now:%FT%H-%M-%S}.dlog",
-                                       dlog::file_sink_id::default_,
-                                       dlog::file_sink_backend::file_mode)
-                    .value(),
-            bufferSize, {});
+    auto sinkBackendOpenRx = dlog::file_sink_db_backend::create({
+            .max_file_size = UINT64_MAX,
+            .database = db,
+            .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
+            .target_buffer_size = bufferSize,
+            .sink_id = dlog::file_sink_id::default_,
+    });
     REQUIRE(sinkBackendOpenRx);
 
     constexpr auto regionSize = 1 << 14;
