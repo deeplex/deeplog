@@ -27,28 +27,27 @@ namespace dlog_tests
 TEST_CASE("The library can create a new database, as new file_sink and write a "
           "record into it")
 {
-    using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
-
     auto dbOpenRx = dlog::file_database_handle::file_database(test_dir,
                                                               "log-test.drot");
     REQUIRE(dbOpenRx);
     auto &&db = std::move(dbOpenRx).assume_value();
 
+    constexpr auto regionSize = 1 << 14;
+    dlog::log_fabric core{
+            dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
+
     constexpr auto bufferSize = 64 * 1024;
-    auto sinkBackendOpenRx = dlog::file_sink_db_backend::create({
+    auto createSinkRx = core.create_sink<dlog::file_sink_db>({
+        .threshold = dlog::severity::info,
+        .backend = {   
             .max_file_size = UINT64_MAX,
             .database = db,
             .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
             .target_buffer_size = bufferSize,
-            .sink_id = dlog::file_sink_id::default_,
+            .sink_id = dlog::file_sink_id::default_,                                 
+        },
     });
-    REQUIRE(sinkBackendOpenRx);
-
-    constexpr auto regionSize = 1 << 14;
-    dlog::log_fabric core{
-            dlog::mpsc_bus(test_dir, "tmp", 4U, regionSize).value()};
-    auto *sink = core.attach_sink(std::make_unique<sink_type>(
-            dlog::severity::info, std::move(sinkBackendOpenRx).assume_value()));
+    REQUIRE(createSinkRx);
 
     dlog::log_context ctx(core);
     DLOG_TO(ctx, dlog::severity::warn, "important msg with arg {}", 1);
@@ -60,11 +59,7 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     REQUIRE(retireRx);
     CHECK(retireRx.assume_value() == 0);
 
-    core.release_sink(sink);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-    std::unique_ptr<sink_type> sinkOwner(static_cast<sink_type *>(sink));
-    auto finRx = sinkOwner->backend().finalize();
-    REQUIRE(finRx);
+    REQUIRE(core.destroy_sink(createSinkRx.assume_value()));
 }
 
 // we don't want to throw from within an initializer

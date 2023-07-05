@@ -139,7 +139,13 @@ private:
 
 template <typename T>
 concept sink_backend
-        = std::movable<T> && std::derived_from<T, dp::output_buffer>;
+        = std::movable<T> && std::derived_from<T, dp::output_buffer>
+       && requires { typename T::config_type; }
+       && requires(typename T::config_type &&config) {
+              {
+                  T::create(std::move(config))
+                  } -> detail::tryable_result<T>;
+          };
 
 template <sink_backend Backend>
 class basic_sink_frontend : public sink_frontend_base
@@ -148,6 +154,11 @@ class basic_sink_frontend : public sink_frontend_base
 
 public:
     using backend_type = Backend;
+    struct config_type
+    {
+        severity threshold;
+        typename backend_type::config_type backend;
+    };
 
     basic_sink_frontend(basic_sink_frontend const &) = delete;
     auto operator=(basic_sink_frontend const &)
@@ -161,6 +172,31 @@ public:
         : sink_frontend_base(threshold)
         , mBackend(std::move(backend))
     {
+    }
+
+    static auto create(config_type &&config) noexcept
+            -> result<basic_sink_frontend>
+    {
+        DPLX_TRY(auto &&backend,
+                 backend_type::create(std::move(config.backend)));
+        return result<basic_sink_frontend>(
+                std::in_place_type<basic_sink_frontend>, config.threshold,
+                std::move(backend));
+    }
+    static auto create_unique(config_type &&config) noexcept
+            -> result<std::unique_ptr<basic_sink_frontend>>
+    {
+        DPLX_TRY(auto &&backend,
+                 backend_type::create(std::move(config.backend)));
+        // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+        if (auto *frontend = new (std::nothrow)
+                    basic_sink_frontend(config.threshold, std::move(backend));
+            frontend != nullptr)
+        {
+            return std::unique_ptr<basic_sink_frontend>(frontend);
+        }
+
+        return system_error2::errc::not_enough_memory;
     }
 
     auto backend() noexcept -> backend_type &

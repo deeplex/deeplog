@@ -50,6 +50,8 @@ enum class [[nodiscard]] errc
     container_could_not_be_locked,
     unknown_argument_type_id,
     unknown_attribute_type_id,
+    unknown_sink,
+    sink_finalization_failed,
 
     LIMIT,
 };
@@ -110,6 +112,10 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "Could not decode the serialized argument due to an unknown type_id" },
         { code::unknown_attribute_type_id, generic_errc::unknown,
             "Could not decode the serialized attribute due to an unknown type_id" },
+        { code::unknown_sink, generic_errc::unknown,
+            "The given sink isn't attached to this log fabric." },
+        { code::sink_finalization_failed, generic_errc::unknown,
+            "Failed to finalize the sink, the failure code is attached to the sink." },
   // clang-format on
     };
 };

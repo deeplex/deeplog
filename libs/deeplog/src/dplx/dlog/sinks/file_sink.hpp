@@ -99,6 +99,7 @@ private:
 };
 
 extern template class basic_sink_frontend<file_sink_backend>;
+using file_sink = basic_sink_frontend<file_sink_backend>;
 
 class file_sink_db_backend : public file_sink_backend
 {
@@ -134,6 +135,7 @@ private:
 };
 
 extern template class basic_sink_frontend<file_sink_db_backend>;
+using file_sink_db = basic_sink_frontend<file_sink_db_backend>;
 
 } // namespace dplx::dlog
 
