@@ -117,8 +117,7 @@ public:
 auto dplx::dp::codec<dplx::dlog::span_kind>::decode(
         parse_context &ctx, dlog::span_kind &value) noexcept -> result<void>
 {
-    // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
-    std::underlying_type_t<dlog::span_kind> rawValue;
+    std::underlying_type_t<dlog::span_kind> rawValue{};
     DPLX_TRY(dp::parse_integer(
             ctx, rawValue,
             static_cast<std::underlying_type_t<dlog::span_kind>>(
