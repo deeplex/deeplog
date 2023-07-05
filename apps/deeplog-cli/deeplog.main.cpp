@@ -209,6 +209,10 @@ private:
         }
 
         dlog::argument_transmorpher argumentTransmorpher;
+        DPLX_TRY(argumentTransmorpher
+                         .register_type<dlog::detail::reified_status_code>());
+        DPLX_TRY(argumentTransmorpher
+                         .register_type<dlog::detail::reified_system_code>());
 
         dp::basic_decoder<record> decode_record{argumentTransmorpher};
         dp::basic_decoder<record_container> decode{decode_record};

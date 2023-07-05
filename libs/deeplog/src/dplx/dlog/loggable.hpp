@@ -24,6 +24,9 @@
 namespace dplx::dlog
 {
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define DPLX_X_WITH_SYSTEM_ERROR2 1
+
 enum class reification_type_id : std::uint64_t
 {
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
@@ -31,6 +34,8 @@ enum class reification_type_id : std::uint64_t
 #include <dplx/dlog/detail/x_poly_types.inl>
 #undef DPLX_X
 };
+
+#undef DPLX_X_WITH_SYSTEM_ERROR2
 
 } // namespace dplx::dlog
 
@@ -111,6 +116,17 @@ struct reification_tag<std::string>
 {
 };
 
+template <>
+struct reification_tag<detail::reified_status_code>
+    : reification_type_constant<reification_type_id::status_code>
+{
+};
+template <>
+struct reification_tag<detail::reified_system_code>
+    : reification_type_constant<reification_type_id::system_code>
+{
+};
+
 } // namespace dplx::dlog
 
 namespace dplx::dlog::detail
@@ -161,6 +177,12 @@ struct remap_c_string<SYSTEM_ERROR2_NAMESPACE::status_code_domain::string_ref>
     using type = std::string;
 };
 
+template <std::derived_from<system_error::status_code<void>> T>
+struct remap_c_string<T>
+{
+    using type = detail::trivial_status_code_view;
+};
+
 template <typename T>
 using remap_c_string_t = typename remap_c_string<T>::type;
 
@@ -201,6 +223,23 @@ template <>
 struct reification_type_of<std::u8string_view>
 {
     using type = std::u8string;
+};
+
+template <std::derived_from<system_error::status_code<void>> T>
+struct reification_type_of<T>
+{
+    using type = detail::reified_status_code;
+};
+template <>
+struct reification_type_of<system_error::system_code>
+{
+    using type = detail::reified_system_code;
+};
+template <>
+struct reification_type_of<system_error::errored_status_code<
+        system_error::erased<typename system_error::system_code::value_type>>>
+{
+    using type = detail::reified_system_code;
 };
 
 } // namespace dplx::dlog

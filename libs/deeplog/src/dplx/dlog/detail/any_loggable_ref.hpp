@@ -163,7 +163,8 @@ namespace dplx::dlog::detail
 {
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
-#define DPLX_X_STRING trivial_string_view
+#define DPLX_X_STRING             trivial_string_view
+#define DPLX_X_WITH_SYSTEM_ERROR2 1
 
 enum class any_loggable_ref_storage_id : unsigned char
 {
@@ -273,6 +274,20 @@ template <typename T>
 inline constexpr any_loggable_ref_storage_id any_loggable_ref_storage_tag<T>
         = any_loggable_ref_storage_id::string;
 
+template <std::derived_from<system_error::status_code<void>> T>
+inline constexpr any_loggable_ref_storage_id any_loggable_ref_storage_tag<T>
+        = any_loggable_ref_storage_id::status_code;
+
+template <>
+inline constexpr any_loggable_ref_storage_id
+        any_loggable_ref_storage_tag<system_error::system_code>
+        = any_loggable_ref_storage_id::system_code;
+template <>
+inline constexpr any_loggable_ref_storage_id any_loggable_ref_storage_tag<
+        system_error::errored_status_code<system_error::erased<
+                typename system_error::system_code::value_type>>>
+        = any_loggable_ref_storage_id::system_code;
+
 #define DPLX_X_WITH_THUNK 1
 
 class any_loggable_ref
@@ -325,6 +340,7 @@ public:
 };
 
 #undef DPLX_X_WITH_THUNK
+#undef DPLX_X_WITH_SYSTEM_ERROR2
 #undef DPLX_X_STRING
 // NOLINTEND(cppcoreguidelines-macro-usage)
 

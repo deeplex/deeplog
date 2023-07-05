@@ -23,7 +23,8 @@ namespace
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define DPLX_X_WITH_THUNK 0
+#define DPLX_X_WITH_THUNK         0
+#define DPLX_X_WITH_SYSTEM_ERROR2 1
 
 inline auto item_size_of_any_attribute(dp::emit_context &ctx,
                                        any_loggable_ref_storage_id id,
@@ -102,6 +103,7 @@ inline auto encode_any_attribute(dp::emit_context &ctx,
     return oc::success();
 }
 
+#undef DPLX_X_WITH_SYSTEM_ERROR2
 #undef DPLX_X_WITH_THUNK
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 // NOLINTEND(cppcoreguidelines-macro-usage)

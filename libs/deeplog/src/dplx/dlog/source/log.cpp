@@ -11,6 +11,8 @@
 #include <dplx/dp/items/emit_core.hpp>
 #include <dplx/dp/items/emit_ranges.hpp>
 #include <dplx/dp/items/item_size_of_ranges.hpp>
+#include <dplx/dp/items/parse_core.hpp>
+#include <dplx/dp/items/parse_ranges.hpp>
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/attributes.hpp>
@@ -75,6 +77,80 @@ auto dplx::dp::codec<dplx::dlog::reification_type_id>::encode(
     return dp::emit_integer(ctx, cncr::to_underlying(value));
 }
 
+auto dplx::dp::codec<dplx::dlog::detail::reified_status_code>::decode(
+        dp::parse_context &ctx,
+        dlog::detail::reified_status_code &code) noexcept -> dp::result<void>
+{
+    DPLX_TRY(dp::expect_item_head(ctx, dp::type_code::array, 3U));
+    DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
+    DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
+    DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
+    return oc::success();
+}
+
+auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::size_of(
+        dp::emit_context &ctx,
+        dlog::detail::trivial_status_code_view const code) noexcept
+        -> std::uint64_t
+{
+    constexpr std::uint64_t prefixSize = 1U + 9U;
+    return prefixSize
+         + dp::item_size_of_u8string(ctx, code.code->domain().name().size())
+         + dp::item_size_of_u8string(ctx, code.code->message().size());
+}
+
+auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::encode(
+        dp::emit_context &ctx,
+        dlog::detail::trivial_status_code_view const code) noexcept
+        -> dp::result<void>
+{
+    DPLX_TRY(dp::emit_array(ctx, 3U));
+    DPLX_TRY(dp::emit_integer(ctx, code.code->domain().id()));
+    auto domainName = code.code->domain().name();
+    DPLX_TRY(dp::emit_u8string(ctx, domainName.data(), domainName.size()));
+    auto message = code.code->message();
+    DPLX_TRY(dp::emit_u8string(ctx, message.data(), message.size()));
+    return oc::success();
+}
+
+auto dplx::dp::codec<dplx::dlog::detail::reified_system_code>::decode(
+        dp::parse_context &ctx,
+        dlog::detail::reified_system_code &code) noexcept -> dp::result<void>
+{
+    DPLX_TRY(dp::expect_item_head(ctx, dp::type_code::array, 4U));
+    DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
+    DPLX_TRY(dp::parse_integer(ctx, code.mRawValue));
+    DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
+    DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
+    return oc::success();
+}
+
+auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::size_of(
+        dp::emit_context &ctx,
+        dlog::detail::trivial_system_code_view const code) noexcept
+        -> std::uint64_t
+{
+    constexpr std::uint64_t prefixSize = 1U + 9U;
+    return prefixSize + dp::item_size_of_integer(ctx, code.code->value())
+         + dp::item_size_of_u8string(ctx, code.code->domain().name().size())
+         + dp::item_size_of_u8string(ctx, code.code->message().size());
+}
+
+auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::encode(
+        dp::emit_context &ctx,
+        dlog::detail::trivial_system_code_view const code) noexcept
+        -> dp::result<void>
+{
+    DPLX_TRY(dp::emit_array(ctx, 4U));
+    DPLX_TRY(dp::emit_integer(ctx, code.code->domain().id()));
+    DPLX_TRY(dp::emit_integer(ctx, code.code->value()));
+    auto domainName = code.code->domain().name();
+    DPLX_TRY(dp::emit_u8string(ctx, domainName.data(), domainName.size()));
+    auto message = code.code->message();
+    DPLX_TRY(dp::emit_u8string(ctx, message.data(), message.size()));
+    return oc::success();
+}
+
 auto dplx::dlog::detail::erased_loggable_ref::emit_reification_prefix(
         dp::emit_context &ctx, reification_type_id id) noexcept
         -> result<std::uint64_t>
@@ -100,7 +176,8 @@ namespace
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define DPLX_X_WITH_THUNK 0
+#define DPLX_X_WITH_THUNK         0
+#define DPLX_X_WITH_SYSTEM_ERROR2 1
 
 inline auto
 item_size_of_any_loggable(dp::emit_context &ctx,
@@ -171,6 +248,7 @@ inline auto encode_any_loggable(dp::emit_context &ctx,
     return oc::success();
 }
 
+#undef DPLX_X_WITH_SYSTEM_ERROR2
 #undef DPLX_X_WITH_THUNK
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 // NOLINTEND(cppcoreguidelines-macro-usage)

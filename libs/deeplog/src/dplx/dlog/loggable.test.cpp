@@ -21,6 +21,7 @@ static_assert(dlog::loggable<int>);
 static_assert(dlog::loggable<std::int64_t>);
 static_assert(
         dlog::loggable<dlog::system_error::status_code_domain::string_ref>);
+static_assert(dlog::loggable<dlog::system_error::system_code>);
 static_assert(std::same_as<dlog::reification_type_of_t<int>, std::int64_t>);
 
 static_assert(dlog::reification_tag_v<std::int64_t>

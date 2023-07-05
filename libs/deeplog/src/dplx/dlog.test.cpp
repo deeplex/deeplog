@@ -51,6 +51,9 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
 
     dlog::log_context ctx(core);
     DLOG_TO(ctx, dlog::severity::warn, "important msg with arg {}", 1);
+    DLOG_TO(ctx, dlog::severity::error, "oh no {}",
+            dlog::system_error::system_code(
+                    dlog::system_error::errc::not_enough_memory));
     // DLOG_GENERIC(xlog, dlog::severity::warn,
     //              "important msg with arg {} and {}", 1, dlog::arg("argx",
     //              2));

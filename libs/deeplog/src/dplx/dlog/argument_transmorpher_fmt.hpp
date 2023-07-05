@@ -100,12 +100,13 @@ public:
     {
         try
         {
-            mKnownTypes.insert(reification_tag_v<T>, &revive_template<T>);
+            mKnownTypes.emplace(reification_tag_v<T>, &revive_template<T>);
         }
         catch (std::bad_alloc const &)
         {
             return errc::not_enough_memory;
         }
+        return oc::success();
     }
 
 private:
