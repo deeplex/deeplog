@@ -235,7 +235,10 @@
 
 </span><span class="name class">record</span><span class="whitespace"> </span><span class="operator">=</span><span class="whitespace"> </span><span class="punctuation">[</span><span class="whitespace">
     </span><span class="name class">severity</span><span class="punctuation">,</span><span class="whitespace">
-    </span><span class="name class">span_context</span><span class="whitespace"> </span><span class="operator">/</span><span class="whitespace"> </span><span class="name builtin">null</span><span class="punctuation">,</span><span class="whitespace">
+    </span><span class="literal string">ctx</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="punctuation">[</span><span class="whitespace">
+        </span><span class="operator">?</span><span class="whitespace"> </span><span class="literal string">name</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="name class">dupe_tstr</span><span class="punctuation">,</span><span class="whitespace">
+        </span><span class="operator">?</span><span class="whitespace"> </span><span class="punctuation">(</span><span class="whitespace"> </span><span class="name class">trace_id</span><span class="punctuation">,</span><span class="whitespace"> </span><span class="name class">span_id</span><span class="whitespace"> </span><span class="punctuation">),</span><span class="whitespace">
+    </span><span class="punctuation">],</span><span class="whitespace">
     </span><span class="name class">timestamp</span><span class="punctuation">,</span><span class="whitespace">
     </span><span class="literal string">message</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="name class">dupe_tstr</span><span class="punctuation">,</span><span class="whitespace">
     </span><span class="literal string">fmtArgs</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="punctuation">[</span><span class="operator">*</span><span class="whitespace"> </span><span class="name builtin">any</span><span class="punctuation">],</span><span class="whitespace">
