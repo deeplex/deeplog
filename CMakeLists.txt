@@ -70,7 +70,7 @@ find_package(llfio CONFIG REQUIRED)
 find_package(concrete 0.0 CONFIG REQUIRED)
 find_package(deeppack 0.1 CONFIG REQUIRED)
 
-find_package(Boost 1.81 REQUIRED)
+find_package(Boost 1.82 REQUIRED)
 
 find_package(Catch2 CONFIG)
 set_package_properties(Catch2 PROPERTIES
