@@ -70,6 +70,9 @@ protected:
 public:
     auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
             -> sink_frontend_base *;
+    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink,
+                     std::nothrow_t) noexcept -> result<sink_frontend_base *>;
+    auto destroy_sink(sink_frontend_base *which) noexcept -> result<void>;
     void remove_sink(sink_frontend_base *which) noexcept;
     auto release_sink(sink_frontend_base *which) noexcept
             -> sink_frontend_base *;
@@ -102,6 +105,14 @@ public:
         DPLX_TRY(mMessageBus.consume_messages(drain));
         sync_sinks();
         return oc::success();
+    }
+    template <typename Sink>
+    auto create_sink(typename Sink::config_type &&config) -> result<Sink *>
+    {
+        DPLX_TRY(auto &&sink, Sink::create_unique(std::move(config)));
+        DPLX_TRY(auto *attached, attach_sink(std::move(sink), std::nothrow));
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+        return static_cast<Sink *>(attached);
     }
 
 private:

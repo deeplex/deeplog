@@ -26,28 +26,28 @@ using namespace dplx;
 
 inline auto main() -> dlog::result<void>
 {
-    using sink_type = dlog::basic_sink_frontend<dlog::file_sink_backend>;
     dlog::llfio::path_handle baseDir = {};
 
     DPLX_TRY(auto &&db, dlog::file_database_handle::file_database(
                                 baseDir, "log-test.drot"));
 
-    constexpr auto bufferSize = 64 * 1024;
-    DPLX_TRY(auto &&sinkBackend,
-             dlog::file_sink_db_backend::create({
-                     .max_file_size = UINT64_MAX,
-                     .database = db,
-                     .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
-                     .target_buffer_size = bufferSize,
-                     .sink_id = dlog::file_sink_id::default_,
-             }));
-
     constexpr auto regionSize = 1 << 14;
     DPLX_TRY(auto &&mpscBus,
              dlog::mpsc_bus(baseDir, "log-test.dmsb", 4U, regionSize));
     dlog::log_fabric core{std::move(mpscBus)};
-    auto *sink = core.attach_sink(std::make_unique<sink_type>(
-            dlog::severity::debug, std::move(sinkBackend)));
+
+    constexpr auto bufferSize = 64 * 1024;
+    DPLX_TRY(auto *sink,
+             core.create_sink<dlog::file_sink_db>({
+                    .threshold = dlog::severity::debug,
+                    .backend = {
+                            .max_file_size = UINT64_MAX,
+                            .database = db,
+                            .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
+                            .target_buffer_size = bufferSize,
+                            .sink_id = dlog::file_sink_id::default_,
+                    },
+    }));
     dlog::set_thread_context(dlog::log_context{core});
 
     {
@@ -57,10 +57,7 @@ inline auto main() -> dlog::result<void>
 
     DPLX_TRY(core.retire_log_records());
 
-    core.release_sink(sink);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-    std::unique_ptr<sink_type> sinkOwner(static_cast<sink_type *>(sink));
-    DPLX_TRY(sinkOwner->backend().finalize());
+    DPLX_TRY(core.destroy_sink(sink));
 
     DPLX_TRY(core.message_bus().unlink());
     return dlog::oc::success();
