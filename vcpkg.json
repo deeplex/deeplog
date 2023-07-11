@@ -8,6 +8,7 @@
         "boost-mp11",
         "boost-unordered",
         "boost-variant2",
+        "boost-winapi",
         "concrete",
         "deeppack",
         "fmt",
