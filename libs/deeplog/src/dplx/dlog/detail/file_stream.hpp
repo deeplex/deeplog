@@ -11,10 +11,9 @@
 #include <cstdint>
 #include <span>
 
-#include <boost/predef/os.h>
-
 #include <dplx/dp/legacy/chunked_input_stream.hpp>
 #include <dplx/dp/legacy/memory_buffer.hpp>
+#include <dplx/predef/os.h>
 
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -214,7 +213,7 @@ private:
         auto readRx = dataSource->read({ioBuffers, realReadPos});
         if (readRx.has_failure())
         {
-#if defined(BOOST_OS_WINDOWS_AVAILABLE)
+#if defined(DPLX_OS_WINDOWS_AVAILABLE)
             constexpr system_error::win32_code error_handle_eof{0x00000026};
             constexpr system_error::nt_code status_end_of_file{
                     static_cast<long>(0xc0000011U)};

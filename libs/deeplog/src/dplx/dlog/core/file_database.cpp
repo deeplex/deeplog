@@ -12,6 +12,14 @@
 #include <shared_mutex>
 #include <utility>
 
+#include <dplx/predef/os.h>
+
+#if defined(DPLX_OS_WINDOWS_AVAILABLE)
+#include <boost/winapi/get_current_process_id.hpp>
+#elif defined(DPLX_OS_UNIX_AVAILABLE) || defined(DPLX_OS_MACOS_AVAILABLE)
+#include <unistd.h>
+#endif
+
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
@@ -23,6 +31,7 @@
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/codecs/std-container.hpp>
 #include <dplx/dp/codecs/std-filesystem.hpp>
+#include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/legacy/memory_buffer.hpp>
 
 #include <dplx/dlog/concepts.hpp>
@@ -31,6 +40,28 @@
 
 namespace dplx::dlog
 {
+
+namespace
+{
+
+#if defined(DPLX_OS_WINDOWS_AVAILABLE)
+auto get_current_process_id() -> std::uint32_t
+{
+    return static_cast<std::uint32_t>(boost::winapi::GetCurrentProcessId());
+}
+#elif defined(DPLX_OS_UNIX_AVAILABLE) || defined(DPLX_OS_MACOS_AVAILABLE)
+auto get_current_process_id() -> std::uint32_t
+{
+    return static_cast<std::uint32_t>(::getpid());
+}
+#else
+auto get_current_process_id() -> std::uint32_t
+{
+    return 0xffff'ffff; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+}
+#endif
+
+} // namespace
 
 auto file_database_handle::clone() const noexcept
         -> result<file_database_handle>
@@ -108,29 +139,8 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
     llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
     DPLX_TRY(fetch_content_impl());
 
-    for (auto &recordContainer : mContents.record_containers)
-    {
-        llfio::file_handle containerFile;
-        if (auto openRx = llfio::file(mRootDirHandle, recordContainer.path,
-                                      llfio::file_handle::mode::write);
-            openRx.has_value())
-        {
-            containerFile = std::move(openRx).assume_value();
-        }
-        else
-        {
-            continue;
-        }
-
-        if (!containerFile.unlink())
-        {
-            continue;
-        }
-        recordContainer.rotation = 0U;
-    }
-
-    erase_if(mContents.record_containers,
-             [](auto const &c) { return !c.rotation; });
+    unlink_all_record_containers_impl();
+    unlink_all_message_buses_impl();
 
     (void)retire_to_storage(mContents);
 
@@ -138,12 +148,47 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
     {
         return errc::container_unlink_failed;
     }
+    if (!mContents.message_buses.empty())
+    {
+        return errc::message_bus_unlink_failed;
+    }
 
     rootLock.unlock();
     DPLX_TRY(mRootHandle.unlink());
 
     *this = {};
 
+    return oc::success();
+}
+
+auto file_database_handle::unlink_all_message_buses() noexcept -> result<void>
+{
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    DPLX_TRY(fetch_content_impl());
+
+    unlink_all_message_buses_impl();
+    (void)retire_to_storage(mContents);
+
+    if (!mContents.message_buses.empty())
+    {
+        return errc::message_bus_unlink_failed;
+    }
+    return oc::success();
+}
+
+auto file_database_handle::unlink_all_record_containers() noexcept
+        -> result<void>
+{
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    DPLX_TRY(fetch_content_impl());
+
+    unlink_all_record_containers_impl();
+    (void)retire_to_storage(mContents);
+
+    if (!mContents.record_containers.empty())
+    {
+        return errc::container_unlink_failed;
+    }
     return oc::success();
 }
 
@@ -206,19 +251,20 @@ auto file_database_handle::create_record_container(
             {.path = {}, .byte_size = 0U, .sink_id = sinkId, .rotation = 0U});
     auto &meta = contents.record_containers.back();
 
-    auto lastRotation = std::ranges::max(contents.record_containers, {},
-                                         [sinkId](auto const &rcm) {
-                                             return rcm.sink_id == sinkId
-                                                          ? rcm.rotation
-                                                          : 0U;
-                                         })
-                                .rotation;
+    auto const lastRotation = std::ranges::max(contents.record_containers, {},
+                                               [sinkId](auto const &rcm) {
+                                                   return rcm.sink_id == sinkId
+                                                                ? rcm.rotation
+                                                                : 0U;
+                                               })
+                                      .rotation;
     meta.rotation = lastRotation + 1;
 
     llfio::file_handle file;
     do // open retry loop
     {
-        meta.path = file_name(fileNamePattern, meta.sink_id, meta.rotation);
+        meta.path = record_container_filename(fileNamePattern, meta.sink_id,
+                                              meta.rotation);
 
         if (auto openRx
             = llfio::file(mRootDirHandle, meta.path, fileMode,
@@ -274,15 +320,189 @@ auto file_database_handle::open_record_container(
     return std::move(containerFile);
 }
 
-auto file_database_handle::file_name(std::string_view pattern,
-                                     file_sink_id sinkId,
-                                     unsigned rotationCount) -> std::string
+auto file_database_handle::create_message_bus(
+        std::string_view namePattern,
+        std::string id,
+        std::span<std::byte const> busMagic,
+        llfio::file_handle::mode fileMode,
+        llfio::file_handle::caching caching,
+        llfio::file_handle::flag flags) -> result<message_bus_file>
+{
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    DPLX_TRY(fetch_content_impl());
+
+    auto contents = mContents;
+    contents.revision += 1;
+
+    contents.message_buses.push_back({
+            .path = {},
+            .magic = {busMagic.begin(), busMagic.end()},
+            .id = std::move(id),
+            .rotation = {},
+            .process_id = dlog::get_current_process_id(),
+    });
+    auto &meta = contents.message_buses.back();
+
+    auto lastRotation
+            = std::ranges::max(contents.message_buses, {},
+                               [&meta](auto const &mbm) {
+                                   return mbm.id == meta.id ? mbm.rotation : 0U;
+                               })
+                      .rotation;
+    meta.rotation = lastRotation + 1;
+
+    llfio::file_handle file;
+    do // open retry loop
+    {
+        meta.path = message_bus_filename(namePattern, meta.id, meta.process_id,
+                                         meta.rotation);
+
+        if (auto openRx
+            = llfio::file(mRootDirHandle, meta.path, fileMode,
+                          llfio::file_handle::creation::only_if_not_exist,
+                          caching, flags);
+            openRx.has_value())
+        {
+            file = std::move(openRx).assume_value();
+            DPLX_TRY(file.lock_file());
+        }
+        else if (openRx.assume_error() == system_error::errc::file_exists)
+        {
+            // 5 retries hoping that the user chose a file name pattern which
+            // disambiguates by timestamp or rotation count
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+            if (meta.rotation - 10 < lastRotation)
+            {
+                meta.rotation += 2; // preserve oddness
+            }
+            else
+            {
+                return std::move(openRx).as_failure();
+            }
+        }
+        else
+        {
+            return std::move(openRx).as_failure();
+        }
+    } while (!file.is_valid());
+
+    if (auto retireRx = retire_to_storage(contents); retireRx.has_failure())
+    {
+        file.unlock_file();
+        (void)file.unlink();
+        return std::move(retireRx).as_failure();
+    }
+
+    mContents = std::move(contents);
+    return message_bus_file{.handle = std::move(file),
+                            .rotation = meta.rotation};
+}
+
+auto file_database_handle::remove_message_bus(std::string_view id,
+                                              std::uint32_t rotation)
+        -> result<void>
+{
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    DPLX_TRY(fetch_content_impl());
+
+    auto contents = mContents;
+    contents.revision += 1;
+
+    if (std::erase_if(contents.message_buses, [id, rotation](auto const &mbm)
+                      { return mbm.id == id && mbm.rotation == rotation; })
+        == 0)
+    {
+        return errc::unknown_message_bus;
+    }
+    DPLX_TRY(retire_to_storage(contents));
+    mContents = std::move(contents);
+    return oc::success();
+}
+
+auto file_database_handle::record_container_filename(
+        std::string_view pattern,
+        file_sink_id sinkId,
+        std::uint32_t rotationCount) -> std::string
 {
     auto const now = std::chrono::floor<std::chrono::seconds>(
             std::chrono::system_clock::now());
 
     return fmt::format(fmt::runtime(pattern), fmt::arg("id", sinkId),
                        fmt::arg("now", now), fmt::arg("ctr", rotationCount));
+}
+
+auto file_database_handle::message_bus_filename(std::string_view pattern,
+                                                std::string_view id,
+                                                std::uint32_t processId,
+                                                std::uint32_t rotationCount)
+        -> std::string
+{
+    auto const now = std::chrono::floor<std::chrono::seconds>(
+            std::chrono::system_clock::now());
+
+    return fmt::format(fmt::runtime(pattern), fmt::arg("id", id),
+                       fmt::arg("now", now), fmt::arg("pid", processId),
+                       fmt::arg("ctr", rotationCount));
+}
+
+void file_database_handle::unlink_all_message_buses_impl() noexcept
+{
+    for (auto &messageBus : mContents.message_buses)
+    {
+        if (auto openRx = llfio::file(mRootDirHandle, messageBus.path,
+                                      llfio::file_handle::mode::write);
+            openRx.has_value())
+        {
+            llfio::file_handle &messageBusFile = openRx.assume_value();
+            if (!messageBusFile.try_lock_file())
+            {
+                continue;
+            }
+            messageBusFile.unlock_file();
+            if (messageBusFile.unlink().has_value())
+            {
+                messageBus.rotation = 0U;
+            }
+        }
+        else if (openRx.assume_error()
+                 == system_error::errc::no_such_file_or_directory)
+        {
+            messageBus.rotation = 0U;
+        }
+    }
+
+    std::erase_if(mContents.message_buses,
+                  [](auto const &c) { return !c.rotation; });
+}
+
+void file_database_handle::unlink_all_record_containers_impl() noexcept
+{
+    for (auto &recordContainer : mContents.record_containers)
+    {
+        if (auto openRx = llfio::file(mRootDirHandle, recordContainer.path,
+                                      llfio::file_handle::mode::write);
+            openRx.has_value())
+        {
+            llfio::file_handle &containerFile = openRx.assume_value();
+            if (!containerFile.try_lock_file())
+            {
+                continue;
+            }
+            containerFile.unlock_file();
+            if (containerFile.unlink().has_value())
+            {
+                recordContainer.rotation = 0U;
+            }
+        }
+        else if (openRx.assume_error()
+                 == system_error::errc::no_such_file_or_directory)
+        {
+            recordContainer.rotation = 0U;
+        }
+    }
+
+    erase_if(mContents.record_containers,
+             [](auto const &c) { return !c.rotation; });
 }
 
 auto file_database_handle::validate_magic() noexcept -> result<void>
@@ -343,6 +563,8 @@ auto file_database_handle::retire_to_storage(
 
 DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(
         ::dplx::dlog::file_database_handle::record_container_meta)
+DPLX_DLOG_DEFINE_AUTO_TUPLE_CODEC(
+        ::dplx::dlog::file_database_handle::message_bus_meta)
 
 DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(
         ::dplx::dlog::file_database_handle::contents_t)

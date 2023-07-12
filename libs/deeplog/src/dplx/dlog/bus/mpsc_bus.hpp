@@ -22,9 +22,11 @@
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/concepts.hpp>
+#include <dplx/dlog/core/file_database.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
+#include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/source/record_output_buffer.hpp>
 
 namespace dplx::dlog::detail
@@ -69,7 +71,7 @@ struct mpsc_bus_region_ctrl
     std::uint8_t padding[48]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 };
 
-class mpsc_bus_handle final
+class mpsc_bus_handle
 {
     llfio::mapped_file_handle mBackingFile;
     std::uint32_t mNumRegions;
@@ -124,6 +126,13 @@ public:
                          std::uint32_t numRegions,
                          std::uint32_t regionSize) noexcept
             -> result<mpsc_bus_handle>;
+
+    static inline constexpr llfio::file_handle::mode file_mode
+            = llfio::file_handle::mode::write;
+    static inline constexpr llfio::file_handle::caching file_caching
+            = llfio::file_handle::caching::temporary;
+    static inline constexpr llfio::file_handle::flag file_flags
+            = llfio::file_handle::flag::none;
 
     [[nodiscard]] auto release() noexcept -> llfio::mapped_file_handle
     {
@@ -439,6 +448,75 @@ inline auto mpsc_bus(llfio::mapped_file_handle &&backingFile,
     return mpsc_bus_handle::mpsc_bus(std::move(backingFile), numRegions,
                                      regionSize);
 }
+
+class db_mpsc_bus_handle : private mpsc_bus_handle
+{
+    file_database_handle mFileDb;
+    std::string mId;
+    std::uint32_t mRotation;
+
+public:
+    db_mpsc_bus_handle()
+        : mpsc_bus_handle()
+        , mId()
+        , mRotation(0U)
+    {
+    }
+
+    db_mpsc_bus_handle(db_mpsc_bus_handle &&other) noexcept
+        : mpsc_bus_handle(std::move(other))
+        , mId(std::move(other.mId))
+        , mRotation(std::exchange(other.mRotation, 0U))
+    {
+    }
+    auto operator=(db_mpsc_bus_handle &&other) noexcept -> db_mpsc_bus_handle &
+    {
+        mpsc_bus_handle::operator=(std::move(other));
+
+        // the base class operator only moves base class parts
+        // NOLINTBEGIN(bugprone-use-after-move)
+        mId = std::move(other.mId);
+        mRotation = std::exchange(other.mRotation, 0U);
+        // NOLINTEND(bugprone-use-after-move)
+        return *this;
+    }
+
+private:
+    db_mpsc_bus_handle(mpsc_bus_handle &&h,
+                       std::string id,
+                       std::uint32_t rotation)
+        : mpsc_bus_handle(std::move(h))
+        , mId(std::move(id))
+        , mRotation(rotation)
+    {
+    }
+
+public:
+    struct config_type
+    {
+        file_database_handle const &database;
+        std::string bus_id;
+        std::string_view file_name_pattern;
+        std::uint32_t num_regions;
+        std::uint32_t region_size;
+    };
+
+    static auto create(config_type &&config) -> result<db_mpsc_bus_handle>;
+
+    using mpsc_bus_handle::consume_batch_size;
+    using mpsc_bus_handle::max_message_size;
+    using mpsc_bus_handle::min_region_size;
+
+    using mpsc_bus_handle::allocate_record_buffer_inplace;
+    using mpsc_bus_handle::consume_messages;
+    using mpsc_bus_handle::create_span_context;
+
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+    auto unlink(llfio::deadline deadline = std::chrono::seconds(30)) noexcept
+            -> result<void>;
+};
+
+extern template class log_fabric<db_mpsc_bus_handle>;
 
 } // namespace dplx::dlog
 

@@ -5,10 +5,10 @@
     "homepage": "https://github.com/deeplex/deeplog",
     "dependencies": [
         "boost-config",
-        "boost-predef",
         "boost-mp11",
         "boost-unordered",
         "boost-variant2",
+        "boost-winapi",
         "concrete",
         "deeppack",
         "fmt",

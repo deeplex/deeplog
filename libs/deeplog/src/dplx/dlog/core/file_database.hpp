@@ -42,9 +42,9 @@ public:
     struct record_container_meta
     {
         std::filesystem::path path;
-        unsigned byte_size;
+        std::uint32_t byte_size;
         file_sink_id sink_id;
-        unsigned rotation;
+        std::uint32_t rotation;
 
         static constexpr dp::tuple_def<
                 dp::tuple_member_def<&record_container_meta::sink_id>{},
@@ -55,16 +55,36 @@ public:
     };
     using record_containers_type = std::vector<record_container_meta>;
 
+    struct message_bus_meta
+    {
+        std::filesystem::path path;
+        std::vector<std::byte> magic;
+        std::string id;
+        std::uint32_t rotation{};
+        std::uint32_t process_id{};
+
+        static constexpr dp::tuple_def<
+                dp::tuple_member_def<&message_bus_meta::magic>{},
+                dp::tuple_member_def<&message_bus_meta::id>{},
+                dp::tuple_member_def<&message_bus_meta::rotation>{},
+                dp::tuple_member_def<&message_bus_meta::process_id>{},
+                dp::tuple_member_def<&message_bus_meta::path>{}>
+                layout_descriptor{};
+    };
+    using message_buses_type = std::vector<message_bus_meta>;
+
 private:
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
     struct contents_t
     {
         unsigned long long revision;
         std::vector<record_container_meta> record_containers;
+        std::vector<message_bus_meta> message_buses;
 
         static constexpr dp::object_def<
                 dp::property_def<1, &contents_t::revision>{},
-                dp::property_def<2, &contents_t::record_containers>{}>
+                dp::property_def<2, &contents_t::record_containers>{},
+                dp::property_def<3, &contents_t::message_buses>{}>
                 layout_descriptor{
                         .version = 0,
                         .allow_versioned_auto_decoder = true,
@@ -99,6 +119,8 @@ public:
 
     auto fetch_content() noexcept -> result<void>;
     auto unlink_all() noexcept -> result<void>;
+    auto unlink_all_message_buses() noexcept -> result<void>;
+    auto unlink_all_record_containers() noexcept -> result<void>;
 
 private:
     auto fetch_content_impl() noexcept -> result<void>;
@@ -128,10 +150,42 @@ public:
         return mContents.record_containers;
     }
 
+    struct message_bus_file
+    {
+        llfio::file_handle handle;
+        std::uint32_t rotation;
+    };
+    auto create_message_bus(std::string_view namePattern,
+                            std::string id,
+                            std::span<std::byte const> busMagic,
+                            llfio::file_handle::mode fileMode
+                            = llfio::file_handle::mode::write,
+                            llfio::file_handle::caching caching
+                            = llfio::file_handle::caching::reads,
+                            llfio::file_handle::flag flags
+                            = llfio::file_handle::flag::none)
+            -> result<message_bus_file>;
+    auto remove_message_bus(std::string_view id, std::uint32_t rotation)
+            -> result<void>;
+
+    auto message_buses() const noexcept -> message_buses_type const &
+    {
+        return mContents.message_buses;
+    }
+
 private:
-    static auto file_name(std::string_view pattern,
-                          file_sink_id sinkId,
-                          unsigned rotationCount) -> std::string;
+    static auto record_container_filename(std::string_view pattern,
+                                          file_sink_id sinkId,
+                                          std::uint32_t rotationCount)
+            -> std::string;
+    static auto message_bus_filename(std::string_view pattern,
+                                     std::string_view id,
+                                     std::uint32_t processId,
+                                     std::uint32_t rotationCount)
+            -> std::string;
+
+    void unlink_all_message_buses_impl() noexcept;
+    void unlink_all_record_containers_impl() noexcept;
 
     auto validate_magic() noexcept -> result<void>;
     auto initialize_storage() noexcept -> result<void>;
@@ -142,4 +196,6 @@ private:
 
 DPLX_DP_DECLARE_CODEC_SIMPLE(
         ::dplx::dlog::file_database_handle::record_container_meta);
+DPLX_DP_DECLARE_CODEC_SIMPLE(
+        ::dplx::dlog::file_database_handle::message_bus_meta);
 DPLX_DP_DECLARE_CODEC_SIMPLE(::dplx::dlog::file_database_handle::contents_t);

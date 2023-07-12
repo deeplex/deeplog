@@ -103,11 +103,10 @@ auto mpsc_bus_handle::mpsc_bus(llfio::path_handle const &base,
                                std::uint32_t const regionSize) noexcept
         -> result<mpsc_bus_handle>
 {
-    using handle = llfio::mapped_file_handle;
     DPLX_TRY(auto &&mappedFile,
-             llfio::mapped_file(base, path, handle::mode::write,
-                                handle::creation::only_if_not_exist,
-                                handle::caching::temporary));
+             llfio::mapped_file(base, path, file_mode,
+                                llfio::file_handle::creation::only_if_not_exist,
+                                file_caching, file_flags));
     return mpsc_bus(std::move(mappedFile), numRegions, regionSize);
 }
 auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
@@ -215,6 +214,45 @@ auto dplx::dlog::mpsc_bus_handle::create_span_context(trace_id trace,
     return {trace, detail::derive_span_id(rawTraceId.values[0],
                                           rawTraceId.values[1], ctr)};
 }
+
+auto db_mpsc_bus_handle::create(config_type &&config)
+        -> result<db_mpsc_bus_handle>
+{
+    auto busIdCopy = config.bus_id;
+    DPLX_TRY(auto &&db, config.database.clone());
+
+    DPLX_TRY(auto &&info,
+             db.create_message_bus(config.file_name_pattern,
+                                   std::move(busIdCopy),
+                                   as_bytes(std::span(magic)), file_mode,
+                                   file_caching, file_flags));
+
+    llfio::mapped_file_handle mappedFile(std::move(info.handle),
+                                         llfio::section_handle::flag::none, 0U);
+    auto openRx = mpsc_bus_handle::mpsc_bus(
+            std::move(mappedFile), config.num_regions, config.region_size);
+    if (openRx.has_failure())
+    {
+        (void)mappedFile.unlink(); // NOLINT(bugprone-use-after-move)
+        // TODO: remove entry from file database
+        return std::move(openRx).as_failure();
+    }
+
+    return db_mpsc_bus_handle(std::move(openRx).assume_value(),
+                              std::move(config.bus_id), info.rotation);
+}
+
+auto db_mpsc_bus_handle::unlink(llfio::deadline deadline) noexcept
+        -> result<void>
+{
+    DPLX_TRY(mpsc_bus_handle::unlink(deadline));
+    DPLX_TRY(mFileDb.remove_message_bus(mId, mRotation));
+    return oc::success();
+}
+
+// log_fabric is final 🙃
+// NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
+template class log_fabric<db_mpsc_bus_handle>;
 
 } // namespace dplx::dlog
 
