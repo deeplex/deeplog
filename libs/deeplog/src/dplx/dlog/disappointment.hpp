@@ -52,6 +52,7 @@ enum class [[nodiscard]] errc
     unknown_argument_type_id,
     unknown_attribute_type_id,
     unknown_sink,
+    unknown_message_bus,
     sink_finalization_failed,
 
     LIMIT,
@@ -117,6 +118,8 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "Could not decode the serialized attribute due to an unknown type_id" },
         { code::unknown_sink, generic_errc::unknown,
             "The given sink isn't attached to this log fabric." },
+        { code::unknown_message_bus, generic_errc::unknown,
+            "The given message bus (id, rotation) isn't registered with this database." },
         { code::sink_finalization_failed, generic_errc::unknown,
             "Failed to finalize the sink, the failure code is attached to the sink." },
   // clang-format on
