@@ -17,6 +17,7 @@
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/predef/hardware.h>
+#include <dplx/scope_guard.hpp>
 
 #if DPLX_HW_SIMD_X86 >= DPLX_HW_SIMD_X86_SSE4_1_VERSION
 #include <nmmintrin.h>
@@ -147,15 +148,18 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
         return errc::invalid_argument;
     }
 
-    llfio::unique_file_lock fileLock(backingFile, lockState);
     if (lockState == llfio::lock_kind::shared)
     {
-        fileLock.unlock_shared();
+        backingFile.unlock_file_shared();
     }
     if (lockState != llfio::lock_kind::exclusive)
     {
-        DPLX_TRY(fileLock.lock());
+        DPLX_TRY(backingFile.lock_file());
     }
+    scope_exit lockGuard = [&backingFile]
+    {
+        backingFile.unlock_file();
+    };
 
     DPLX_TRY(backingFile.truncate(static_cast<extent_type>(fileSize)));
 
@@ -166,8 +170,7 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
                         static_cast<std::size_t>(fileSize));
     dp::memory_output_stream busStream(busMemory);
 
-    DPLX_TRY(busStream.bulk_write(as_bytes(std::span(magic)).data(),
-                                  std::size(magic)));
+    DPLX_TRY(busStream.bulk_write(as_bytes(std::span(magic))));
 
     DPLX_TRY(dp::encode(busStream, info{.num_regions = numRegions,
                                         .region_size = static_cast<unsigned>(
@@ -188,9 +191,8 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
         busStream.commit_written(realRegionSize - region_ctrl_overhead);
     }
 
-    // we can't transfer the unique_lock_file due to moving the handle;
-    // instead the mpsc bus handle takes over lock ownership
-    fileLock.release();
+    // we transfer the lock ownership into the mpsc bus handle
+    lockGuard.release();
     return mpsc_bus_handle{std::move(backingFile), numRegions,
                            static_cast<std::uint32_t>(realRegionSize)};
 }
