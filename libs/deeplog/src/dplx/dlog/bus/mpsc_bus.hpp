@@ -124,7 +124,9 @@ public:
             -> result<mpsc_bus_handle>;
     static auto mpsc_bus(llfio::mapped_file_handle &&backingFile,
                          std::uint32_t numRegions,
-                         std::uint32_t regionSize) noexcept
+                         std::uint32_t regionSize,
+                         llfio::lock_kind lockState
+                         = llfio::lock_kind::unlocked) noexcept
             -> result<mpsc_bus_handle>;
 
     static inline constexpr llfio::file_handle::mode file_mode

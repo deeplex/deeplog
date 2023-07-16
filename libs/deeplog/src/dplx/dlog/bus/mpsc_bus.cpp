@@ -111,7 +111,8 @@ auto mpsc_bus_handle::mpsc_bus(llfio::path_handle const &base,
 }
 auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
                                std::uint32_t const numRegions,
-                               std::uint32_t const regionSize) noexcept
+                               std::uint32_t const regionSize,
+                               llfio::lock_kind const lockState) noexcept
         -> result<mpsc_bus_handle>
 {
     using extent_type = llfio::file_handle::extent_type;
@@ -146,8 +147,15 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
         return errc::invalid_argument;
     }
 
-    llfio::unique_file_lock fileLock(backingFile, llfio::lock_kind::unlocked);
-    DPLX_TRY(fileLock.lock());
+    llfio::unique_file_lock fileLock(backingFile, lockState);
+    if (lockState == llfio::lock_kind::shared)
+    {
+        fileLock.unlock_shared();
+    }
+    if (lockState != llfio::lock_kind::exclusive)
+    {
+        DPLX_TRY(fileLock.lock());
+    }
 
     DPLX_TRY(backingFile.truncate(static_cast<extent_type>(fileSize)));
 
@@ -230,7 +238,8 @@ auto db_mpsc_bus_handle::create(config_type &&config)
     llfio::mapped_file_handle mappedFile(std::move(info.handle),
                                          llfio::section_handle::flag::none, 0U);
     auto openRx = mpsc_bus_handle::mpsc_bus(
-            std::move(mappedFile), config.num_regions, config.region_size);
+            std::move(mappedFile), config.num_regions, config.region_size,
+            llfio::lock_kind::exclusive);
     if (openRx.has_failure())
     {
         (void)mappedFile.unlink(); // NOLINT(bugprone-use-after-move)
