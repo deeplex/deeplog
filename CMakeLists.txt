@@ -142,6 +142,11 @@ install(EXPORT deeplog-targets
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/deeplog"
 )
 
+export(EXPORT deeplog-targets NAMESPACE Deeplex::)
+# note that you need to configure with -DCMAKE_EXPORT_PACKAGE_REGISTRY=ON
+# for this to have any effect at all
+export(PACKAGE deeplog)
+
 configure_package_config_file(tools/deeplog-config.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/deeplog-config.cmake"
     INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/deeplog"
