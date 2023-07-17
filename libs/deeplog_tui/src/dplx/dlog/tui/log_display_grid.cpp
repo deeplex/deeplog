@@ -84,15 +84,15 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
     auto spaceSeperator = ftxui::separator(ftxui::Pixel{});
 
     auto header = ftxui::hbox({
+            ftxui::text("Timestamp")
+                    | ftxui::size(ftxui::WIDTH, ftxui::EQUAL,
+                                  layout_size_timestamp),
+            spaceSeperator,
             ftxui::text("Level")
                     | ftxui::size(ftxui::WIDTH, ftxui::EQUAL,
                                   layout_size_level),
             spaceSeperator,
             ftxui::text("Message") | ftxui::flex,
-            spaceSeperator,
-            ftxui::text("Timestamp")
-                    | ftxui::size(ftxui::WIDTH, ftxui::EQUAL,
-                                  layout_size_timestamp),
     });
 
     std::string previousTime;
@@ -162,10 +162,6 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
 
         auto formattedRecord
                 = ftxui::hbox({
-                          formattedLevel,
-                          spaceSeperator,
-                          ftxui::text(formattedMessage) | ftxui::flex,
-                          spaceSeperator,
                           ftxui::hbox({
                                   ftxui::text(
                                           std::move(iso8601DateTimeUnchanged))
@@ -176,6 +172,10 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
                                   | ftxui::size(ftxui::WIDTH, ftxui::EQUAL,
                                                 layout_size_timestamp)
                                   | ftxui::notflex,
+                          spaceSeperator,
+                          formattedLevel,
+                          spaceSeperator,
+                          ftxui::text(formattedMessage) | ftxui::flex,
                   })
                 | lineDecorator;
 
