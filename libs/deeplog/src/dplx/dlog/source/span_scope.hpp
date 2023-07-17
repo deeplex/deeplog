@@ -59,7 +59,7 @@ public:
         if (nullptr != mContext)
         {
             mContext->span(mPreviousId);
-            mContext->threshold(mPreviousThreshold);
+            mContext->override_threshold(mPreviousThreshold);
             (void)send_close_msg();
         }
     }

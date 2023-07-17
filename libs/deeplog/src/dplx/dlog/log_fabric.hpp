@@ -12,7 +12,7 @@
 #include <span>
 #include <vector>
 
-#include <boost/variant2.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
@@ -30,14 +30,33 @@ namespace detail
 class log_fabric_base : public log_record_port
 {
 protected:
+    struct transparent_string_hash : boost::hash<std::string_view>
+    {
+        using is_transparent = int;
+    };
+    using scope_threshold_map
+            = boost::unordered_flat_map<std::string,
+                                        severity,
+                                        transparent_string_hash,
+                                        std::equal_to<void>>;
+
     using sink_owner = std::unique_ptr<sink_frontend_base>;
 
 private:
     std::vector<sink_owner> mSinks;
+    scope_threshold_map mThresholds;
+    severity mDefaultThreshold;
 
 protected:
     ~log_fabric_base() = default;
-    log_fabric_base() noexcept = default;
+    explicit log_fabric_base(severity defaultThreshold
+                             = dlog::default_threshold,
+                             scope_threshold_map thresholds = {}) noexcept
+        : mSinks()
+        , mThresholds(std::move(thresholds))
+        , mDefaultThreshold(defaultThreshold)
+    {
+    }
 
 public:
     log_fabric_base(log_fabric_base const &) noexcept = delete;
@@ -47,6 +66,9 @@ protected:
     log_fabric_base(log_fabric_base &&other) noexcept
         : log_record_port(std::move(other))
         , mSinks(std::move(other.mSinks))
+        , mThresholds(std::move(other.mThresholds))
+        , mDefaultThreshold(std::exchange(other.mDefaultThreshold,
+                                          dlog::default_threshold))
     {
     }
     auto operator=(log_fabric_base &&other) noexcept -> log_fabric_base &
@@ -57,7 +79,12 @@ protected:
         }
         log_record_port::operator=(std::move(other));
         // the above move slices
-        mSinks = std::move(other.mSinks); // NOLINT(bugprone-use-after-move)
+        // NOLINTBEGIN(bugprone-use-after-move)
+        mSinks = std::move(other.mSinks);
+        mThresholds = std::move(other.mThresholds);
+        mDefaultThreshold = std::exchange(other.mDefaultThreshold,
+                                          dlog::default_threshold);
+        // NOLINTEND(bugprone-use-after-move)
         return *this;
     }
 
@@ -77,6 +104,13 @@ public:
     auto release_sink(sink_frontend_base *which) noexcept
             -> sink_frontend_base *;
     void clear_sinks() noexcept;
+
+private:
+    [[nodiscard]] auto do_default_threshold() const noexcept
+            -> severity override;
+    [[nodiscard]] auto do_threshold(char const *scopeName,
+                                    std::size_t scopeNameSize) const noexcept
+            -> severity override;
 };
 
 } // namespace detail
@@ -87,8 +121,10 @@ class log_fabric final : public detail::log_fabric_base
     MessageBus mMessageBus;
 
 public:
-    explicit log_fabric(MessageBus &&rig)
-        : log_fabric_base()
+    explicit log_fabric(MessageBus &&rig,
+                        severity defaultThreshold = dlog::default_threshold,
+                        scope_threshold_map thresholds = {})
+        : log_fabric_base(defaultThreshold, std::move(thresholds))
         , mMessageBus(std::move(rig))
     {
     }

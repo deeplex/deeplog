@@ -71,7 +71,7 @@ public:
     explicit log_context(log_record_port &targetPort,
                          scope_name name,
                          span_context span = span_context{})
-        : mThresholdCache{targetPort.default_threshold()}
+        : mThresholdCache{targetPort.threshold(name)}
         , mTargetPort(&targetPort)
         , mInstrumentationScope(name)
         , mCurrentSpan(span)
@@ -88,7 +88,7 @@ public:
         return mThresholdCache;
     }
     DPLX_ATTR_FORCE_INLINE constexpr void
-    threshold(severity nextThreshold) noexcept
+    override_threshold(severity nextThreshold) noexcept
     {
         mThresholdCache = nextThreshold;
     }

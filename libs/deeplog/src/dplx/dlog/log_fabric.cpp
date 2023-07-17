@@ -1,4 +1,3 @@
-#include "log_fabric.hpp"
 
 // Copyright Henrik Steffen Gaßmann 2021
 //
@@ -6,9 +5,9 @@
 //         (See accompanying file LICENSE or copy at
 //           https://www.boost.org/LICENSE_1_0.txt)
 
-#include <algorithm>
-
 #include "dplx/dlog/log_fabric.hpp"
+
+#include <algorithm>
 
 namespace dplx::dlog::detail
 {
@@ -80,6 +79,24 @@ auto log_fabric_base::release_sink(sink_frontend_base *const which) noexcept
 void log_fabric_base::clear_sinks() noexcept
 {
     mSinks.clear();
+}
+
+auto log_fabric_base::do_default_threshold() const noexcept -> severity
+{
+    return mDefaultThreshold;
+}
+
+auto log_fabric_base::do_threshold(
+        char const *const scopeName,
+        std::size_t const scopeNameSize) const noexcept -> severity
+{
+    if (auto const it
+        = mThresholds.find(std::string_view{scopeName, scopeNameSize});
+        it != mThresholds.end())
+    {
+        return it->second;
+    }
+    return mDefaultThreshold;
 }
 
 } // namespace dplx::dlog::detail

@@ -154,7 +154,7 @@ span_scope::span_scope(log_context *const ctx,
     , mPreviousId{ctx->span()}
 {
     ctx->span(id);
-    ctx->threshold(threshold);
+    ctx->override_threshold(threshold);
 }
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT

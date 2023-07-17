@@ -44,7 +44,7 @@ inline auto main() -> dlog::result<void>
                      .num_regions = 4U,
                      .region_size = regionSize,
              }));
-    mpsc_log_fabric core{std::move(mpscBus)};
+    mpsc_log_fabric core{std::move(mpscBus), dlog::severity::debug};
 
     constexpr auto bufferSize = 64 * 1024;
     DPLX_TRY(auto *sink,

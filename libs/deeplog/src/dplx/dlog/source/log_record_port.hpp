@@ -48,12 +48,15 @@ public:
     {
         return do_create_span_context(traceId, name, thresholdInOut);
     }
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto default_threshold() noexcept
+    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto default_threshold() const noexcept
             -> severity
     {
-        // TODO: make virtual and configurable
-        return dlog::default_threshold;
+        return do_default_threshold();
+    }
+    [[nodiscard]] DPLX_ATTR_FORCE_INLINE auto
+    threshold(std::string_view scopeName) const noexcept -> severity
+    {
+        return do_threshold(scopeName.data(), scopeName.size());
     }
 
 private:
@@ -67,6 +70,12 @@ private:
                                         std::string_view name,
                                         severity &thresholdInOut) noexcept
             -> span_context
+            = 0;
+    [[nodiscard]] virtual auto do_default_threshold() const noexcept -> severity
+            = 0;
+    [[nodiscard]] virtual auto
+    do_threshold(char const *scopeName,
+                 std::size_t scopeNameSize) const noexcept -> severity
             = 0;
 };
 
