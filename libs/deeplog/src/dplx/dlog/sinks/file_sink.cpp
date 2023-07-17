@@ -212,14 +212,14 @@ auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
 {
     if (mFileNamePattern.empty())
     {
-        return oc::success();
+        return false;
     }
     if (backingFile.is_valid())
     {
         DPLX_TRY(auto const maxExtent, backingFile.maximum_extent());
         if (maxExtent <= mMaxFileSize)
         {
-            return oc::success();
+            return false;
         }
     }
     DPLX_TRY(finalize());
@@ -227,7 +227,7 @@ auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
     DPLX_TRY(backingFile, mFileDatabase.create_record_container(
                                   mFileNamePattern, mSinkId, file_mode,
                                   file_caching, file_flags));
-    return oc::success();
+    return true;
 }
 
 template class basic_sink_frontend<file_sink_db_backend>;
