@@ -50,7 +50,9 @@ void do_output()
 
     DLOG_(warn, "important msg with arg {}", 1);
     DLOG_(info, "here happens something else");
-    DLOG_(error, "oh no something bad happened");
+    dplx::dlog::system_error::system_code ex
+            = dplx::dlog::system_error::errc::state_not_recoverable;
+    DLOG_(error, "oh no something bad happened:\n{}", ex);
 
     // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
     jsf_engine gen(0xdead'beefU);
