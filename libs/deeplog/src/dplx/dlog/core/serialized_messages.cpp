@@ -29,32 +29,58 @@ auto preparse_record(dp::parse_context &ctx, bytes const rawMessage) noexcept
     };
     auto &parsed = *get_if<serialized_record_info>(&info);
 
-    if (dp::decode(ctx, parsed.message_severity).has_failure())
+    if (dp::decode(ctx, parsed.message_severity).has_failure()) [[unlikely]]
     {
         info = serialized_malformed_message_info{{rawMessage}};
     }
-    if (dp::skip_item(ctx).has_failure())
+    if (dp::skip_item(ctx).has_failure()) [[unlikely]]
     {
         info = serialized_malformed_message_info{{rawMessage}};
     }
-    if (dp::decode(ctx, parsed.timestamp).has_failure())
+    if (dp::decode(ctx, parsed.timestamp).has_failure()) [[unlikely]]
     {
         info = serialized_malformed_message_info{{rawMessage}};
     }
-    return parsed;
+    for (int i = 3; i < 6; ++i) // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+    {
+        if (dp::skip_item(ctx).has_failure()) [[unlikely]]
+        {
+            info = serialized_malformed_message_info{{rawMessage}};
+        }
+    }
+    parsed.raw_data = rawMessage.first(rawMessage.size() - ctx.in.size());
+    return info;
 }
 auto preparse_span_start(dp::parse_context &ctx,
                          bytes const rawMessage) noexcept
         -> serialized_message_info
 {
-    (void)ctx;
-    return serialized_span_start_info{{rawMessage}};
+    serialized_message_info info{serialized_span_start_info{{rawMessage}}};
+    auto &parsed = *get_if<serialized_span_start_info>(&info);
+    for (int i = 0; i < 7; ++i) // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+    {
+        if (dp::skip_item(ctx).has_failure()) [[unlikely]]
+        {
+            info = serialized_malformed_message_info{{rawMessage}};
+        }
+    }
+    parsed.raw_data = rawMessage.first(rawMessage.size() - ctx.in.size());
+    return info;
 }
 auto preparse_span_end(dp::parse_context &ctx, bytes const rawMessage) noexcept
         -> serialized_message_info
 {
-    (void)ctx;
-    return serialized_span_end_info{{rawMessage}};
+    serialized_message_info info{serialized_span_end_info{{rawMessage}}};
+    auto &parsed = *get_if<serialized_span_end_info>(&info);
+    for (int i = 0; i < 2; ++i) // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+    {
+        if (dp::skip_item(ctx).has_failure()) [[unlikely]]
+        {
+            info = serialized_malformed_message_info{{rawMessage}};
+        }
+    }
+    parsed.raw_data = rawMessage.first(rawMessage.size() - ctx.in.size());
+    return info;
 }
 
 } // namespace
@@ -88,8 +114,10 @@ auto preparse_messages(std::span<bytes const> const &records,
                 break;
 
             default:
-                break;
+                info = serialized_malformed_message_info{{records[i]}};
+                continue;
             }
+            binarySize -= ctx.in.size();
         }
         else
         {
