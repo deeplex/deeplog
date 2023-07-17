@@ -110,8 +110,9 @@ auto file_database_handle::file_database(llfio::path_handle const &base,
     file_database_handle db(std::move(root), std::move(rootDirHandle));
 
     {
-        llfio::unique_file_lock dbLock{db.mRootHandle,
-                                       llfio::lock_kind::exclusive};
+        llfio::unique_file_lock rootLock{db.mRootHandle,
+                                         llfio::lock_kind::unlocked};
+        DPLX_TRY(rootLock.lock());
 
         DPLX_TRY(auto maxExtent, db.mRootHandle.maximum_extent());
         if (maxExtent != 0)
@@ -130,13 +131,15 @@ auto file_database_handle::file_database(llfio::path_handle const &base,
 
 auto file_database_handle::fetch_content() noexcept -> result<void>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::shared};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock_shared());
     return fetch_content_impl();
 }
 
 auto file_database_handle::unlink_all() noexcept -> result<void>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
     DPLX_TRY(fetch_content_impl());
 
     unlink_all_record_containers_impl();
@@ -163,7 +166,8 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
 
 auto file_database_handle::unlink_all_message_buses() noexcept -> result<void>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
     DPLX_TRY(fetch_content_impl());
 
     unlink_all_message_buses_impl();
@@ -179,7 +183,8 @@ auto file_database_handle::unlink_all_message_buses() noexcept -> result<void>
 auto file_database_handle::unlink_all_record_containers() noexcept
         -> result<void>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
     DPLX_TRY(fetch_content_impl());
 
     unlink_all_record_containers_impl();
@@ -241,7 +246,8 @@ auto file_database_handle::create_record_container(
         llfio::file_handle::caching const caching,
         llfio::file_handle::flag const flags) -> result<llfio::file_handle>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
     DPLX_TRY(fetch_content_impl());
 
     auto contents = mContents;
@@ -328,7 +334,8 @@ auto file_database_handle::create_message_bus(
         llfio::file_handle::caching caching,
         llfio::file_handle::flag flags) -> result<message_bus_file>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
     DPLX_TRY(fetch_content_impl());
 
     auto contents = mContents;
@@ -402,7 +409,8 @@ auto file_database_handle::remove_message_bus(std::string_view id,
                                               std::uint32_t rotation)
         -> result<void>
 {
-    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::exclusive};
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
     DPLX_TRY(fetch_content_impl());
 
     auto contents = mContents;
