@@ -249,7 +249,7 @@ auto db_mpsc_bus_handle::create(config_type &&config)
         return std::move(openRx).as_failure();
     }
 
-    return db_mpsc_bus_handle(std::move(openRx).assume_value(),
+    return db_mpsc_bus_handle(std::move(openRx).assume_value(), std::move(db),
                               std::move(config.bus_id), info.rotation);
 }
 

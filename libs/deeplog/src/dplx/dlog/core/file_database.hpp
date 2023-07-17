@@ -98,6 +98,15 @@ private:
 
 public:
     file_database_handle() noexcept = default;
+
+    file_database_handle(file_database_handle const &) = delete;
+    auto operator=(file_database_handle const &)
+            -> file_database_handle & = delete;
+
+    file_database_handle(file_database_handle &&) noexcept = default;
+    auto operator=(file_database_handle &&) noexcept
+            -> file_database_handle & = default;
+
     file_database_handle(llfio::file_handle rootHandle,
                          llfio::path_handle rootDirHandle)
         : mRootHandle(std::move(rootHandle))

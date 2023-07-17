@@ -460,6 +460,7 @@ class db_mpsc_bus_handle : private mpsc_bus_handle
 public:
     db_mpsc_bus_handle()
         : mpsc_bus_handle()
+        , mFileDb()
         , mId()
         , mRotation(0U)
     {
@@ -467,6 +468,7 @@ public:
 
     db_mpsc_bus_handle(db_mpsc_bus_handle &&other) noexcept
         : mpsc_bus_handle(std::move(other))
+        , mFileDb(std::move(other).mFileDb)
         , mId(std::move(other.mId))
         , mRotation(std::exchange(other.mRotation, 0U))
     {
@@ -477,6 +479,7 @@ public:
 
         // the base class operator only moves base class parts
         // NOLINTBEGIN(bugprone-use-after-move)
+        mFileDb = std::move(other.mFileDb);
         mId = std::move(other.mId);
         mRotation = std::exchange(other.mRotation, 0U);
         // NOLINTEND(bugprone-use-after-move)
@@ -485,9 +488,11 @@ public:
 
 private:
     db_mpsc_bus_handle(mpsc_bus_handle &&h,
+        file_database_handle &&fileDb,
                        std::string id,
                        std::uint32_t rotation)
         : mpsc_bus_handle(std::move(h))
+        , mFileDb(std::move(fileDb))
         , mId(std::move(id))
         , mRotation(rotation)
     {
