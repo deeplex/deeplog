@@ -84,7 +84,7 @@ auto dplx::dp::codec<dplx::dlog::detail::reified_status_code>::decode(
     DPLX_TRY(dp::expect_item_head(ctx, dp::type_code::array, 3U));
     DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
     DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
-    DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
+    DPLX_TRY(dp::parse_text(ctx, code.mMessage));
     return oc::success();
 }
 
@@ -121,7 +121,7 @@ auto dplx::dp::codec<dplx::dlog::detail::reified_system_code>::decode(
     DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
     DPLX_TRY(dp::parse_integer(ctx, code.mRawValue));
     DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
-    DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
+    DPLX_TRY(dp::parse_text(ctx, code.mMessage));
     return oc::success();
 }
 
@@ -306,7 +306,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     auto const ownerId = logCtx.span();
     auto const hasOwnerSpan = ownerId.spanId != span_id::invalid();
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
-    encodedSize += hasOwnerSpan ? 0U : 17U + 9U;
+    encodedSize += hasOwnerSpan ? 17U + 9U : 0U;
 
     encodedSize += static_cast<unsigned>(
             dp::item_size_of_u8string(sizeCtx, args.message.size()));
