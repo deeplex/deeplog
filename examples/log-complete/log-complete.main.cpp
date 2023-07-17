@@ -26,6 +26,10 @@ using namespace dplx;
 
 inline auto main() -> dlog::result<void>
 {
+    using namespace std::string_literals;
+    using mpsc_log_fabric
+            = dplx::dlog::log_fabric<dplx::dlog::db_mpsc_bus_handle>;
+
     dlog::llfio::path_handle baseDir = {};
 
     DPLX_TRY(auto &&db, dlog::file_database_handle::file_database(
@@ -33,8 +37,14 @@ inline auto main() -> dlog::result<void>
 
     constexpr auto regionSize = 1 << 14;
     DPLX_TRY(auto &&mpscBus,
-             dlog::mpsc_bus(baseDir, "log-test.dmsb", 4U, regionSize));
-    dlog::log_fabric core{std::move(mpscBus)};
+             dlog::db_mpsc_bus_handle::create({
+                     .database = db,
+                     .bus_id = "std"s,
+                     .file_name_pattern = "{id}.{now:%FT%H-%M-%S}.dmpscb",
+                     .num_regions = 4U,
+                     .region_size = regionSize,
+             }));
+    mpsc_log_fabric core{std::move(mpscBus)};
 
     constexpr auto bufferSize = 64 * 1024;
     DPLX_TRY(auto *sink,
