@@ -60,8 +60,23 @@ public:
     virtual ~file_sink_backend();
 
     file_sink_backend(file_sink_backend &&) noexcept = default;
-    auto operator=(file_sink_backend &&) noexcept
-            -> file_sink_backend & = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    auto operator=(file_sink_backend &&other) -> file_sink_backend &;
+
+    friend inline void swap(file_sink_backend &lhs,
+                            file_sink_backend &rhs) noexcept
+    {
+        using std::swap;
+        // swap(static_cast<output_buffer &>(lhs),
+        //      static_cast<output_buffer &>(rhs));
+        std::span<std::byte> rhsBytes(rhs.data(), rhs.size());
+        rhs.reset(lhs.data(), lhs.size());
+        lhs.reset(rhsBytes.data(), rhsBytes.size());
+
+        swap(lhs.mBackingFile, rhs.mBackingFile);
+        swap(lhs.mBufferAllocation, rhs.mBufferAllocation);
+        swap(lhs.mTargetBufferSize, rhs.mTargetBufferSize);
+    }
 
 protected:
     explicit file_sink_backend(std::size_t targetBufferSize) noexcept;
@@ -84,7 +99,9 @@ public:
             = {0x83, 0x4e, 0x0d, 0x0a, 0xab, 0x7e, 0x7b, 0x64,
                0x6c, 0x6f, 0x67, 0x7d, 0x7e, 0xbb, 0x0a, 0x1a};
 
-    auto finalize() noexcept -> result<void>;
+    // returns the size of the finalized log record container
+    // or 0 if file_sink_backend wasn't initialized
+    auto finalize() noexcept -> result<std::uint32_t>;
 
 private:
     auto rotate() noexcept -> dp::result<void>;
@@ -107,9 +124,29 @@ class file_sink_db_backend : public file_sink_backend
     file_database_handle mFileDatabase;
     std::string mFileNamePattern;
     file_sink_id mSinkId{};
+    std::uint32_t mCurrentRotation{};
 
 public:
+    ~file_sink_db_backend() override;
     file_sink_db_backend() noexcept = default;
+
+    file_sink_db_backend(file_sink_db_backend &&) noexcept = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    auto operator=(file_sink_db_backend &&other) -> file_sink_db_backend &;
+
+    friend inline void swap(file_sink_db_backend &lhs,
+                            file_sink_db_backend &rhs) noexcept
+    {
+        using std::swap;
+        swap(static_cast<file_sink_backend &>(lhs),
+             static_cast<file_sink_backend &>(rhs));
+
+        swap(lhs.mMaxFileSize, rhs.mMaxFileSize);
+        swap(lhs.mFileDatabase, rhs.mFileDatabase);
+        swap(lhs.mFileNamePattern, rhs.mFileNamePattern);
+        swap(lhs.mSinkId, rhs.mSinkId);
+        swap(lhs.mCurrentRotation, rhs.mCurrentRotation);
+    }
 
 private:
     explicit file_sink_db_backend(std::size_t targetBufferSize,

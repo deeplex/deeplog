@@ -135,6 +135,11 @@ private:
     auto fetch_content_impl() noexcept -> result<void>;
 
 public:
+    struct record_container_file
+    {
+        llfio::file_handle handle;
+        std::uint32_t rotation;
+    };
     auto create_record_container(std::string_view namePattern,
                                  file_sink_id sinkId = file_sink_id::default_,
                                  llfio::file_handle::mode fileMode
@@ -143,7 +148,10 @@ public:
                                  = llfio::file_handle::caching::reads,
                                  llfio::file_handle::flag flags
                                  = llfio::file_handle::flag::none)
-            -> result<llfio::file_handle>;
+            -> result<record_container_file>;
+    auto update_record_container_size(file_sink_id which,
+                                      std::uint32_t rotation,
+                                      std::uint32_t newSize) -> result<void>;
 
     auto open_record_container(record_container_meta const &which,
                                llfio::file_handle::mode fileMode

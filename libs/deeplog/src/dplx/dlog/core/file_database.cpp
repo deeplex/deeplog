@@ -244,7 +244,7 @@ auto file_database_handle::create_record_container(
         file_sink_id const sinkId,
         llfio::file_handle::mode const fileMode,
         llfio::file_handle::caching const caching,
-        llfio::file_handle::flag const flags) -> result<llfio::file_handle>
+        llfio::file_handle::flag const flags) -> result<record_container_file>
 {
     llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
     DPLX_TRY(rootLock.lock());
@@ -309,7 +309,37 @@ auto file_database_handle::create_record_container(
     }
 
     mContents = std::move(contents);
-    return file;
+    return record_container_file{.handle = std::move(file),
+                                 .rotation = meta.rotation};
+}
+
+auto file_database_handle::update_record_container_size(file_sink_id which,
+                                                        std::uint32_t rotation,
+                                                        std::uint32_t newSize)
+        -> result<void>
+{
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
+    DPLX_TRY(fetch_content_impl());
+
+    auto contents = mContents;
+    contents.revision += 1;
+
+    if (auto const it = std::ranges::find_if(
+                contents.record_containers,
+                [which, rotation](record_container_meta const &meta)
+                { return meta.sink_id == which && meta.rotation == rotation; });
+        it != contents.record_containers.end())
+    {
+        it->byte_size = newSize;
+    }
+    else
+    {
+        return errc::unknown_sink;
+    }
+
+    DPLX_TRY(retire_to_storage(contents));
+    return oc::success();
 }
 
 auto file_database_handle::open_record_container(

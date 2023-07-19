@@ -26,6 +26,21 @@ file_sink_backend::~file_sink_backend()
     (void)finalize();
 }
 
+// NOLINTNEXTLINE(performance-noexcept-move-constructor)
+auto file_sink_backend::operator=(file_sink_backend &&other)
+        -> file_sink_backend &
+{
+    finalize().value();
+
+    output_buffer::operator=(std::move(other));
+    // NOLINTBEGIN(bugprone-use-after-move)
+    mBackingFile = std::move(other.mBackingFile);
+    mBufferAllocation = std::move(other.mBufferAllocation);
+    mTargetBufferSize = std::exchange(other.mTargetBufferSize, 0U);
+    // NOLINTEND(bugprone-use-after-move)
+    return *this;
+}
+
 file_sink_backend::file_sink_backend(std::size_t targetBufferSize) noexcept
     : mBackingFile{}
     , mBufferAllocation{}
@@ -53,22 +68,22 @@ auto file_sink_backend::create(config_type &&config) noexcept
     return self;
 }
 
-auto file_sink_backend::finalize() noexcept -> result<void>
+auto file_sink_backend::finalize() noexcept -> result<std::uint32_t>
 {
     if (!mBackingFile.is_valid())
     {
-        return oc::success();
+        return 0U;
     }
     {
         dp::emit_context ctx{*this};
         DPLX_TRY(dp::emit_break(ctx));
     }
     DPLX_TRY(sync_output());
+    DPLX_TRY(auto const finalFileSize, mBackingFile.maximum_extent());
     mBackingFile.unlock_file();
     DPLX_TRY(mBackingFile.close());
-
-    *this = file_sink_backend();
-    return oc::success();
+    reset();
+    return static_cast<std::uint32_t>(finalFileSize);
 }
 
 auto file_sink_backend::rotate() noexcept -> dp::result<void>
@@ -177,6 +192,36 @@ auto file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
 
 template class basic_sink_frontend<file_sink_backend>;
 
+file_sink_db_backend::~file_sink_db_backend()
+{
+    if (auto finalizeRx = finalize();
+        finalizeRx.has_value() && finalizeRx.assume_value() != 0)
+    {
+        (void)mFileDatabase.update_record_container_size(
+                mSinkId, mCurrentRotation, finalizeRx.assume_value());
+    }
+}
+
+// NOLINTNEXTLINE(performance-noexcept-move-constructor)
+auto file_sink_db_backend::operator=(file_sink_db_backend &&other)
+        -> file_sink_db_backend &
+{
+    mFileDatabase
+            .update_record_container_size(mSinkId, mCurrentRotation,
+                                          finalize().value())
+            .value();
+
+    file_sink_backend::operator=(std::move(other));
+    // NOLINTBEGIN(bugprone-use-after-move)
+    mMaxFileSize = std::exchange(other.mMaxFileSize, 0U);
+    mFileDatabase = std::move(other.mFileDatabase);
+    mFileNamePattern = std::move(other.mFileNamePattern);
+    mSinkId = std::exchange(other.mSinkId, file_sink_id{});
+    mCurrentRotation = std::exchange(other.mCurrentRotation, 0U);
+    // NOLINTEND(bugprone-use-after-move)
+    return *this;
+}
+
 file_sink_db_backend::file_sink_db_backend(std::size_t const targetBufferSize,
                                            std::uint64_t const maxFileSize,
                                            file_sink_id const sinkId) noexcept
@@ -185,6 +230,7 @@ file_sink_db_backend::file_sink_db_backend(std::size_t const targetBufferSize,
     , mFileDatabase()
     , mFileNamePattern()
     , mSinkId(sinkId)
+    , mCurrentRotation()
 {
 }
 
@@ -221,12 +267,28 @@ auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
         {
             return false;
         }
-    }
-    DPLX_TRY(finalize());
 
-    DPLX_TRY(backingFile, mFileDatabase.create_record_container(
-                                  mFileNamePattern, mSinkId, file_mode,
-                                  file_caching, file_flags));
+        {
+            dp::emit_context ctx{*this};
+            DPLX_TRY(dp::emit_break(ctx));
+        }
+        DPLX_TRY(sync_output());
+
+        DPLX_TRY(auto const finalFileSize, backingFile.maximum_extent());
+        (void)mFileDatabase.update_record_container_size(
+                mSinkId, mCurrentRotation,
+                static_cast<std::uint32_t>(finalFileSize));
+
+        backingFile.unlock_file();
+        DPLX_TRY(backingFile.close());
+    }
+
+    DPLX_TRY(auto &&created, mFileDatabase.create_record_container(
+                                     mFileNamePattern, mSinkId, file_mode,
+                                     file_caching, file_flags));
+    backingFile = std::move(created.handle);
+    mCurrentRotation = created.rotation;
+
     return true;
 }
 

@@ -31,8 +31,8 @@ TEST_CASE("file database API integration test")
 
     auto create2Rx = db.create_record_container(sinkFilePattern);
     REQUIRE(create2Rx);
-    create2Rx.assume_value().unlock_file();
-    (void)create2Rx.assume_value().close();
+    create2Rx.assume_value().handle.unlock_file();
+    (void)create2Rx.assume_value().handle.close();
 
     auto create3Rx = db.create_message_bus(busNamePattern, "std", {});
     REQUIRE(create3Rx);
@@ -61,7 +61,7 @@ TEST_CASE("file database reopen round trip")
 
         auto create2Rx = db.create_record_container(sinkFilePattern);
         REQUIRE(create2Rx);
-        create2Rx.assume_value().unlock_file();
+        create2Rx.assume_value().handle.unlock_file();
 
         auto create3Rx = db.create_message_bus(busNamePattern, "std", {});
         REQUIRE(create3Rx);
