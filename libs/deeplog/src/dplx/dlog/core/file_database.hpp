@@ -152,6 +152,10 @@ public:
     auto update_record_container_size(file_sink_id which,
                                       std::uint32_t rotation,
                                       std::uint32_t newSize) -> result<void>;
+    auto prune_record_containers(
+            std::function<result<bool>(llfio::file_handle &h,
+                                       record_container_meta const &meta)>
+                    predicate) -> result<void>;
 
     auto open_record_container(record_container_meta const &which,
                                llfio::file_handle::mode fileMode
@@ -200,6 +204,9 @@ private:
                                      std::uint32_t processId,
                                      std::uint32_t rotationCount)
             -> std::string;
+
+    template <typename TransformFn>
+    auto transform(TransformFn &&transformFn) -> result<void>;
 
     void unlink_all_message_buses_impl() noexcept;
     void unlink_all_record_containers_impl() noexcept;

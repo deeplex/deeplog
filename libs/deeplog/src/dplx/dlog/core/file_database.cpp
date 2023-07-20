@@ -342,6 +342,65 @@ auto file_database_handle::update_record_container_size(file_sink_id which,
     return oc::success();
 }
 
+auto file_database_handle::prune_record_containers(
+        std::function<result<bool>(llfio::file_handle &h,
+                                   record_container_meta const &meta)>
+                predicate) -> result<void>
+{
+    using file_handle = llfio::file_handle;
+    return transform(
+            [&](contents_t &contents) -> result<void>
+            {
+                std::erase_if(
+                        contents.record_containers,
+                        [&](record_container_meta &containerMeta)
+                        {
+                            file_handle container;
+                            if (auto openRx = llfio::file(
+                                        mRootDirHandle, containerMeta.path,
+                                        file_handle::mode::write);
+                                openRx.has_value())
+                            {
+                                container = std::move(openRx).assume_value();
+                            }
+                            else if (openRx.assume_error()
+                                     == system_error::errc::
+                                             no_such_file_or_directory)
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                            llfio::unique_file_lock containerLock{
+                                    container, llfio::lock_kind::unlocked};
+                            if (!containerLock.try_lock())
+                            {
+                                return false;
+                            }
+
+                            auto predicateResult
+                                    = predicate(container, containerMeta);
+                            if (!container.is_valid())
+                            {
+                                containerLock.release();
+                                return true;
+                            }
+                            auto pruneCandidate
+                                    = predicateResult.has_value()
+                                   && predicateResult.assume_value();
+                            if (pruneCandidate)
+                            {
+                                containerLock.unlock();
+                                (void)container.unlink();
+                            }
+                            return pruneCandidate;
+                        });
+                return oc::success();
+            });
+}
+
 auto file_database_handle::open_record_container(
         record_container_meta const &which,
         llfio::file_handle::mode fileMode,
@@ -481,6 +540,22 @@ auto file_database_handle::message_bus_filename(std::string_view pattern,
     return fmt::format(fmt::runtime(pattern), fmt::arg("id", id),
                        fmt::arg("now", now), fmt::arg("pid", processId),
                        fmt::arg("ctr", rotationCount));
+}
+
+template <typename TransformFn>
+auto file_database_handle::transform(TransformFn &&transformFn) -> result<void>
+{
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    DPLX_TRY(rootLock.lock());
+    DPLX_TRY(fetch_content_impl());
+
+    auto contents = mContents;
+    contents.revision += 1;
+
+    DPLX_TRY(transformFn(contents));
+
+    DPLX_TRY(retire_to_storage(contents));
+    return oc::success();
 }
 
 void file_database_handle::unlink_all_message_buses_impl() noexcept

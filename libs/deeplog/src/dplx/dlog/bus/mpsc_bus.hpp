@@ -455,16 +455,10 @@ class db_mpsc_bus_handle : private mpsc_bus_handle
 {
     file_database_handle mFileDb;
     std::string mId;
-    std::uint32_t mRotation;
+    std::uint32_t mRotation{};
 
 public:
-    db_mpsc_bus_handle()
-        : mpsc_bus_handle()
-        , mFileDb()
-        , mId()
-        , mRotation(0U)
-    {
-    }
+    db_mpsc_bus_handle() = default;
 
     db_mpsc_bus_handle(db_mpsc_bus_handle &&other) noexcept
         : mpsc_bus_handle(std::move(other))
@@ -488,7 +482,7 @@ public:
 
 private:
     db_mpsc_bus_handle(mpsc_bus_handle &&h,
-        file_database_handle &&fileDb,
+                       file_database_handle &&fileDb,
                        std::string id,
                        std::uint32_t rotation)
         : mpsc_bus_handle(std::move(h))
