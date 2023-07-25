@@ -12,8 +12,9 @@ on:
       - 'docs/**'
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-22.04
+    name: Build docs
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
@@ -22,18 +23,23 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
-          cache: 'pip'
-          cache-dependency-path: docs/requirements.txt
+          python-version: "3.11"
+          cache: 'pipenv'
+          cache-dependency-path: docs/Pipfile.lock
 
       - name: Install dependencies
-        run: python3 -m pip install -r ./docs/requirements.txt
+        working-directory: docs
+        run: |
+          python3 -m pip install pipenv
+          python3 -m pipenv sync
 
       - if: github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/heads/release/v')
-        run: sphinx-build docs build/html
+        working-directory: docs
+        run: python3 -m pipenv run sphinx-build . ../build/html
 
       - if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release/v')
-        run: sphinx-multiversion docs build/html
+        working-directory: docs
+        run: python3 -m pipenv run sphinx-multiversion . ../build/html
 
       - if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release/v')
         run: cp ./docs/root.html ./build/html/index.html
