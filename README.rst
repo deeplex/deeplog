@@ -5,7 +5,7 @@
  ``deeplog``
 =============
 
-|License| |C++ CI| |Latest Release| |Docs|
+|C++ CI| |Latest Release| |Docs| |License|
 
 Is a C++20 binary logging library with a Boost license.
 
@@ -18,9 +18,9 @@ packages are available from the `deeplex-registry <https://github.com/deeplex/vc
 
 * A small Boost subset
 
-    * `boost-unordered <https://github.com/boostorg/unordered>`_
-    * `boost-variant2 <https://github.com/boostorg/variant2>`_
-    * `boost-winapi <https://github.com/boostorg/winapi>`_
+  * `boost-unordered <https://github.com/boostorg/unordered>`_
+  * `boost-variant2 <https://github.com/boostorg/variant2>`_
+  * `boost-winapi <https://github.com/boostorg/winapi>`_
 
 * `fmt <https://fmt.dev>`_
 * `SG14 status-code/system_error2 <https://github.com/ned14/status-code>`_
@@ -28,12 +28,12 @@ packages are available from the `deeplex-registry <https://github.com/deeplex/vc
 * `llfio <https://github.com/ned14/llfio>`_
 * deeplex packages
 
-    * `concrete <https://github.com/deeplex/concrete>`_
-    * `deeppack <https://github.com/deeplex/deeppack>`_
+  * `concrete <https://github.com/deeplex/concrete>`_
+  * `deeppack <https://github.com/deeplex/deeppack>`_
 
 * CLI dependencies
   
-    * `ftxui <https://github.com/ArthurSonzogni/FTXUI>`_
+  * `ftxui <https://github.com/ArthurSonzogni/FTXUI>`_
 
 
 .. |C++ CI| image:: https://github.com/deeplex/deeplog/actions/workflows/cpp-ci.yml/badge.svg
