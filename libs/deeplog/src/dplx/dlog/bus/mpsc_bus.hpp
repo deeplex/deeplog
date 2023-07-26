@@ -508,9 +508,38 @@ public:
     using mpsc_bus_handle::max_message_size;
     using mpsc_bus_handle::min_region_size;
 
+#if __INTELLISENSE__ || __EDG__
+    // EDG fails to take using-declarations into account while checking concepts
+    auto allocate_record_buffer_inplace(
+            record_output_buffer_storage &bufferPlacementStorage,
+            std::size_t messageSize,
+            span_id span) noexcept -> result<record_output_buffer *>
+    {
+        return mpsc_bus_handle::allocate_record_buffer_inplace(
+                bufferPlacementStorage, messageSize, span);
+    }
+
+    template <typename ConsumeFn>
+        requires raw_message_consumer<ConsumeFn &&>
+    auto consume_messages(ConsumeFn &&consumeFn) noexcept -> result<void>
+    {
+        return mpsc_bus_handle::consume_messages<ConsumeFn>(
+                static_cast<ConsumeFn &&>(consumeFn));
+    }
+    auto create_span_context(trace_id trace,
+                             std::string_view spanName,
+                             severity &newThreshold) noexcept -> span_context
+    {
+        return mpsc_bus_handle::create_span_context(trace, spanName,
+                                                    newThreshold);
+    }
+
+#else // ^^^ workaround __INTELLISENSE__ / no workaround vvv
     using mpsc_bus_handle::allocate_record_buffer_inplace;
     using mpsc_bus_handle::consume_messages;
     using mpsc_bus_handle::create_span_context;
+
+#endif // ^^^ no workaround ^^^
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
     auto unlink(llfio::deadline deadline = std::chrono::seconds(30)) noexcept
