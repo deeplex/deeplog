@@ -1,5 +1,5 @@
 
-// Copyright Henrik S. Gaßmann 2021-2023.
+// Copyright 2021-2023 Henrik Steffen Gaßmann
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <dplx/dlog/config.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/fwd.hpp>
 #include <dplx/dlog/macros.hpp>

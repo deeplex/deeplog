@@ -1,5 +1,5 @@
 
-// Copyright Henrik Steffen Gaßmann 2021.
+// Copyright 2021-2023 Henrik Steffen Gaßmann
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -13,6 +13,7 @@
 #include <dplx/predef/workaround.h>
 
 #include <dplx/dlog/config.hpp>
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
 // these macros are very similar to those in <dplx/predef/other/workaround.h>
 // but offer library specific configuration knobs
@@ -43,3 +44,5 @@
 // https://developercommunity.visualstudio.com/t/C:-constinit-for-an-optional-fails-if/1406069
 #define DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069                              \
     DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_COMP_MSVC, 19, 36, 32532)
+
+// NOLINTEND(cppcoreguidelines-macro-usage)
