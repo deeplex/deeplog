@@ -1,5 +1,5 @@
 
-// Copyright Henrik S. Gaßmann 2021-2023.
+// Copyright 2021-2023 Henrik Steffen Gaßmann
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -39,12 +39,12 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     constexpr auto bufferSize = 64 * 1024;
     auto createSinkRx = core.create_sink<dlog::file_sink_db>({
         .threshold = dlog::severity::info,
-        .backend = {   
+        .backend = {
             .max_file_size = UINT64_MAX,
             .database = db,
             .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
             .target_buffer_size = bufferSize,
-            .sink_id = dlog::file_sink_id::default_,                                 
+            .sink_id = dlog::file_sink_id::default_,
         },
     });
     REQUIRE(createSinkRx);

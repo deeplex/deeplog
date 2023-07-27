@@ -12,6 +12,3 @@ furo = "==2023.5.20"
 [dev-packages]
 esbonio = "*"
 doc8 = "*"
-
-[requires]
-python_version = "3.11"
