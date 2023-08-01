@@ -36,7 +36,7 @@ namespace detail
 template <typename T>
 concept is_fmt_formattable = fmt::is_formattable<T>::value;
 
-inline auto format_error(dlog::system_error::status_code<void> const &esc)
+inline auto format_error(system_error::status_code<void> const &esc)
         -> std::string
 {
     auto const domainNameRef = esc.domain().name();

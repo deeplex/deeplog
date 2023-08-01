@@ -18,7 +18,6 @@
 namespace dplx::dlog
 {
 
-namespace system_error = SYSTEM_ERROR2_NAMESPACE;
 namespace oc = OUTCOME_V2_NAMESPACE;
 
 enum class [[nodiscard]] errc
