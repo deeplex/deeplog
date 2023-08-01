@@ -189,8 +189,7 @@ auto encoded_size_of_attributes(dp::emit_context &ctx,
                                 attribute_args const &attrs) noexcept
         -> std::uint64_t;
 auto encode_attributes(dp::emit_context &ctx,
-                       attribute_args const &attrs) noexcept
-        -> dp::result<void>;
+                       attribute_args const &attrs) noexcept -> result<void>;
 
 } // namespace dplx::dlog::detail
 

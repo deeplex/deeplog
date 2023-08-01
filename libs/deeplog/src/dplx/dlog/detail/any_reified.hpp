@@ -59,7 +59,7 @@ public:
     encoded_size(dp::emit_context &ctx) const noexcept -> std::uint64_t
             = 0;
     [[nodiscard]] virtual auto encode(dp::emit_context &ctx) const noexcept
-            -> dp::result<void>
+            -> result<void>
             = 0;
 };
 
@@ -93,7 +93,7 @@ public:
 
     static auto reify(dp::parse_context &ctx,
                       typename base::allocator_type &allocator) noexcept
-            -> dp::result<base *>
+            -> result<base *>
     try
     {
         using allocator_t = mp_bind_alloc<Allocator, basic_reified_value>;
@@ -173,7 +173,7 @@ public:
         return dp::encoded_size_of(ctx, mValue);
     }
     [[nodiscard]] auto encode(dp::emit_context &ctx) const noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         return dp::encode(ctx, mValue);
     }
@@ -273,9 +273,9 @@ public:
                  && std::movable<T>)
     static auto reify(dp::parse_context &ctx,
                       allocator_type const &allocator) noexcept
-            -> dp::result<any_reified>
+            -> result<any_reified>
     {
-        dp::result<any_reified> rx(std::in_place_type<any_reified>, allocator);
+        result<any_reified> rx(std::in_place_type<any_reified>, allocator);
         any_reified &self = rx.assume_value();
 
         if (auto reifyRx

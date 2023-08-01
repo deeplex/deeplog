@@ -49,7 +49,7 @@ public:
     friend inline auto tag_invoke(dp::container_reserve_fn,
                                   dynamic_format_arg_store &self,
                                   std::size_t const reservationSize) noexcept
-            -> dp::result<void>
+            -> result<void>
     {
         try
         {

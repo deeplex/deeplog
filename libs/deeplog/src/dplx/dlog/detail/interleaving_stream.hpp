@@ -162,7 +162,7 @@ private:
 
     auto
     acquire_next_chunk_impl([[maybe_unused]] std::uint64_t remaining) noexcept
-            -> dp::result<dp::memory_view>
+            -> result<dp::memory_view>
     {
         if (mBufferAllocation.size() == 0)
         {
@@ -174,7 +174,7 @@ private:
         return dp::memory_view{nextReadArea};
     }
 
-    auto read_current_chunk() noexcept -> dp::result<std::span<std::byte const>>
+    auto read_current_chunk() noexcept -> result<std::span<std::byte const>>
     {
         return read_chunk(mBufferAllocation, mDataSource, mIndexPosition,
                           mStreamSelector);
@@ -183,7 +183,7 @@ private:
                            llfio::byte_io_handle *dataSource,
                            unsigned index,
                            bool streamSelector) noexcept
-            -> dp::result<std::span<std::byte const>>
+            -> result<std::span<std::byte const>>
     {
         auto const readPos = index_to_block_offset(index, streamSelector);
         auto const readSpan
@@ -297,7 +297,7 @@ public:
     }
 
 private:
-    auto acquire_next_chunk_impl() noexcept -> dp::result<std::span<std::byte>>
+    auto acquire_next_chunk_impl() noexcept -> result<std::span<std::byte>>
     {
         if (mDataSink == nullptr)
         {
@@ -322,7 +322,7 @@ private:
         return nextWriteArea;
     }
 
-    auto write_current_chunk() noexcept -> dp::result<void>
+    auto write_current_chunk() noexcept -> result<void>
     {
         auto const writePos
                 = index_to_block_offset(mIndexPosition, mStreamSelector);

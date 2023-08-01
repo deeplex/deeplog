@@ -111,7 +111,7 @@ private:
     }
 
     auto do_require_input(size_type const requiredSize) noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         DPLX_TRY(read_next_chunk());
         if (input_buffer::size() < requiredSize)
@@ -123,7 +123,7 @@ private:
         return outcome::success();
     }
     auto do_discard_input(size_type const amount) noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         mReadOffset += amount;
         auto const remainingInput = input_size() - amount;
@@ -136,7 +136,7 @@ private:
     }
     auto do_bulk_read(std::byte *const dest,
                       std::size_t const destSize) noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         std::span<std::byte> destinationBuffer(dest, destSize);
         if (mDataSource->requires_aligned_io())
@@ -178,7 +178,7 @@ private:
         return outcome::success();
     }
 
-    auto read_next_chunk() -> dp::result<void>
+    auto read_next_chunk() -> result<void>
     {
         if (mBufferAllocation.size() == 0U)
         {
@@ -198,7 +198,7 @@ private:
                            std::uint64_t const readPos,
                            std::byte *readBuffer,
                            std::size_t readBufferSize) noexcept
-            -> dp::result<std::span<std::byte const>>
+            -> result<std::span<std::byte const>>
     {
         constexpr auto pageMask = std::uint64_t{page_size - 1};
         auto const alignMask

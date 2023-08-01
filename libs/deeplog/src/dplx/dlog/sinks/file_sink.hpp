@@ -104,15 +104,15 @@ public:
     auto finalize() noexcept -> result<std::uint32_t>;
 
 private:
-    auto rotate() noexcept -> dp::result<void>;
+    auto rotate() noexcept -> result<void>;
 
-    auto resize(std::size_t requestedSize) noexcept -> dp::result<void>;
-    auto do_grow(size_type requestedSize) noexcept -> dp::result<void> final;
+    auto resize(std::size_t requestedSize) noexcept -> result<void>;
+    auto do_grow(size_type requestedSize) noexcept -> result<void> final;
     auto do_bulk_write(std::byte const *src, std::size_t srcSize) noexcept
-            -> dp::result<void> final;
-    auto do_sync_output() noexcept -> dp::result<void> final;
+            -> result<void> final;
+    auto do_sync_output() noexcept -> result<void> final;
     virtual auto do_rotate(llfio::file_handle &backingFile) noexcept
-            -> dp::result<bool>;
+            -> result<bool>;
 };
 
 extern template class basic_sink_frontend<file_sink_backend>;
@@ -168,7 +168,7 @@ public:
 
 private:
     auto do_rotate(llfio::file_handle &backingFile) noexcept
-            -> dp::result<bool> final;
+            -> result<bool> final;
 };
 
 extern template class basic_sink_frontend<file_sink_db_backend>;

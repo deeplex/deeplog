@@ -27,8 +27,7 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::size_of(
 }
 auto dplx::dp::codec<dplx::dlog::detail::trivial_string_view>::encode(
         dp::emit_context &ctx,
-        dlog::detail::trivial_string_view const &str) noexcept
-        -> dp::result<void>
+        dlog::detail::trivial_string_view const &str) noexcept -> result<void>
 {
     return dp::emit_u8string(ctx, str.data, str.size);
 }
@@ -79,7 +78,7 @@ auto dplx::dp::codec<dplx::dlog::reification_type_id>::encode(
 
 auto dplx::dp::codec<dplx::dlog::detail::reified_status_code>::decode(
         dp::parse_context &ctx,
-        dlog::detail::reified_status_code &code) noexcept -> dp::result<void>
+        dlog::detail::reified_status_code &code) noexcept -> result<void>
 {
     DPLX_TRY(dp::expect_item_head(ctx, dp::type_code::array, 3U));
     DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
@@ -102,7 +101,7 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::size_of(
 auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::encode(
         dp::emit_context &ctx,
         dlog::detail::trivial_status_code_view const code) noexcept
-        -> dp::result<void>
+        -> result<void>
 {
     DPLX_TRY(dp::emit_array(ctx, 3U));
     DPLX_TRY(dp::emit_integer(ctx, code.code->domain().id()));
@@ -115,7 +114,7 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::encode(
 
 auto dplx::dp::codec<dplx::dlog::detail::reified_system_code>::decode(
         dp::parse_context &ctx,
-        dlog::detail::reified_system_code &code) noexcept -> dp::result<void>
+        dlog::detail::reified_system_code &code) noexcept -> result<void>
 {
     DPLX_TRY(dp::expect_item_head(ctx, dp::type_code::array, 4U));
     DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
@@ -139,7 +138,7 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::size_of(
 auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::encode(
         dp::emit_context &ctx,
         dlog::detail::trivial_system_code_view const code) noexcept
-        -> dp::result<void>
+        -> result<void>
 {
     DPLX_TRY(dp::emit_array(ctx, 4U));
     DPLX_TRY(dp::emit_integer(ctx, code.code->domain().id()));
@@ -155,12 +154,12 @@ auto dplx::dlog::detail::erased_loggable_ref::emit_reification_prefix(
         dp::emit_context &ctx, reification_type_id id) noexcept
         -> result<std::uint64_t>
 {
-    if (dp::result<void> emitRx = dp::emit_array(ctx, 2U); emitRx.has_error())
+    if (result<void> emitRx = dp::emit_array(ctx, 2U); emitRx.has_error())
             [[unlikely]]
     {
         return static_cast<decltype(emitRx) &&>(emitRx).assume_error();
     }
-    if (dp::result<void> encodeRx = dp::encode(ctx, id); encodeRx.has_error())
+    if (result<void> encodeRx = dp::encode(ctx, id); encodeRx.has_error())
             [[unlikely]]
     {
         return static_cast<decltype(encodeRx) &&>(encodeRx).assume_error();

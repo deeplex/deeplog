@@ -17,7 +17,7 @@ namespace dplx::dlog
 {
 
 auto attribute_type_registry::decode(dp::parse_context &ctx) const noexcept
-        -> dp::result<any_attribute>
+        -> result<any_attribute>
 {
     DPLX_TRY(auto const key, dp::decode(dp::as_value<key_type>, ctx));
 

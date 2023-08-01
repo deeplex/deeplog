@@ -127,7 +127,7 @@ auto encoded_size_of_attributes(dp::emit_context &ctx,
     return accumulator;
 }
 auto encode_attributes(dp::emit_context &ctx,
-                       attribute_args const &attrs) noexcept -> dp::result<void>
+                       attribute_args const &attrs) noexcept -> result<void>
 {
     std::uint_fast16_t const numAttributes{attrs.num_attributes};
     for (std::uint_fast16_t i = 0; i < numAttributes; ++i)

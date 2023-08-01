@@ -86,7 +86,7 @@ auto file_sink_backend::finalize() noexcept -> result<std::uint32_t>
     return static_cast<std::uint32_t>(finalFileSize);
 }
 
-auto file_sink_backend::rotate() noexcept -> dp::result<void>
+auto file_sink_backend::rotate() noexcept -> result<void>
 {
     DPLX_TRY(auto const needsInit, do_rotate(mBackingFile));
     if (!needsInit)
@@ -111,14 +111,14 @@ auto file_sink_backend::rotate() noexcept -> dp::result<void>
 }
 
 auto file_sink_backend::resize(std::size_t const requestedSize) noexcept
-        -> dp::result<void>
+        -> result<void>
 {
     reset();
     return mBufferAllocation.resize(static_cast<unsigned>(requestedSize));
 }
 
 auto file_sink_backend::do_grow(size_type requestedSize) noexcept
-        -> dp::result<void>
+        -> result<void>
 {
     if (size() != mBufferAllocation.size())
     {
@@ -138,7 +138,7 @@ auto file_sink_backend::do_grow(size_type requestedSize) noexcept
 
 auto file_sink_backend::do_bulk_write(std::byte const *src,
                                       std::size_t srcSize) noexcept
-        -> dp::result<void>
+        -> result<void>
 {
     if (srcSize < mBufferAllocation.size() / 2)
     {
@@ -163,7 +163,7 @@ auto file_sink_backend::do_bulk_write(std::byte const *src,
     return outcome::success();
 }
 
-auto file_sink_backend::do_sync_output() noexcept -> dp::result<void>
+auto file_sink_backend::do_sync_output() noexcept -> result<void>
 {
     if (size() != mBufferAllocation.size())
     {
@@ -184,7 +184,7 @@ auto file_sink_backend::do_sync_output() noexcept -> dp::result<void>
 }
 
 auto file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
-        -> dp::result<bool>
+        -> result<bool>
 {
     DPLX_TRY(auto const maxExtent, backingFile.maximum_extent());
     return maxExtent == 0U;
@@ -254,7 +254,7 @@ auto file_sink_db_backend::create(config_type &&config) noexcept
 }
 
 auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
-        -> dp::result<bool>
+        -> result<bool>
 {
     if (mFileNamePattern.empty())
     {

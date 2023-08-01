@@ -191,7 +191,7 @@ public:
 
         using record_output_buffer::record_output_buffer;
 
-        auto do_sync_output() noexcept -> dp::result<void> final
+        auto do_sync_output() noexcept -> result<void> final
         {
             if (mMsgCtrl == nullptr) [[unlikely]]
             {

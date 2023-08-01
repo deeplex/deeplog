@@ -184,7 +184,7 @@ class dplx::dp::codec<dplx::dlog::detail::reified_status_code>
 public:
     static auto decode(dp::parse_context &ctx,
                        dlog::detail::reified_status_code &code) noexcept
-            -> dp::result<void>;
+            -> result<void>;
 };
 template <>
 class dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>
@@ -195,7 +195,7 @@ public:
             -> std::uint64_t;
     static auto encode(dp::emit_context &ctx,
                        dlog::detail::trivial_status_code_view code) noexcept
-            -> dp::result<void>;
+            -> result<void>;
 };
 
 template <>
@@ -204,7 +204,7 @@ class dplx::dp::codec<dplx::dlog::detail::reified_system_code>
 public:
     static auto decode(dp::parse_context &ctx,
                        dlog::detail::reified_system_code &code) noexcept
-            -> dp::result<void>;
+            -> result<void>;
 };
 template <>
 class dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>
@@ -215,5 +215,5 @@ public:
             -> std::uint64_t;
     static auto encode(dp::emit_context &ctx,
                        dlog::detail::trivial_system_code_view code) noexcept
-            -> dp::result<void>;
+            -> result<void>;
 };
