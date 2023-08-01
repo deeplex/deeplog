@@ -11,24 +11,9 @@
 #include <type_traits>
 #include <utility>
 
-#include <dplx/predef/compiler.h>
-
-#if defined(DPLX_COMP_GNUC_AVAILABLE)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-#endif
-
-#include <outcome/experimental/status_result.hpp>
-#include <outcome/try.hpp>
-#include <status-code/system_code.hpp>
-
-#if defined(DPLX_COMP_GNUC_AVAILABLE)
-#pragma GCC diagnostic pop
-#endif
-
 #include <dplx/cncr/data_defined_status_domain.hpp>
+#include <dplx/cncr/disappointment.hpp>
+#include <dplx/predef/compiler.h>
 
 namespace dplx::dlog
 {
@@ -58,23 +43,8 @@ enum class [[nodiscard]] errc
     LIMIT,
 };
 
-// we use a distinct policy type in order to shorten the symbol length
-template <typename T>
-struct status_throw_policy
-    : oc::experimental::policy::status_code_throw<
-              T,
-              system_error::errored_status_code<system_error::erased<
-                      typename system_error::system_code::value_type>>,
-              void>
-{
-};
-
 template <typename R>
-using result = oc::experimental::status_result<
-        R,
-        system_error::errored_status_code<system_error::erased<
-                typename system_error::system_code::value_type>>,
-        status_throw_policy<R>>;
+using result = dplx::result<R>;
 
 template <typename R>
 using pure_result = oc::experimental::status_result<R, errc>;
@@ -125,58 +95,3 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
   // clang-format on
     };
 };
-
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
-
-#ifndef DPLX_TRY
-#define DPLX_TRY(...) OUTCOME_TRY(__VA_ARGS__)
-#endif
-
-// NOLINTEND(cppcoreguidelines-macro-usage)
-
-namespace dplx::dlog::detail
-{
-
-template <typename B>
-concept boolean_testable_impl = std::convertible_to<B, bool>;
-// clang-format off
-template <typename B>
-concept boolean_testable
-        = boolean_testable_impl<B>
-        && requires(B &&b)
-        {
-            { !static_cast<B &&>(b) }
-                -> boolean_testable_impl;
-        };
-// clang-format on
-
-// clang-format off
-template <typename T>
-concept tryable
-    = requires(T t)
-{
-    { oc::try_operation_has_value(t) }
-        -> boolean_testable;
-    { oc::try_operation_return_as(static_cast<T &&>(t)) }
-        -> std::convertible_to<result<void>>;
-    oc::try_operation_extract_value(static_cast<T &&>(t));
-};
-// clang-format on
-
-template <tryable T>
-using result_value_t
-        = std::remove_cvref_t<decltype(oc::try_operation_extract_value(
-                std::declval<T &&>()))>;
-
-// clang-format off
-template <typename T, typename R>
-concept tryable_result
-    = tryable<T>
-    && requires(T rx)
-    {
-        { oc::try_operation_extract_value(static_cast<T &&>(rx)) }
-            -> std::convertible_to<R>;
-    };
-// clang-format on
-
-} // namespace dplx::dlog::detail

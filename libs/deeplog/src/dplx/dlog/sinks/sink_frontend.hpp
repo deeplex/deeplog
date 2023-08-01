@@ -144,7 +144,7 @@ concept sink_backend
        && requires(typename T::config_type &&config) {
               {
                   T::create(std::move(config))
-                  } -> detail::tryable_result<T>;
+                  } -> cncr::tryable_result<T>;
           };
 
 template <sink_backend Backend>
@@ -228,7 +228,7 @@ private:
         if constexpr (requires {
                           {
                               mBackend.finalize()
-                              } -> detail::tryable;
+                              } -> cncr::tryable;
                       })
         {
             DPLX_TRY(mBackend.finalize());
