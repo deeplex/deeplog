@@ -41,9 +41,6 @@ enum class [[nodiscard]] errc
 };
 
 template <typename R>
-using result = dplx::result<R>;
-
-template <typename R>
 using pure_result = outcome::experimental::status_result<R, errc>;
 
 } // namespace dplx::dlog

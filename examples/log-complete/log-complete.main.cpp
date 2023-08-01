@@ -24,7 +24,7 @@ namespace dlog_ex
 
 using namespace dplx;
 
-inline auto main() -> dlog::result<void>
+inline auto main() -> result<void>
 {
     using namespace std::string_literals;
     using mpsc_log_fabric

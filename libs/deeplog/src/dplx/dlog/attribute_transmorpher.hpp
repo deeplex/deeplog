@@ -76,7 +76,7 @@ public:
     auto decode(dp::parse_context &ctx) const noexcept -> result<any_attribute>;
 
     template <attribute T>
-    auto insert() -> dlog::result<void>
+    auto insert() -> result<void>
     try
     {
         revive_fn fn = &any_attribute::reify<T>;
