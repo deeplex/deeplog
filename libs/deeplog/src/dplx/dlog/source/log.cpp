@@ -47,7 +47,7 @@ auto dplx::dp::codec<dplx::dlog::severity>::encode(
     }
     *ctx.out.data() = static_cast<std::byte>(bits);
     ctx.out.commit_written(1U);
-    return oc::success();
+    return outcome::success();
 }
 
 auto dplx::dp::codec<dplx::dlog::resource_id>::size_of(
@@ -85,7 +85,7 @@ auto dplx::dp::codec<dplx::dlog::detail::reified_status_code>::decode(
     DPLX_TRY(dp::parse_integer(ctx, code.mDomainId));
     DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
     DPLX_TRY(dp::parse_text(ctx, code.mMessage));
-    return oc::success();
+    return outcome::success();
 }
 
 auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::size_of(
@@ -110,7 +110,7 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::encode(
     DPLX_TRY(dp::emit_u8string(ctx, domainName.data(), domainName.size()));
     auto message = code.code->message();
     DPLX_TRY(dp::emit_u8string(ctx, message.data(), message.size()));
-    return oc::success();
+    return outcome::success();
 }
 
 auto dplx::dp::codec<dplx::dlog::detail::reified_system_code>::decode(
@@ -122,7 +122,7 @@ auto dplx::dp::codec<dplx::dlog::detail::reified_system_code>::decode(
     DPLX_TRY(dp::parse_integer(ctx, code.mRawValue));
     DPLX_TRY(dp::parse_text(ctx, code.mDomainName));
     DPLX_TRY(dp::parse_text(ctx, code.mMessage));
-    return oc::success();
+    return outcome::success();
 }
 
 auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::size_of(
@@ -148,7 +148,7 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::encode(
     DPLX_TRY(dp::emit_u8string(ctx, domainName.data(), domainName.size()));
     auto message = code.code->message();
     DPLX_TRY(dp::emit_u8string(ctx, message.data(), message.size()));
-    return oc::success();
+    return outcome::success();
 }
 
 auto dplx::dlog::detail::erased_loggable_ref::emit_reification_prefix(
@@ -245,7 +245,7 @@ inline auto encode_any_loggable(dp::emit_context &ctx,
         cncr::unreachable();
     }
 
-    return oc::success();
+    return outcome::success();
 }
 
 #undef DPLX_X_WITH_SYSTEM_ERROR2
@@ -261,7 +261,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
 {
     if (args.sev == severity::none) [[unlikely]]
     {
-        return oc::success();
+        return outcome::success();
     }
     constexpr severity severity_max{24};
     if (args.sev > severity_max) [[unlikely]]
@@ -399,7 +399,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
                 ctx, args.location.filename,
                 static_cast<std::size_t>(args.location.filenameSize)));
     }
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dlog::detail

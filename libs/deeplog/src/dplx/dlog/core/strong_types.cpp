@@ -49,7 +49,7 @@ auto codec<dlog::severity>::decode(parse_context &ctx,
         return static_cast<result<void> &&>(parseRx).as_failure();
     }
     outValue = static_cast<dlog::severity>(underlyingValue + encoding_offset);
-    return oc::success();
+    return outcome::success();
 }
 
 auto codec<dlog::resource_id>::decode(parse_context &ctx,
@@ -64,7 +64,7 @@ auto codec<dlog::resource_id>::decode(parse_context &ctx,
         return static_cast<result<void> &&>(parseRx).as_failure();
     }
     outValue = static_cast<dlog::resource_id>(underlyingValue);
-    return oc::success();
+    return outcome::success();
 }
 
 auto codec<dlog::reification_type_id>::decode(
@@ -79,7 +79,7 @@ auto codec<dlog::reification_type_id>::decode(
         return static_cast<result<void> &&>(parseRx).as_failure();
     }
     outValue = static_cast<dlog::reification_type_id>(underlyingValue);
-    return oc::success();
+    return outcome::success();
 }
 
 auto codec<dlog::trace_id>::decode(parse_context &ctx,
@@ -131,13 +131,13 @@ auto codec<dlog::span_context>::decode(parse_context &ctx,
     {
         ctx.in.discard_buffered(1U);
         spanCtx = {};
-        return oc::success();
+        return outcome::success();
     }
 
     DPLX_TRY(dp::expect_item_head(ctx, type_code::array, 2U));
     DPLX_TRY(dp::codec<dlog::trace_id>::decode(ctx, spanCtx.traceId));
     DPLX_TRY(dp::codec<dlog::span_id>::decode(ctx, spanCtx.spanId));
-    return oc::success();
+    return outcome::success();
 }
 auto codec<dlog::span_context>::encode(emit_context &ctx,
                                        dlog::span_context spanCtx) noexcept
@@ -151,7 +151,7 @@ auto codec<dlog::span_context>::encode(emit_context &ctx,
     DPLX_TRY(dp::emit_array(ctx, 2U));
     DPLX_TRY(dp::codec<dlog::trace_id>::encode(ctx, spanCtx.traceId));
     DPLX_TRY(dp::codec<dlog::span_id>::encode(ctx, spanCtx.spanId));
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dp

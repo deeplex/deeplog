@@ -142,7 +142,7 @@ public:
                     mBuffer.size());
 
         mWriteOffset = 0U;
-        return oc::success();
+        return outcome::success();
     }
 
     [[nodiscard]] auto release() -> llfio::mapped_file_handle
@@ -157,7 +157,7 @@ public:
     {
         DPLX_TRY(mBackingFile.unlink(deadline));
         (void)release();
-        return oc::success();
+        return outcome::success();
     }
 
     auto allocate_record_buffer_inplace(

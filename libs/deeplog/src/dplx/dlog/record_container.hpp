@@ -106,7 +106,7 @@ public:
 
         DPLX_TRY(parse_arguments(ctx, value.format_arguments));
         DPLX_TRY(dp::decode(ctx, value.attributes));
-        return oc::success();
+        return outcome::success();
     }
 
 private:
@@ -164,7 +164,7 @@ public:
         std::erase_if(value.records, [](dlog::record const &r)
                       { return r.severity == dlog::severity::none; });
 
-        return oc::success();
+        return outcome::success();
     }
 
 private:

@@ -140,7 +140,7 @@ public:
 
         DPLX_TRY(mMessageBus.consume_messages(drain));
         sync_sinks();
-        return oc::success();
+        return outcome::success();
     }
     template <typename Sink>
     auto create_sink(typename Sink::config_type &&config) -> result<Sink *>

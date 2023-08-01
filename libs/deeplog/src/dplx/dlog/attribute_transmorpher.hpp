@@ -82,7 +82,7 @@ public:
     {
         revive_fn fn = &any_attribute::reify<T>;
         mKnownTypes.insert({T::id, fn});
-        return dp::oc::success();
+        return outcome::success();
     }
     catch (std::bad_alloc const &)
     {

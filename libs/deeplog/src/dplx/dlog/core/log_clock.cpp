@@ -52,7 +52,7 @@ auto dplx::dp::codec<dplx::dlog::log_clock::time_point>::decode(
              dp::decode(as_value<dplx::dlog::log_clock::time_point::duration>,
                         ctx));
     outValue = dplx::dlog::log_clock::time_point{timeSinceEpoch};
-    return oc::success();
+    return outcome::success();
 }
 
 auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::size_of(
@@ -76,7 +76,7 @@ auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::encode(
 
     DPLX_TRY(dp::encode(ctx, value.system_reference.time_since_epoch()));
     DPLX_TRY(dp::encode(ctx, value.steady_reference.time_since_epoch()));
-    return oc::success();
+    return outcome::success();
 
     // system_clock::time_point is missing a codec<>
     // return dp::encode_tuple<dlog::log_epoch_info_descriptor>(ctx, value);
@@ -100,7 +100,7 @@ auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::decode(
             internal_clock::time_point{steadyRef},
     };
 
-    return oc::success();
+    return outcome::success();
 
     // system_clock::time_point is missing a codec<>
     // DPLX_TRY(tuple_head_info headInfo,

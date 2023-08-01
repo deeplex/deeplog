@@ -100,7 +100,7 @@ inline auto encode_any_attribute(dp::emit_context &ctx,
         cncr::unreachable();
     }
 
-    return oc::success();
+    return outcome::success();
 }
 
 #undef DPLX_X_WITH_SYSTEM_ERROR2
@@ -137,7 +137,7 @@ auto encode_attributes(dp::emit_context &ctx,
                                       attrs.attributes[i], attrs.ids[i]));
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dlog::detail

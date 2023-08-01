@@ -129,11 +129,11 @@ private:
 
     virtual auto do_sync() noexcept -> result<void>
     {
-        return oc::success();
+        return outcome::success();
     }
     virtual auto do_finalize() noexcept -> result<void>
     {
-        return oc::success();
+        return outcome::success();
     }
 };
 
@@ -216,12 +216,12 @@ private:
     {
         (void)binarySize;
         DPLX_TRY(detail::concate_messages(mBackend, messages, mThreshold));
-        return oc::success();
+        return outcome::success();
     }
     auto do_sync() noexcept -> result<void> override
     {
         DPLX_TRY(mBackend.sync_output());
-        return oc::success();
+        return outcome::success();
     }
     auto do_finalize() noexcept -> result<void> override
     {
@@ -233,7 +233,7 @@ private:
         {
             DPLX_TRY(mBackend.finalize());
         }
-        return oc::success();
+        return outcome::success();
     }
 };
 

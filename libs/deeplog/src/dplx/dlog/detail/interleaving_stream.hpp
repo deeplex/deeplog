@@ -137,7 +137,7 @@ public:
         DPLX_TRY(*this, interleaving_input_stream(std::move(pages), *dataSource,
                                                   streamSelector, maxSize));
 
-        return oc::success();
+        return outcome::success();
     }
 
 private:
@@ -334,7 +334,7 @@ private:
         };
         DPLX_TRY(mDataSink->write({ioBuffers, writePos}));
 
-        return dp::oc::success();
+        return outcome::success();
     }
 
 public:
@@ -347,7 +347,7 @@ public:
 
         DPLX_TRY(write_current_chunk());
         mDataSink = nullptr;
-        return oc::success();
+        return outcome::success();
     }
 };
 

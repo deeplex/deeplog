@@ -52,7 +52,7 @@ auto file_sink_backend::initialize() noexcept -> result<void>
 {
     DPLX_TRY(resize(mTargetBufferSize));
     DPLX_TRY(rotate());
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_sink_backend::create(config_type &&config) noexcept
@@ -91,7 +91,7 @@ auto file_sink_backend::rotate() noexcept -> dp::result<void>
     DPLX_TRY(auto const needsInit, do_rotate(mBackingFile));
     if (!needsInit)
     {
-        return oc::success();
+        return outcome::success();
     }
     reset(mBufferAllocation.as_span());
     dp::emit_context emitCtx{*this};
@@ -107,7 +107,7 @@ auto file_sink_backend::rotate() noexcept -> dp::result<void>
 
     DPLX_TRY(mBackingFile.write({writeBuffers, 0U}))
     reset(mBufferAllocation.as_span());
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_sink_backend::resize(std::size_t const requestedSize) noexcept
@@ -133,7 +133,7 @@ auto file_sink_backend::do_grow(size_type requestedSize) noexcept
         DPLX_TRY(resize(requestedSize));
     }
     reset(mBufferAllocation.as_span());
-    return dp::oc::success();
+    return outcome::success();
 }
 
 auto file_sink_backend::do_bulk_write(std::byte const *src,
@@ -149,7 +149,7 @@ auto file_sink_backend::do_bulk_write(std::byte const *src,
         reset(buffer);
         std::memcpy(buffer.data(), src, srcSize);
         commit_written(srcSize);
-        return dp::oc::success();
+        return outcome::success();
     }
 
     auto const buffer = mBufferAllocation.as_span();
@@ -160,7 +160,7 @@ auto file_sink_backend::do_bulk_write(std::byte const *src,
 
     DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
     reset(buffer);
-    return dp::oc::success();
+    return outcome::success();
 }
 
 auto file_sink_backend::do_sync_output() noexcept -> dp::result<void>

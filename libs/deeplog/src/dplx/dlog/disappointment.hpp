@@ -18,8 +18,6 @@
 namespace dplx::dlog
 {
 
-namespace oc = OUTCOME_V2_NAMESPACE;
-
 enum class [[nodiscard]] errc
 {
     success = 0,
@@ -46,7 +44,7 @@ template <typename R>
 using result = dplx::result<R>;
 
 template <typename R>
-using pure_result = oc::experimental::status_result<R, errc>;
+using pure_result = outcome::experimental::status_result<R, errc>;
 
 } // namespace dplx::dlog
 

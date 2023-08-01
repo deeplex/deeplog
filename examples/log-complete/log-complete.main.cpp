@@ -70,7 +70,7 @@ inline auto main() -> dlog::result<void>
     DPLX_TRY(core.destroy_sink(sink));
 
     DPLX_TRY(core.message_bus().unlink());
-    return dlog::oc::success();
+    return outcome::success();
 }
 
 } // namespace dlog_ex

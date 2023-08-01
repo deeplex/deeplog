@@ -128,7 +128,7 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
         dlog::record_output_guard busLock(*outStream);
         DPLX_TRY(dplx::dp::encode(*outStream, i));
     }
-    return dlog::oc::success();
+    return outcome::success();
 }
 
 auto consume_content(dlog::mpsc_bus_handle &bus, std::span<std::uint8_t> ids)
@@ -179,7 +179,7 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained",
     threads.reserve(concurrency);
     for (unsigned i = 0U; i < concurrency; ++i)
     {
-        auto *rx = &threadResults.emplace_back(dlog::oc::success());
+        auto *rx = &threadResults.emplace_back(outcome::success());
         threads.emplace_back(
                 [&bufferbus, rx]
                 { *rx = fill_mpsc_bus(bufferbus, msgsPerThread); });

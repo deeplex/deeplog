@@ -123,7 +123,7 @@ auto dplx::dp::codec<dplx::dlog::span_kind>::decode(
             static_cast<std::underlying_type_t<dlog::span_kind>>(
                     dlog::span_kind::server)));
     value = static_cast<dlog::span_kind>(rawValue);
-    return oc::success();
+    return outcome::success();
 }
 auto dplx::dp::codec<dplx::dlog::span_kind>::size_of(
         emit_context &ctx, dlog::span_kind const &value) noexcept
@@ -138,7 +138,7 @@ auto dplx::dp::codec<dplx::dlog::span_kind>::encode(
 {
     DPLX_TRY(dp::emit_integer(
             ctx, static_cast<std::underlying_type_t<dlog::span_kind>>(value)));
-    return oc::success();
+    return outcome::success();
 }
 
 namespace dplx::dlog
@@ -235,7 +235,7 @@ auto span_scope::send_close_msg() noexcept -> result<void>
             .timestamp = log_clock::now(),
     };
     DPLX_TRY(enqueue_message(*mContext->port(), mId.spanId, msg));
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dlog

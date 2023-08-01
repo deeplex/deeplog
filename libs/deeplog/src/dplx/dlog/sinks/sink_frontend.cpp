@@ -32,7 +32,7 @@ struct copy_message_fn
         {
             return out.bulk_write(message.raw_data);
         }
-        return dp::oc::success();
+        return outcome::success();
     }
 };
 
@@ -46,7 +46,7 @@ auto concate_messages(dp::output_buffer &out,
     {
         DPLX_TRY(visit(copy_message_fn{out, threshold}, message));
     }
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dlog::detail

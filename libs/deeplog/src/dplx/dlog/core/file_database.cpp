@@ -161,7 +161,7 @@ auto file_database_handle::unlink_all() noexcept -> result<void>
 
     *this = {};
 
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::unlink_all_message_buses() noexcept -> result<void>
@@ -177,7 +177,7 @@ auto file_database_handle::unlink_all_message_buses() noexcept -> result<void>
     {
         return errc::message_bus_unlink_failed;
     }
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::unlink_all_record_containers() noexcept
@@ -194,7 +194,7 @@ auto file_database_handle::unlink_all_record_containers() noexcept
     {
         return errc::container_unlink_failed;
     }
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::fetch_content_impl() noexcept -> result<void>
@@ -236,7 +236,7 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
         mContents.revision += 1;
     }
 
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::create_record_container(
@@ -339,7 +339,7 @@ auto file_database_handle::update_record_container_size(file_sink_id which,
     }
 
     DPLX_TRY(retire_to_storage(contents));
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::prune_record_containers(
@@ -397,7 +397,7 @@ auto file_database_handle::prune_record_containers(
                             }
                             return pruneCandidate;
                         });
-                return oc::success();
+                return outcome::success();
             });
 }
 
@@ -513,7 +513,7 @@ auto file_database_handle::remove_message_bus(std::string_view id,
     }
     DPLX_TRY(retire_to_storage(contents));
     mContents = std::move(contents);
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::record_container_filename(
@@ -555,7 +555,7 @@ auto file_database_handle::transform(TransformFn &&transformFn) -> result<void>
     DPLX_TRY(transformFn(contents));
 
     DPLX_TRY(retire_to_storage(contents));
-    return oc::success();
+    return outcome::success();
 }
 
 void file_database_handle::unlink_all_message_buses_impl() noexcept
@@ -644,7 +644,7 @@ auto file_database_handle::validate_magic() noexcept -> result<void>
         return errc::invalid_file_database_header;
     }
 
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::initialize_storage() noexcept -> result<void>
@@ -658,7 +658,7 @@ auto file_database_handle::initialize_storage() noexcept -> result<void>
     DPLX_TRY(mRootHandle.write({writeBuffers, 0U}));
 
     DPLX_TRY(retire_to_storage(mContents));
-    return oc::success();
+    return outcome::success();
 }
 
 auto file_database_handle::retire_to_storage(
@@ -669,7 +669,7 @@ auto file_database_handle::retire_to_storage(
                      mRootHandle, contents.revision & 0b01));
 
     DPLX_TRY(dp::encode(outStream, contents));
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dlog

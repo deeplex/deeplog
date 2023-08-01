@@ -137,7 +137,7 @@ private:
                 return static_cast<decltype(encodeRx) &&>(encodeRx)
                         .assume_error();
             }
-            return oc::success_type<std::uint64_t>(std::uint64_t{});
+            return outcome::success_type<std::uint64_t>(std::uint64_t{});
 
         default:
             cncr::unreachable();

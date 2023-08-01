@@ -23,11 +23,11 @@ namespace dplx::dlog::detail
 
 class os_input_stream final : public dp::input_buffer
 {
-    friend class oc::basic_result<
+    friend class outcome::basic_result<
             os_input_stream,
             system_error::errored_status_code<system_error::erased<
                     system_error::system_code::value_type>>,
-            oc::experimental::policy::default_status_result_policy<
+            outcome::experimental::policy::default_status_result_policy<
                     os_input_stream,
                     system_error::errored_status_code<system_error::erased<
                             system_error::system_code::value_type>>>>;
@@ -120,7 +120,7 @@ private:
                          ? dp::errc::buffer_size_exceeded
                          : dp::errc::end_of_stream;
         }
-        return oc::success();
+        return outcome::success();
     }
     auto do_discard_input(size_type const amount) noexcept
             -> dp::result<void> override
@@ -132,7 +132,7 @@ private:
         {
             return read_next_chunk();
         }
-        return oc::success();
+        return outcome::success();
     }
     auto do_bulk_read(std::byte *const dest,
                       std::size_t const destSize) noexcept
@@ -175,7 +175,7 @@ private:
         {
             return dp::errc::end_of_stream;
         }
-        return dp::oc::success();
+        return outcome::success();
     }
 
     auto read_next_chunk() -> dp::result<void>
@@ -191,7 +191,7 @@ private:
 
         reset(nextChunk.data(), nextChunk.size(), input_size());
         mReadOffset += nextChunk.size();
-        return dp::oc::success();
+        return outcome::success();
     }
 
     static auto read_chunk(llfio::byte_io_handle *const dataSource,

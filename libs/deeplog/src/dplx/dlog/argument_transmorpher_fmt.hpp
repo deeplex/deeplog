@@ -54,7 +54,7 @@ public:
         try
         {
             self.reserve(reservationSize, reservationSize);
-            return oc::success();
+            return outcome::success();
         }
         catch (std::bad_alloc const &)
         {
@@ -91,7 +91,7 @@ public:
         {
             return std::move(parseRx).as_failure();
         }
-        return oc::success();
+        return outcome::success();
     }
 
     template <typename T>
@@ -106,7 +106,7 @@ public:
         {
             return errc::not_enough_memory;
         }
-        return oc::success();
+        return outcome::success();
     }
 
 private:
@@ -180,7 +180,7 @@ private:
             store.push_back(
                     fmt::arg(name, static_cast<decltype(value) &&>(value)));
         }
-        return oc::success();
+        return outcome::success();
     }
     catch (std::bad_alloc const &)
     {
