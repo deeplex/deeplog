@@ -35,6 +35,8 @@ struct record_output_buffer_storage;
 class file_database_handle;
 
 class sink_frontend_base;
+class file_sink_backend;
+class file_sink_db_backend;
 
 class mpsc_bus_handle;
 class db_mpsc_bus_handle;

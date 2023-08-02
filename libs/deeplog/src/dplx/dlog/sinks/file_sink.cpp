@@ -18,6 +18,27 @@
 
 #include <dplx/dlog/detail/utils.hpp>
 
+auto dplx::make<dplx::dlog::file_sink_backend>::operator()() const noexcept
+        -> result<dlog::file_sink_backend>
+{
+    using namespace dplx::dlog;
+    using file_creation = llfio::file_handle::creation;
+
+    file_sink_backend self{target_buffer_size};
+    DPLX_TRY(self.mBackingFile,
+             llfio::file(base, path, file_sink_backend::file_mode,
+                         file_creation::only_if_not_exist,
+                         file_sink_backend::file_caching,
+                         file_sink_backend::file_flags));
+
+    llfio::unique_file_lock fileLock(self.mBackingFile,
+                                     llfio::lock_kind::unlocked);
+    DPLX_TRY(fileLock.lock());
+    DPLX_TRY(self.initialize());
+    fileLock.release();
+    return self;
+}
+
 namespace dplx::dlog
 {
 
@@ -53,19 +74,6 @@ auto file_sink_backend::initialize() noexcept -> result<void>
     DPLX_TRY(resize(mTargetBufferSize));
     DPLX_TRY(rotate());
     return outcome::success();
-}
-
-auto file_sink_backend::create(config_type &&config) noexcept
-        -> result<file_sink_backend>
-{
-    file_sink_backend self{config.target_buffer_size};
-    self.mBackingFile = std::move(config.file);
-    llfio::unique_file_lock fileLock(self.mBackingFile,
-                                     llfio::lock_kind::unlocked);
-    DPLX_TRY(fileLock.lock());
-    DPLX_TRY(self.initialize());
-    fileLock.release();
-    return self;
 }
 
 auto file_sink_backend::finalize() noexcept -> result<std::uint32_t>
@@ -192,6 +200,31 @@ auto file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
 
 template class basic_sink_frontend<file_sink_backend>;
 
+} // namespace dplx::dlog
+
+auto dplx::make<dplx::dlog::file_sink_db_backend>::operator()() const noexcept
+        -> result<dlog::file_sink_db_backend>
+{
+    using namespace dplx::dlog;
+
+    file_sink_db_backend self(target_buffer_size, max_file_size, sink_id);
+    try
+    {
+        self.mFileNamePattern = file_name_pattern;
+    }
+    catch (std::bad_alloc const &)
+    {
+        return system_error::errc::not_enough_memory;
+    }
+    DPLX_TRY(self.mFileDatabase, database.clone());
+    DPLX_TRY(self.initialize())
+
+    return self;
+}
+
+namespace dplx::dlog
+{
+
 file_sink_db_backend::~file_sink_db_backend()
 {
     if (auto finalizeRx = finalize();
@@ -232,25 +265,6 @@ file_sink_db_backend::file_sink_db_backend(std::size_t const targetBufferSize,
     , mSinkId(sinkId)
     , mCurrentRotation()
 {
-}
-
-auto file_sink_db_backend::create(config_type &&config) noexcept
-        -> result<file_sink_db_backend>
-{
-    file_sink_db_backend self(config.target_buffer_size, config.max_file_size,
-                              config.sink_id);
-    try
-    {
-        self.mFileNamePattern = config.file_name_pattern;
-    }
-    catch (std::bad_alloc const &)
-    {
-        return system_error2::errc::not_enough_memory;
-    }
-    DPLX_TRY(self.mFileDatabase, config.database.clone());
-    DPLX_TRY(self.initialize())
-
-    return self;
 }
 
 auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
