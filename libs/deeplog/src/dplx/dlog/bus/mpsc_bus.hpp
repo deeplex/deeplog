@@ -19,6 +19,7 @@
 #include <dplx/dp.hpp>
 #include <dplx/dp/macros.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
+#include <dplx/make.hpp>
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/concepts.hpp>
@@ -451,6 +452,38 @@ inline auto mpsc_bus(llfio::mapped_file_handle &&backingFile,
                                      regionSize);
 }
 
+} // namespace dplx::dlog
+
+template <>
+struct dplx::make<dplx::dlog::mpsc_bus_handle>
+{
+    dlog::llfio::path_handle const &base;
+    dlog::llfio::path_view path;
+    std::uint32_t num_regions;
+    std::uint32_t region_size;
+
+    auto operator()() const noexcept -> result<dlog::mpsc_bus_handle>
+    {
+        return dlog::mpsc_bus_handle::mpsc_bus(base, path, num_regions,
+                                               region_size);
+    }
+};
+
+template <>
+struct dplx::make<dplx::dlog::db_mpsc_bus_handle>
+{
+    dlog::file_database_handle const &database;
+    std::string bus_id;
+    std::string_view file_name_pattern;
+    std::uint32_t num_regions;
+    std::uint32_t region_size;
+
+    auto operator()() const noexcept -> result<dlog::db_mpsc_bus_handle>;
+};
+
+namespace dplx::dlog
+{
+
 class db_mpsc_bus_handle : private mpsc_bus_handle
 {
     file_database_handle mFileDb;
@@ -493,16 +526,23 @@ private:
     }
 
 public:
-    struct config_type
-    {
-        file_database_handle const &database;
-        std::string bus_id;
-        std::string_view file_name_pattern;
-        std::uint32_t num_regions;
-        std::uint32_t region_size;
-    };
+    using config_type [[deprecated("Use dplx::make<> instead")]]
+    = make<db_mpsc_bus_handle>;
 
-    static auto create(config_type &&config) -> result<db_mpsc_bus_handle>;
+    static auto db_mpsc_bus(file_database_handle const &database,
+                            std::string_view busId,
+                            std::string_view busNamePattern,
+                            std::uint32_t numRegions,
+                            std::uint32_t regionSize) noexcept
+            -> result<db_mpsc_bus_handle>;
+
+    [[deprecated("Use dplx::make<> instead")]] static auto
+    create(make<db_mpsc_bus_handle> const &config) -> result<db_mpsc_bus_handle>
+    {
+        return dlog::db_mpsc_bus_handle::db_mpsc_bus(
+                config.database, config.bus_id, config.file_name_pattern,
+                config.num_regions, config.region_size);
+    }
 
     using mpsc_bus_handle::consume_batch_size;
     using mpsc_bus_handle::max_message_size;
@@ -546,8 +586,27 @@ public:
             -> result<void>;
 };
 
+inline auto db_mpsc_bus(file_database_handle const &database,
+                        std::string_view busId,
+                        std::string_view busNamePattern,
+                        std::uint32_t numRegions,
+                        std::uint32_t regionSize) noexcept
+        -> result<db_mpsc_bus_handle>
+{
+    return dlog::db_mpsc_bus_handle::db_mpsc_bus(
+            database, busId, busNamePattern, numRegions, regionSize);
+}
+
 extern template class log_fabric<db_mpsc_bus_handle>;
 
 } // namespace dplx::dlog
+
+inline auto
+dplx::make<dplx::dlog::db_mpsc_bus_handle>::operator()() const noexcept
+        -> result<dlog::db_mpsc_bus_handle>
+{
+    return dlog::db_mpsc_bus_handle::db_mpsc_bus(
+            database, bus_id, file_name_pattern, num_regions, region_size);
+}
 
 DPLX_DP_DECLARE_CODEC_SIMPLE(dplx::dlog::mpsc_bus_info_v00);

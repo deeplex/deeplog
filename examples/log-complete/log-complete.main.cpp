@@ -36,15 +36,16 @@ inline auto main() -> result<void>
                                 baseDir, "log-test.drot"));
 
     constexpr auto regionSize = 1 << 14;
-    DPLX_TRY(auto &&mpscBus,
-             dlog::db_mpsc_bus_handle::create({
+    DPLX_TRY(mpsc_log_fabric &&core, (make<mpsc_log_fabric>{
+            .make_bus = {
                      .database = db,
                      .bus_id = "std"s,
                      .file_name_pattern = "{id}.{now:%FT%H-%M-%S}.dmpscb",
                      .num_regions = 4U,
                      .region_size = regionSize,
-             }));
-    mpsc_log_fabric core{std::move(mpscBus), dlog::severity::debug};
+             },
+            .default_threshold = dlog::severity::debug,
+            })());
 
     constexpr auto bufferSize = 64 * 1024;
     DPLX_TRY(auto *sink,

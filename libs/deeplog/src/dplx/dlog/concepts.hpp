@@ -12,6 +12,9 @@
 #include <span>
 #include <string_view>
 
+#include <dplx/dp/fwd.hpp>
+#include <dplx/make.hpp>
+
 #include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog
@@ -23,7 +26,8 @@ using writable_bytes = std::span<std::byte>;
 // clang-format off
 template <typename T>
 concept bus
-        = requires(T instance,
+        = makable<T>
+       && requires(T instance,
                    record_output_buffer_storage &bufferPlacementStorage,
                    std::size_t const messageSize,
                    span_id const spanId,
@@ -36,6 +40,9 @@ concept bus
                     -> cncr::tryable;
         };
 // clang-format on
+
+template <bus MessageBus>
+class log_fabric;
 
 // clang-format off
 template <typename T>
@@ -58,5 +65,14 @@ concept raw_message_consumer
                   static_cast<Fn &&>(fn)(msgs)
               } noexcept;
           };
+
+template <typename T>
+concept sink_backend = makable<T> && std::derived_from<T, dp::output_buffer>;
+
+template <typename T>
+concept sink = makable<T> && std::derived_from<T, sink_frontend_base>;
+
+template <sink_backend Backend>
+class basic_sink_frontend;
 
 } // namespace dplx::dlog

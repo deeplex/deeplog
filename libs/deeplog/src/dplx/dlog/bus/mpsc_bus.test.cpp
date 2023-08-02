@@ -32,6 +32,7 @@ namespace dlog_tests
 {
 
 static_assert(dlog::bus<dlog::mpsc_bus_handle>);
+static_assert(dlog::bus<dlog::db_mpsc_bus_handle>);
 
 TEST_CASE("mpsc_bus() creates a mpsc_bus_handle given a mapped_file_handle")
 {

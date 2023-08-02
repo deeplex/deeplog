@@ -225,23 +225,28 @@ auto dplx::dlog::mpsc_bus_handle::create_span_context(trace_id trace,
                                           rawTraceId.values[1], ctr)};
 }
 
-auto db_mpsc_bus_handle::create(config_type &&config)
+auto db_mpsc_bus_handle::db_mpsc_bus(file_database_handle const &database,
+                                     std::string_view busId,
+                                     std::string_view busNamePattern,
+                                     std::uint32_t numRegions,
+                                     std::uint32_t regionSize) noexcept
         -> result<db_mpsc_bus_handle>
+try
 {
-    auto busIdCopy = config.bus_id;
-    DPLX_TRY(auto &&db, config.database.clone());
+    // get the memory allocations out of the way
+    std::string busIdCopy(busId);
+    DPLX_TRY(auto &&db, database.clone());
 
     DPLX_TRY(auto &&info,
-             db.create_message_bus(config.file_name_pattern,
-                                   std::move(busIdCopy),
+             db.create_message_bus(busNamePattern, std::string(busId),
                                    as_bytes(std::span(magic)), file_mode,
                                    file_caching, file_flags));
 
     llfio::mapped_file_handle mappedFile(std::move(info.handle),
                                          llfio::section_handle::flag::none, 0U);
-    auto openRx = mpsc_bus_handle::mpsc_bus(
-            std::move(mappedFile), config.num_regions, config.region_size,
-            llfio::lock_kind::exclusive);
+    auto openRx = mpsc_bus_handle::mpsc_bus(std::move(mappedFile), numRegions,
+                                            regionSize,
+                                            llfio::lock_kind::exclusive);
     if (openRx.has_failure())
     {
         (void)mappedFile.unlink(); // NOLINT(bugprone-use-after-move)
@@ -250,7 +255,11 @@ auto db_mpsc_bus_handle::create(config_type &&config)
     }
 
     return db_mpsc_bus_handle(std::move(openRx).assume_value(), std::move(db),
-                              std::move(config.bus_id), info.rotation);
+                              std::move(busIdCopy), info.rotation);
+}
+catch (std::bad_alloc const &)
+{
+    return errc::not_enough_memory;
 }
 
 auto db_mpsc_bus_handle::unlink(llfio::deadline deadline) noexcept

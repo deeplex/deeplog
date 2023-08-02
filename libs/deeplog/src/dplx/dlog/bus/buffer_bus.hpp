@@ -16,6 +16,7 @@
 #include <dplx/dp/items/parse_core.hpp>
 #include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
+#include <dplx/make.hpp>
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/disappointment.hpp>
@@ -203,3 +204,16 @@ inline auto bufferbus(llfio::mapped_file_handle &&backingFile,
 }
 
 } // namespace dplx::dlog
+
+template <>
+struct dplx::make<dplx::dlog::bufferbus_handle>
+{
+    dlog::llfio::path_handle const &base;
+    dlog::llfio::path_view path;
+    unsigned int buffer_size;
+
+    auto operator()() const noexcept -> result<dlog::bufferbus_handle>
+    {
+        return dlog::bufferbus_handle::bufferbus(base, path, buffer_size);
+    }
+};

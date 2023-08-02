@@ -18,21 +18,21 @@ void log_fabric_base::sync_sinks() noexcept
                    [](auto &sink) { return sink->try_sync(); });
 }
 
-auto log_fabric_base::attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
+auto log_fabric_base::attach_sink(std::unique_ptr<sink_frontend_base> &&sinkPtr)
         -> sink_frontend_base *
 {
-    auto *const ptr = sink.get();
-    mSinks.push_back(std::move(sink));
+    auto *const ptr = sinkPtr.get();
+    mSinks.push_back(std::move(sinkPtr));
     return ptr;
 }
 
-auto log_fabric_base::attach_sink(std::unique_ptr<sink_frontend_base> &&sink,
+auto log_fabric_base::attach_sink(std::unique_ptr<sink_frontend_base> &&sinkPtr,
                                   std::nothrow_t) noexcept
         -> result<sink_frontend_base *>
 try
 {
-    auto *const ptr = sink.get();
-    mSinks.push_back(std::move(sink));
+    auto *const ptr = sinkPtr.get();
+    mSinks.push_back(std::move(sinkPtr));
     return ptr;
 }
 catch (std::bad_alloc const &)

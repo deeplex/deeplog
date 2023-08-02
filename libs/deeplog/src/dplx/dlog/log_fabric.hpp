@@ -14,6 +14,8 @@
 
 #include <boost/unordered/unordered_flat_map.hpp>
 
+#include <dplx/make.hpp>
+
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/core/serialized_messages.hpp>
@@ -21,10 +23,7 @@
 #include <dplx/dlog/sinks/sink_frontend.hpp>
 #include <dplx/dlog/source/log_record_port.hpp>
 
-namespace dplx::dlog
-{
-
-namespace detail
+namespace dplx::dlog::detail
 {
 
 class log_fabric_base : public log_record_port
@@ -34,12 +33,15 @@ protected:
     {
         using is_transparent = int;
     };
+
+public:
     using scope_threshold_map
             = boost::unordered_flat_map<std::string,
                                         severity,
                                         transparent_string_hash,
                                         std::equal_to<void>>;
 
+protected:
     using sink_owner = std::unique_ptr<sink_frontend_base>;
 
 private:
@@ -95,9 +97,9 @@ protected:
     void sync_sinks() noexcept;
 
 public:
-    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
+    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sinkPtr)
             -> sink_frontend_base *;
-    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink,
+    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sinkPtr,
                      std::nothrow_t) noexcept -> result<sink_frontend_base *>;
     auto destroy_sink(sink_frontend_base *which) noexcept -> result<void>;
     void remove_sink(sink_frontend_base *which) noexcept;
@@ -113,7 +115,10 @@ private:
             -> severity override;
 };
 
-} // namespace detail
+} // namespace dplx::dlog::detail
+
+namespace dplx::dlog
+{
 
 template <bus MessageBus>
 class log_fabric final : public detail::log_fabric_base
@@ -121,11 +126,11 @@ class log_fabric final : public detail::log_fabric_base
     MessageBus mMessageBus;
 
 public:
-    explicit log_fabric(MessageBus &&rig,
+    explicit log_fabric(MessageBus &&msgBus,
                         severity defaultThreshold = dlog::default_threshold,
                         scope_threshold_map thresholds = {})
         : log_fabric_base(defaultThreshold, std::move(thresholds))
-        , mMessageBus(std::move(rig))
+        , mMessageBus(std::move(msgBus))
     {
     }
 
@@ -142,11 +147,17 @@ public:
         sync_sinks();
         return outcome::success();
     }
-    template <typename Sink>
-    auto create_sink(typename Sink::config_type &&config) -> result<Sink *>
+    template <sink Sink>
+    auto create_sink(make<Sink> &&maker) -> result<Sink *>
     {
-        DPLX_TRY(auto &&sink, Sink::create_unique(std::move(config)));
-        DPLX_TRY(auto *attached, attach_sink(std::move(sink), std::nothrow));
+        DPLX_TRY(auto &&tmp, maker());
+        std::unique_ptr<Sink> sinkPtr(new (std::nothrow) Sink(std::move(tmp)));
+        if (!sinkPtr)
+        {
+            return system_error::errc::not_enough_memory;
+        }
+
+        DPLX_TRY(auto *attached, attach_sink(std::move(sinkPtr), std::nothrow));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
         return static_cast<Sink *>(attached);
     }
@@ -171,3 +182,29 @@ private:
 };
 
 } // namespace dplx::dlog
+
+template <dplx::dlog::bus MessageBus>
+struct dplx::make<dplx::dlog::log_fabric<MessageBus>>
+{
+    using scope_threshold_map
+            = dlog::detail::log_fabric_base::scope_threshold_map;
+
+    make<MessageBus> make_bus;
+    dlog::severity default_threshold{dlog::default_threshold};
+    scope_threshold_map thresholds{};
+
+    auto operator()() const noexcept -> result<dlog::log_fabric<MessageBus>>
+    {
+        DPLX_TRY(auto &&msgBus, make_bus());
+        try
+        {
+            return dlog::log_fabric<MessageBus>{std::move(msgBus),
+                                                default_threshold, thresholds};
+        }
+        catch (std::bad_alloc const &) // copying thresholds may throw
+        {
+            (void)msgBus.unlink();
+            return dlog::errc::not_enough_memory;
+        }
+    }
+};

@@ -17,6 +17,7 @@
 #include <dplx/dp/macros.hpp>
 #include <dplx/dp/object_def.hpp>
 #include <dplx/dp/streams/output_buffer.hpp>
+#include <dplx/make.hpp>
 
 #include <dplx/dlog/attribute_transmorpher.hpp>
 #include <dplx/dlog/concepts.hpp>
@@ -24,6 +25,16 @@
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/sinks/sink_frontend.hpp>
+
+template <>
+struct dplx::make<dplx::dlog::file_sink_backend>
+{
+    dlog::llfio::path_handle const &base;
+    dlog::llfio::path_view path;
+    std::size_t target_buffer_size;
+
+    auto operator()() const noexcept -> result<dlog::file_sink_backend>;
+};
 
 namespace dplx::dlog
 {
@@ -42,14 +53,8 @@ struct file_info
 
 class file_sink_backend : public dp::output_buffer
 {
-public:
-    struct config_type
-    {
-        llfio::file_handle file;
-        std::size_t target_buffer_size;
-    };
+    friend struct make<file_sink_backend>;
 
-private:
     llfio::file_handle mBackingFile;
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>>
             mBufferAllocation;
@@ -84,8 +89,12 @@ protected:
     auto initialize() noexcept -> result<void>;
 
 public:
-    static auto create(config_type &&config) noexcept
-            -> result<file_sink_backend>;
+    using config_type = make<file_sink_backend>;
+    static auto create(make<file_sink_backend> &&maker) noexcept
+            -> result<file_sink_backend>
+    {
+        return maker();
+    }
 
     static inline constexpr llfio::file_handle::mode file_mode
             = llfio::file_handle::mode::append;
@@ -118,8 +127,27 @@ private:
 extern template class basic_sink_frontend<file_sink_backend>;
 using file_sink = basic_sink_frontend<file_sink_backend>;
 
+} // namespace dplx::dlog
+
+template <>
+struct dplx::make<dplx::dlog::file_sink_db_backend>
+{
+    std::uint64_t max_file_size;
+    dlog::file_database_handle const &database;
+    std::string_view file_name_pattern;
+    std::size_t target_buffer_size;
+    dlog::file_sink_id sink_id;
+
+    auto operator()() const noexcept -> result<dlog::file_sink_db_backend>;
+};
+
+namespace dplx::dlog
+{
+
 class file_sink_db_backend : public file_sink_backend
 {
+    friend struct make<file_sink_db_backend>;
+
     std::uint64_t mMaxFileSize{};
     file_database_handle mFileDatabase;
     std::string mFileNamePattern;
@@ -154,17 +182,12 @@ private:
                                   file_sink_id sinkId) noexcept;
 
 public:
-    struct config_type
+    using config_type = make<file_sink_db_backend>;
+    static auto create(make<file_sink_db_backend> &&maker) noexcept
+            -> result<file_sink_db_backend>
     {
-        std::uint64_t max_file_size;
-        file_database_handle const &database;
-        std::string_view file_name_pattern;
-        std::size_t target_buffer_size;
-        file_sink_id sink_id;
-    };
-
-    static auto create(config_type &&config) noexcept
-            -> result<file_sink_db_backend>;
+        return maker();
+    }
 
 private:
     auto do_rotate(llfio::file_handle &backingFile) noexcept
