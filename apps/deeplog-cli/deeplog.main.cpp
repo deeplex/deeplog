@@ -112,12 +112,12 @@ private:
         }
 
         mFileSelection->DetachAllChildren();
-        for (auto &sink : resourcesView)
+        for (auto &sinkView : resourcesView)
         {
-            auto name = fmt::format("sink {}", sink.first);
+            auto name = fmt::format("sink {}", sinkView.first);
             mFileSelection->Add(ftxui::Renderer(
-                    sink.second,
-                    [name = std::move(name), component = sink.second] {
+                    sinkView.second,
+                    [name = std::move(name), component = sinkView.second] {
                         return ftxui::window(ftxui::text(name),
                                              component->Render());
                     }));

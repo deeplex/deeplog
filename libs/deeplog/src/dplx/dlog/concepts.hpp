@@ -12,6 +12,7 @@
 #include <span>
 #include <string_view>
 
+#include <dplx/dp/fwd.hpp>
 #include <dplx/make.hpp>
 
 #include <dplx/dlog/fwd.hpp>
@@ -64,5 +65,14 @@ concept raw_message_consumer
                   static_cast<Fn &&>(fn)(msgs)
               } noexcept;
           };
+
+template <typename T>
+concept sink_backend = makable<T> && std::derived_from<T, dp::output_buffer>;
+
+template <typename T>
+concept sink = makable<T> && std::derived_from<T, sink_frontend_base>;
+
+template <sink_backend Backend>
+class basic_sink_frontend;
 
 } // namespace dplx::dlog

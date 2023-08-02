@@ -97,9 +97,9 @@ protected:
     void sync_sinks() noexcept;
 
 public:
-    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink)
+    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sinkPtr)
             -> sink_frontend_base *;
-    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sink,
+    auto attach_sink(std::unique_ptr<sink_frontend_base> &&sinkPtr,
                      std::nothrow_t) noexcept -> result<sink_frontend_base *>;
     auto destroy_sink(sink_frontend_base *which) noexcept -> result<void>;
     void remove_sink(sink_frontend_base *which) noexcept;
@@ -126,11 +126,11 @@ class log_fabric final : public detail::log_fabric_base
     MessageBus mMessageBus;
 
 public:
-    explicit log_fabric(MessageBus &&rig,
+    explicit log_fabric(MessageBus &&msgBus,
                         severity defaultThreshold = dlog::default_threshold,
                         scope_threshold_map thresholds = {})
         : log_fabric_base(defaultThreshold, std::move(thresholds))
-        , mMessageBus(std::move(rig))
+        , mMessageBus(std::move(msgBus))
     {
     }
 
@@ -147,11 +147,17 @@ public:
         sync_sinks();
         return outcome::success();
     }
-    template <typename Sink>
-    auto create_sink(typename Sink::config_type &&config) -> result<Sink *>
+    template <sink Sink>
+    auto create_sink(make<Sink> &&maker) -> result<Sink *>
     {
-        DPLX_TRY(auto &&sink, Sink::create_unique(std::move(config)));
-        DPLX_TRY(auto *attached, attach_sink(std::move(sink), std::nothrow));
+        DPLX_TRY(auto &&tmp, maker());
+        std::unique_ptr<Sink> sinkPtr(new (std::nothrow) Sink(std::move(tmp)));
+        if (!sinkPtr)
+        {
+            return system_error::errc::not_enough_memory;
+        }
+
+        DPLX_TRY(auto *attached, attach_sink(std::move(sinkPtr), std::nothrow));
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
         return static_cast<Sink *>(attached);
     }
