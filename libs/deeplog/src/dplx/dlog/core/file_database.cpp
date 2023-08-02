@@ -235,7 +235,9 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
     {
         mContents.revision += 1;
     }
-
+    std::ranges::sort(mContents.record_containers, std::less<void>{},
+                      [](record_container_meta const &self)
+                      { return self.rotation; });
     return outcome::success();
 }
 
