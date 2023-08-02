@@ -23,11 +23,11 @@ namespace dplx::dlog::detail
 
 class os_input_stream final : public dp::input_buffer
 {
-    friend class oc::basic_result<
+    friend class outcome::basic_result<
             os_input_stream,
             system_error::errored_status_code<system_error::erased<
                     system_error::system_code::value_type>>,
-            oc::experimental::policy::default_status_result_policy<
+            outcome::experimental::policy::default_status_result_policy<
                     os_input_stream,
                     system_error::errored_status_code<system_error::erased<
                             system_error::system_code::value_type>>>>;
@@ -111,7 +111,7 @@ private:
     }
 
     auto do_require_input(size_type const requiredSize) noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         DPLX_TRY(read_next_chunk());
         if (input_buffer::size() < requiredSize)
@@ -120,10 +120,10 @@ private:
                          ? dp::errc::buffer_size_exceeded
                          : dp::errc::end_of_stream;
         }
-        return oc::success();
+        return outcome::success();
     }
     auto do_discard_input(size_type const amount) noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         mReadOffset += amount;
         auto const remainingInput = input_size() - amount;
@@ -132,11 +132,11 @@ private:
         {
             return read_next_chunk();
         }
-        return oc::success();
+        return outcome::success();
     }
     auto do_bulk_read(std::byte *const dest,
                       std::size_t const destSize) noexcept
-            -> dp::result<void> override
+            -> result<void> override
     {
         std::span<std::byte> destinationBuffer(dest, destSize);
         if (mDataSource->requires_aligned_io())
@@ -175,10 +175,10 @@ private:
         {
             return dp::errc::end_of_stream;
         }
-        return dp::oc::success();
+        return outcome::success();
     }
 
-    auto read_next_chunk() -> dp::result<void>
+    auto read_next_chunk() -> result<void>
     {
         if (mBufferAllocation.size() == 0U)
         {
@@ -191,14 +191,14 @@ private:
 
         reset(nextChunk.data(), nextChunk.size(), input_size());
         mReadOffset += nextChunk.size();
-        return dp::oc::success();
+        return outcome::success();
     }
 
     static auto read_chunk(llfio::byte_io_handle *const dataSource,
                            std::uint64_t const readPos,
                            std::byte *readBuffer,
                            std::size_t readBufferSize) noexcept
-            -> dp::result<std::span<std::byte const>>
+            -> result<std::span<std::byte const>>
     {
         constexpr auto pageMask = std::uint64_t{page_size - 1};
         auto const alignMask

@@ -31,13 +31,13 @@ protected:
 
 private:
     auto do_grow([[maybe_unused]] size_type requestedSize) noexcept
-            -> dp::result<void> final
+            -> result<void> final
     {
         return dp::errc::end_of_stream;
     }
     auto do_bulk_write([[maybe_unused]] std::byte const *src,
                        [[maybe_unused]] std::size_t size) noexcept
-            -> dp::result<void> final
+            -> result<void> final
     {
         return dp::errc::end_of_stream;
     }
@@ -71,7 +71,7 @@ inline constexpr struct enqueue_message_fn
     template <dp::encodable T>
     inline auto operator()(log_record_port &destination,
                            span_id sid,
-                           T const &msg) const noexcept -> dp::result<void>
+                           T const &msg) const noexcept -> result<void>
     {
         auto const msgSize = dp::encoded_size_of(msg);
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
@@ -84,7 +84,7 @@ inline constexpr struct enqueue_message_fn
     template <dp::encodable T, bus Bus>
     inline auto operator()(Bus &destination,
                            span_id sid,
-                           T const &msg) const noexcept -> dp::result<void>
+                           T const &msg) const noexcept -> result<void>
     {
         auto const msgSize = dp::encoded_size_of(msg);
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)

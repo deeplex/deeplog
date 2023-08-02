@@ -54,7 +54,7 @@ auto log_fabric_base::destroy_sink(sink_frontend_base *which) noexcept
         return errc::sink_finalization_failed;
     }
     mSinks.erase(it);
-    return oc::success();
+    return outcome::success();
 }
 
 void log_fabric_base::remove_sink(sink_frontend_base *const which) noexcept

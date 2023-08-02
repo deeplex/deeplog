@@ -105,7 +105,7 @@ namespace
 {
 
 auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
-        -> dlog::result<void>
+        -> result<void>
 {
     for (unsigned i = 0U; i < limit; ++i)
     {
@@ -128,11 +128,11 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
         dlog::record_output_guard busLock(*outStream);
         DPLX_TRY(dplx::dp::encode(*outStream, i));
     }
-    return dlog::oc::success();
+    return outcome::success();
 }
 
 auto consume_content(dlog::mpsc_bus_handle &bus, std::span<std::uint8_t> ids)
-        -> dlog::result<void>
+        -> result<void>
 {
     return bus.consume_messages(
             [ids](std::span<dlog::bytes const> const &msgs) noexcept
@@ -173,13 +173,13 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained",
                       2U, (sizePerThread / 2U) * concurrency)
                       .value();
 
-    std::vector<dlog::result<void>> threadResults;
+    std::vector<result<void>> threadResults;
     threadResults.reserve(concurrency);
     std::vector<std::jthread> threads;
     threads.reserve(concurrency);
     for (unsigned i = 0U; i < concurrency; ++i)
     {
-        auto *rx = &threadResults.emplace_back(dlog::oc::success());
+        auto *rx = &threadResults.emplace_back(outcome::success());
         threads.emplace_back(
                 [&bufferbus, rx]
                 { *rx = fill_mpsc_bus(bufferbus, msgsPerThread); });
@@ -196,12 +196,11 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained",
     threads.clear();
     REQUIRE(consume_content(bufferbus, poppedIds));
 
-    REQUIRE_THAT(threadResults,
-                 Catch::Matchers::AllMatch(
-                         Catch::Matchers::Predicate<dlog::result<void>>(
-                                 [](dlog::result<void> const &rx)
-                                 { return rx.has_value(); },
-                                 "All threads should complete successfully")));
+    REQUIRE_THAT(
+            threadResults,
+            Catch::Matchers::AllMatch(Catch::Matchers::Predicate<result<void>>(
+                    [](result<void> const &rx) { return rx.has_value(); },
+                    "All threads should complete successfully")));
     REQUIRE_THAT(
             poppedIds,
             Catch::Matchers::AllMatch(Catch::Matchers::Predicate<std::uint8_t>(

@@ -258,7 +258,7 @@ auto db_mpsc_bus_handle::unlink(llfio::deadline deadline) noexcept
 {
     DPLX_TRY(mpsc_bus_handle::unlink(deadline));
     DPLX_TRY(mFileDb.remove_message_bus(mId, mRotation));
-    return oc::success();
+    return outcome::success();
 }
 
 // log_fabric is final 🙃

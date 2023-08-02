@@ -131,13 +131,13 @@ private:
             }
             [[fallthrough]];
         case encode_raw:
-            if (dp::result<void> encodeRx = dp::encode(ctx, typedSelf);
+            if (result<void> encodeRx = dp::encode(ctx, typedSelf);
                 encodeRx.has_error()) [[unlikely]]
             {
                 return static_cast<decltype(encodeRx) &&>(encodeRx)
                         .assume_error();
             }
-            return oc::success_type<std::uint64_t>(std::uint64_t{});
+            return outcome::success_type<std::uint64_t>(std::uint64_t{});
 
         default:
             cncr::unreachable();
@@ -156,7 +156,7 @@ public:
             -> std::uint64_t;
     static auto encode(dp::emit_context &ctx,
                        dlog::detail::trivial_string_view const &str) noexcept
-            -> dp::result<void>;
+            -> result<void>;
 };
 
 namespace dplx::dlog::detail

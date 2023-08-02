@@ -100,7 +100,7 @@ inline auto encode_any_attribute(dp::emit_context &ctx,
         cncr::unreachable();
     }
 
-    return oc::success();
+    return outcome::success();
 }
 
 #undef DPLX_X_WITH_SYSTEM_ERROR2
@@ -127,7 +127,7 @@ auto encoded_size_of_attributes(dp::emit_context &ctx,
     return accumulator;
 }
 auto encode_attributes(dp::emit_context &ctx,
-                       attribute_args const &attrs) noexcept -> dp::result<void>
+                       attribute_args const &attrs) noexcept -> result<void>
 {
     std::uint_fast16_t const numAttributes{attrs.num_attributes};
     for (std::uint_fast16_t i = 0; i < numAttributes; ++i)
@@ -137,7 +137,7 @@ auto encode_attributes(dp::emit_context &ctx,
                                       attrs.attributes[i], attrs.ids[i]));
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     }
-    return oc::success();
+    return outcome::success();
 }
 
 } // namespace dplx::dlog::detail

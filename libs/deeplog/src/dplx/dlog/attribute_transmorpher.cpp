@@ -17,7 +17,7 @@ namespace dplx::dlog
 {
 
 auto attribute_type_registry::decode(dp::parse_context &ctx) const noexcept
-        -> dp::result<any_attribute>
+        -> result<any_attribute>
 {
     DPLX_TRY(auto const key, dp::decode(dp::as_value<key_type>, ctx));
 
@@ -79,7 +79,7 @@ auto dplx::dp::codec<dplx::dlog::attribute_container>::decode(
                                  .second)
                     {
                         // ignore duplicate keys
-                        return oc::success();
+                        return outcome::success();
                     }
                 }
                 catch (std::bad_alloc const &)
@@ -87,11 +87,11 @@ auto dplx::dp::codec<dplx::dlog::attribute_container>::decode(
                     return errc::not_enough_memory;
                 }
 
-                return oc::success();
+                return outcome::success();
             });
     if (parseRx.has_failure()) [[unlikely]]
     {
         return static_cast<decltype(parseRx) &&>(parseRx).as_failure();
     }
-    return oc::success();
+    return outcome::success();
 }

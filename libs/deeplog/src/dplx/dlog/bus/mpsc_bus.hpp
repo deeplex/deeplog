@@ -148,7 +148,7 @@ public:
     {
         DPLX_TRY(mBackingFile.unlink(deadline));
         (void)release();
-        return oc::success();
+        return outcome::success();
     }
 
     static inline constexpr std::string_view extension{".dmpscb"};
@@ -191,7 +191,7 @@ public:
 
         using record_output_buffer::record_output_buffer;
 
-        auto do_sync_output() noexcept -> dp::result<void> final
+        auto do_sync_output() noexcept -> result<void> final
         {
             if (mMsgCtrl == nullptr) [[unlikely]]
             {
@@ -202,7 +202,7 @@ public:
                     max_message_size, std::memory_order::release);
             // reset();
             mMsgCtrl = nullptr;
-            return dp::oc::success();
+            return outcome::success();
         }
     };
 
@@ -215,7 +215,7 @@ public:
             DPLX_TRY(this->read_region(static_cast<ConsumeFn &&>(consumeFn),
                                        regionId));
         }
-        return oc::success();
+        return outcome::success();
     }
 
 private:
@@ -235,7 +235,7 @@ private:
         if (allocPos == originalReadPos)
         {
             // nothing to see here
-            return oc::success();
+            return outcome::success();
         }
 
         auto readPos = originalReadPos;
@@ -311,7 +311,7 @@ private:
             // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
         }
 
-        return oc::success();
+        return outcome::success();
     }
 
 public:

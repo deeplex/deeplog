@@ -31,9 +31,9 @@ concept bus
         {
             { instance.allocate_record_buffer_inplace(
                 bufferPlacementStorage, messageSize, spanId) }
-                    -> detail::tryable_result<record_output_buffer *>;
+                    -> cncr::tryable_result<record_output_buffer *>;
             { instance.consume_messages(dummy_consumer) }
-                    -> detail::tryable;
+                    -> cncr::tryable;
         };
 // clang-format on
 

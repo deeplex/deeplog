@@ -129,11 +129,11 @@ private:
 
     virtual auto do_sync() noexcept -> result<void>
     {
-        return oc::success();
+        return outcome::success();
     }
     virtual auto do_finalize() noexcept -> result<void>
     {
-        return oc::success();
+        return outcome::success();
     }
 };
 
@@ -144,7 +144,7 @@ concept sink_backend
        && requires(typename T::config_type &&config) {
               {
                   T::create(std::move(config))
-                  } -> detail::tryable_result<T>;
+                  } -> cncr::tryable_result<T>;
           };
 
 template <sink_backend Backend>
@@ -216,24 +216,24 @@ private:
     {
         (void)binarySize;
         DPLX_TRY(detail::concate_messages(mBackend, messages, mThreshold));
-        return oc::success();
+        return outcome::success();
     }
     auto do_sync() noexcept -> result<void> override
     {
         DPLX_TRY(mBackend.sync_output());
-        return oc::success();
+        return outcome::success();
     }
     auto do_finalize() noexcept -> result<void> override
     {
         if constexpr (requires {
                           {
                               mBackend.finalize()
-                              } -> detail::tryable;
+                              } -> cncr::tryable;
                       })
         {
             DPLX_TRY(mBackend.finalize());
         }
-        return oc::success();
+        return outcome::success();
     }
 };
 

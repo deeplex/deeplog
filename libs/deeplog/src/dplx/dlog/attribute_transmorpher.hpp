@@ -50,8 +50,8 @@ public:
 class attribute_type_registry
 {
     using key_type = resource_id;
-    using revive_fn = auto(*)(dp::parse_context &ctx) noexcept
-                      -> dp::result<any_attribute>;
+    using revive_fn
+            = auto(*)(dp::parse_context &ctx) noexcept -> result<any_attribute>;
 
 public:
     using allocator_type = std::pmr::polymorphic_allocator<
@@ -73,16 +73,15 @@ public:
     {
     }
 
-    auto decode(dp::parse_context &ctx) const noexcept
-            -> dp::result<any_attribute>;
+    auto decode(dp::parse_context &ctx) const noexcept -> result<any_attribute>;
 
     template <attribute T>
-    auto insert() -> dlog::result<void>
+    auto insert() -> result<void>
     try
     {
         revive_fn fn = &any_attribute::reify<T>;
         mKnownTypes.insert({T::id, fn});
-        return dp::oc::success();
+        return outcome::success();
     }
     catch (std::bad_alloc const &)
     {

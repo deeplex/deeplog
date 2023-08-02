@@ -24,7 +24,7 @@ namespace dlog_ex
 
 using namespace dplx;
 
-inline auto main() -> dlog::result<void>
+inline auto main() -> result<void>
 {
     using namespace std::string_literals;
     using mpsc_log_fabric
@@ -70,7 +70,7 @@ inline auto main() -> dlog::result<void>
     DPLX_TRY(core.destroy_sink(sink));
 
     DPLX_TRY(core.message_bus().unlink());
-    return dlog::oc::success();
+    return outcome::success();
 }
 
 } // namespace dlog_ex

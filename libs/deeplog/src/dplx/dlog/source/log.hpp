@@ -188,7 +188,7 @@ template <typename... Args>
 {
     if (sev < ctx.threshold()) [[unlikely]]
     {
-        return oc::success();
+        return outcome::success();
     }
 
     return detail::vlog(ctx, detail::stack_log_args<Args...>{
@@ -211,7 +211,7 @@ template <typename... Args>
     log_context ctx(port);
     if (sev < ctx.threshold()) [[unlikely]]
     {
-        return oc::success();
+        return outcome::success();
     }
 
     return detail::vlog(ctx, detail::stack_log_args<Args...>{

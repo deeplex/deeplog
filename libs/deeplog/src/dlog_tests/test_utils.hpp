@@ -36,7 +36,7 @@ namespace detail
 template <typename T>
 concept is_fmt_formattable = fmt::is_formattable<T>::value;
 
-inline auto format_error(dlog::system_error::status_code<void> const &esc)
+inline auto format_error(system_error::status_code<void> const &esc)
         -> std::string
 {
     auto const domainNameRef = esc.domain().name();
@@ -53,9 +53,9 @@ inline auto format_error(dlog::system_error::status_code<void> const &esc)
 
 template <typename T>
     requires dlog_tests::detail::is_fmt_formattable<T const &>
-struct Catch::StringMaker<dplx::dlog::result<T>>
+struct Catch::StringMaker<dplx::result<T>>
 {
-    static auto convert(dplx::dlog::result<T> const &rx) -> std::string
+    static auto convert(dplx::result<T> const &rx) -> std::string
     {
         if (rx.has_value())
         {
@@ -67,9 +67,9 @@ struct Catch::StringMaker<dplx::dlog::result<T>>
 };
 
 template <>
-struct Catch::StringMaker<dplx::dlog::result<void>>
+struct Catch::StringMaker<dplx::result<void>>
 {
-    static auto convert(dplx::dlog::result<void> const &rx) -> std::string
+    static auto convert(dplx::result<void> const &rx) -> std::string
     {
         using namespace std::string_literals;
         if (rx.has_value())

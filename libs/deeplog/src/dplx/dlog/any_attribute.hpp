@@ -141,8 +141,7 @@ private:
 
 public:
     template <attribute T>
-    static auto reify(dp::parse_context &ctx) noexcept
-            -> dp::result<any_attribute>
+    static auto reify(dp::parse_context &ctx) noexcept -> result<any_attribute>
     {
         using namespace std::string_view_literals;
         allocator_type allocator = ctx.get_allocator();
