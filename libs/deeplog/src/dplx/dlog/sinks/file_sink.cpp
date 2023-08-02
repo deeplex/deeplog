@@ -202,12 +202,12 @@ template class basic_sink_frontend<file_sink_backend>;
 
 } // namespace dplx::dlog
 
-auto dplx::make<dplx::dlog::file_sink_db_backend>::operator()() const noexcept
-        -> result<dlog::file_sink_db_backend>
+auto dplx::make<dplx::dlog::db_file_sink_backend>::operator()() const noexcept
+        -> result<dlog::db_file_sink_backend>
 {
     using namespace dplx::dlog;
 
-    file_sink_db_backend self(target_buffer_size, max_file_size, sink_id);
+    db_file_sink_backend self(target_buffer_size, max_file_size, sink_id);
     try
     {
         self.mFileNamePattern = file_name_pattern;
@@ -225,7 +225,7 @@ auto dplx::make<dplx::dlog::file_sink_db_backend>::operator()() const noexcept
 namespace dplx::dlog
 {
 
-file_sink_db_backend::~file_sink_db_backend()
+db_file_sink_backend::~db_file_sink_backend()
 {
     if (auto finalizeRx = finalize();
         finalizeRx.has_value() && finalizeRx.assume_value() != 0)
@@ -236,8 +236,8 @@ file_sink_db_backend::~file_sink_db_backend()
 }
 
 // NOLINTNEXTLINE(performance-noexcept-move-constructor)
-auto file_sink_db_backend::operator=(file_sink_db_backend &&other)
-        -> file_sink_db_backend &
+auto db_file_sink_backend::operator=(db_file_sink_backend &&other)
+        -> db_file_sink_backend &
 {
     mFileDatabase
             .update_record_container_size(mSinkId, mCurrentRotation,
@@ -255,7 +255,7 @@ auto file_sink_db_backend::operator=(file_sink_db_backend &&other)
     return *this;
 }
 
-file_sink_db_backend::file_sink_db_backend(std::size_t const targetBufferSize,
+db_file_sink_backend::db_file_sink_backend(std::size_t const targetBufferSize,
                                            std::uint64_t const maxFileSize,
                                            file_sink_id const sinkId) noexcept
     : file_sink_backend(targetBufferSize)
@@ -267,7 +267,7 @@ file_sink_db_backend::file_sink_db_backend(std::size_t const targetBufferSize,
 {
 }
 
-auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
+auto db_file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
         -> result<bool>
 {
     if (mFileNamePattern.empty())
@@ -306,7 +306,7 @@ auto file_sink_db_backend::do_rotate(llfio::file_handle &backingFile) noexcept
     return true;
 }
 
-template class basic_sink_frontend<file_sink_db_backend>;
+template class basic_sink_frontend<db_file_sink_backend>;
 
 } // namespace dplx::dlog
 

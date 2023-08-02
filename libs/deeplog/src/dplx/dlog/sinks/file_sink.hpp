@@ -130,7 +130,7 @@ using file_sink = basic_sink_frontend<file_sink_backend>;
 } // namespace dplx::dlog
 
 template <>
-struct dplx::make<dplx::dlog::file_sink_db_backend>
+struct dplx::make<dplx::dlog::db_file_sink_backend>
 {
     std::uint64_t max_file_size;
     dlog::file_database_handle const &database;
@@ -138,15 +138,15 @@ struct dplx::make<dplx::dlog::file_sink_db_backend>
     std::size_t target_buffer_size;
     dlog::file_sink_id sink_id;
 
-    auto operator()() const noexcept -> result<dlog::file_sink_db_backend>;
+    auto operator()() const noexcept -> result<dlog::db_file_sink_backend>;
 };
 
 namespace dplx::dlog
 {
 
-class file_sink_db_backend : public file_sink_backend
+class db_file_sink_backend : public file_sink_backend
 {
-    friend struct make<file_sink_db_backend>;
+    friend struct make<db_file_sink_backend>;
 
     std::uint64_t mMaxFileSize{};
     file_database_handle mFileDatabase;
@@ -155,15 +155,15 @@ class file_sink_db_backend : public file_sink_backend
     std::uint32_t mCurrentRotation{};
 
 public:
-    ~file_sink_db_backend() override;
-    file_sink_db_backend() noexcept = default;
+    ~db_file_sink_backend() override;
+    db_file_sink_backend() noexcept = default;
 
-    file_sink_db_backend(file_sink_db_backend &&) noexcept = default;
+    db_file_sink_backend(db_file_sink_backend &&) noexcept = default;
     // NOLINTNEXTLINE(performance-noexcept-move-constructor)
-    auto operator=(file_sink_db_backend &&other) -> file_sink_db_backend &;
+    auto operator=(db_file_sink_backend &&other) -> db_file_sink_backend &;
 
-    friend inline void swap(file_sink_db_backend &lhs,
-                            file_sink_db_backend &rhs) noexcept
+    friend inline void swap(db_file_sink_backend &lhs,
+                            db_file_sink_backend &rhs) noexcept
     {
         using std::swap;
         swap(static_cast<file_sink_backend &>(lhs),
@@ -177,14 +177,14 @@ public:
     }
 
 private:
-    explicit file_sink_db_backend(std::size_t targetBufferSize,
+    explicit db_file_sink_backend(std::size_t targetBufferSize,
                                   std::uint64_t maxFileSize,
                                   file_sink_id sinkId) noexcept;
 
 public:
-    using config_type = make<file_sink_db_backend>;
-    static auto create(make<file_sink_db_backend> &&maker) noexcept
-            -> result<file_sink_db_backend>
+    using config_type = make<db_file_sink_backend>;
+    static auto create(make<db_file_sink_backend> &&maker) noexcept
+            -> result<db_file_sink_backend>
     {
         return maker();
     }
@@ -194,8 +194,9 @@ private:
             -> result<bool> final;
 };
 
-extern template class basic_sink_frontend<file_sink_db_backend>;
-using file_sink_db = basic_sink_frontend<file_sink_db_backend>;
+extern template class basic_sink_frontend<db_file_sink_backend>;
+using db_file_sink = basic_sink_frontend<db_file_sink_backend>;
+using file_sink_db = db_file_sink;
 
 } // namespace dplx::dlog
 

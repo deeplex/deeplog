@@ -36,7 +36,7 @@ class file_database_handle;
 
 class sink_frontend_base;
 class file_sink_backend;
-class file_sink_db_backend;
+class db_file_sink_backend;
 
 class mpsc_bus_handle;
 class db_mpsc_bus_handle;
