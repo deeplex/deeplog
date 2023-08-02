@@ -12,6 +12,8 @@
 #include <span>
 #include <string_view>
 
+#include <dplx/make.hpp>
+
 #include <dplx/dlog/fwd.hpp>
 
 namespace dplx::dlog
@@ -23,7 +25,8 @@ using writable_bytes = std::span<std::byte>;
 // clang-format off
 template <typename T>
 concept bus
-        = requires(T instance,
+        = makable<T>
+       && requires(T instance,
                    record_output_buffer_storage &bufferPlacementStorage,
                    std::size_t const messageSize,
                    span_id const spanId,
@@ -36,6 +39,9 @@ concept bus
                     -> cncr::tryable;
         };
 // clang-format on
+
+template <bus MessageBus>
+class log_fabric;
 
 // clang-format off
 template <typename T>

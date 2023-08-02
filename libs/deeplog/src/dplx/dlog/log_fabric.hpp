@@ -14,6 +14,8 @@
 
 #include <boost/unordered/unordered_flat_map.hpp>
 
+#include <dplx/make.hpp>
+
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/core/serialized_messages.hpp>
@@ -21,10 +23,7 @@
 #include <dplx/dlog/sinks/sink_frontend.hpp>
 #include <dplx/dlog/source/log_record_port.hpp>
 
-namespace dplx::dlog
-{
-
-namespace detail
+namespace dplx::dlog::detail
 {
 
 class log_fabric_base : public log_record_port
@@ -34,12 +33,15 @@ protected:
     {
         using is_transparent = int;
     };
+
+public:
     using scope_threshold_map
             = boost::unordered_flat_map<std::string,
                                         severity,
                                         transparent_string_hash,
                                         std::equal_to<void>>;
 
+protected:
     using sink_owner = std::unique_ptr<sink_frontend_base>;
 
 private:
@@ -113,7 +115,10 @@ private:
             -> severity override;
 };
 
-} // namespace detail
+} // namespace dplx::dlog::detail
+
+namespace dplx::dlog
+{
 
 template <bus MessageBus>
 class log_fabric final : public detail::log_fabric_base
@@ -171,3 +176,29 @@ private:
 };
 
 } // namespace dplx::dlog
+
+template <dplx::dlog::bus MessageBus>
+struct dplx::make<dplx::dlog::log_fabric<MessageBus>>
+{
+    using scope_threshold_map
+            = dlog::detail::log_fabric_base::scope_threshold_map;
+
+    make<MessageBus> make_bus;
+    dlog::severity default_threshold{dlog::default_threshold};
+    scope_threshold_map thresholds{};
+
+    auto operator()() const noexcept -> result<dlog::log_fabric<MessageBus>>
+    {
+        DPLX_TRY(auto &&msgBus, make_bus());
+        try
+        {
+            return dlog::log_fabric<MessageBus>{std::move(msgBus),
+                                                default_threshold, thresholds};
+        }
+        catch (std::bad_alloc const &) // copying thresholds may throw
+        {
+            (void)msgBus.unlink();
+            return dlog::errc::not_enough_memory;
+        }
+    }
+};
