@@ -9,6 +9,7 @@
 
 #include <bit>
 #include <chrono>
+#include <numeric>
 #include <shared_mutex>
 #include <utility>
 
@@ -399,6 +400,71 @@ auto file_database_handle::prune_record_containers(
                             }
                             return pruneCandidate;
                         });
+                return outcome::success();
+            });
+}
+
+auto file_database_handle::prune_record_containers(
+        file_database_limits const limits) -> result<void>
+{
+    using file_handle = llfio::file_handle;
+    return transform(
+            [&](contents_t &contents) -> result<void>
+            {
+                auto const pageSize = llfio::utils::page_size();
+                std::uint32_t numFiles = 0;
+                std::uint64_t accumulatedSize = 0;
+                // clang-14 and -15 can't grok `ranges::reverse_view`,
+                // so reverse iteration isn't really possible with ranged for.
+                // NOLINTNEXTLINE(modernize-loop-convert)
+                for (auto it = contents.record_containers.rbegin(),
+                          end = contents.record_containers.rend();
+                     it != end; ++it)
+                {
+                    record_container_meta &containerMeta = *it;
+
+                    file_handle container;
+                    if (auto openRx
+                        = llfio::file(mRootDirHandle, containerMeta.path,
+                                      file_handle::mode::write);
+                        openRx.has_value())
+                    {
+                        container = std::move(openRx).assume_value();
+                    }
+                    else
+                    {
+                        if (openRx.assume_error()
+                            == system_error::errc::no_such_file_or_directory)
+                        {
+                            containerMeta = {};
+                        }
+                        continue;
+                    }
+                    llfio::unique_file_lock containerLock{
+                            container, llfio::lock_kind::unlocked};
+                    if (!containerLock.try_lock())
+                    {
+                        continue;
+                    }
+
+                    if (numFiles > limits.max_files_to_keep
+                        || accumulatedSize >= limits.global_size_limit)
+                    {
+                        containerLock.unlock();
+                        (void)container.unlink();
+                        containerMeta = {};
+                    }
+                    else
+                    {
+                        numFiles += 1;
+                        accumulatedSize += cncr::round_up_p2(
+                                containerMeta.byte_size, pageSize);
+                    }
+                }
+
+                std::erase_if(contents.record_containers,
+                              [](record_container_meta const &meta)
+                              { return meta.path.empty(); });
                 return outcome::success();
             });
 }

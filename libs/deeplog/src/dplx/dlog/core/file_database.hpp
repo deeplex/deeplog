@@ -35,6 +35,12 @@ constexpr auto format_as(file_sink_id id) noexcept
     return static_cast<std::underlying_type_t<file_sink_id>>(id);
 }
 
+struct file_database_limits
+{
+    std::uint32_t max_files_to_keep;
+    std::uint64_t global_size_limit;
+};
+
 class file_database_handle
 {
 public:
@@ -156,6 +162,8 @@ public:
             std::function<result<bool>(llfio::file_handle &h,
                                        record_container_meta const &meta)>
                     predicate) -> result<void>;
+
+    auto prune_record_containers(file_database_limits limits) -> result<void>;
 
     auto open_record_container(record_container_meta const &which,
                                llfio::file_handle::mode fileMode
