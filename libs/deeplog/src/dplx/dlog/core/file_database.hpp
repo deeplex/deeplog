@@ -222,6 +222,10 @@ private:
     auto validate_magic() noexcept -> result<void>;
     auto initialize_storage() noexcept -> result<void>;
     auto retire_to_storage(contents_t const &contents) noexcept -> result<void>;
+
+    static void
+    sanitize_container_byte_size(llfio::file_handle &container,
+                                 record_container_meta &containerMeta) noexcept;
 };
 
 } // namespace dplx::dlog

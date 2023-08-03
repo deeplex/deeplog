@@ -382,6 +382,8 @@ auto file_database_handle::prune_record_containers(
                             {
                                 return false;
                             }
+                            sanitize_container_byte_size(container,
+                                                         containerMeta);
 
                             auto predicateResult
                                     = predicate(container, containerMeta);
@@ -456,6 +458,7 @@ auto file_database_handle::prune_record_containers(
                     }
                     else
                     {
+                        sanitize_container_byte_size(container, containerMeta);
                         numFiles += 1;
                         accumulatedSize += cncr::round_up_p2(
                                 containerMeta.byte_size, pageSize);
@@ -738,6 +741,24 @@ auto file_database_handle::retire_to_storage(
 
     DPLX_TRY(dp::encode(outStream, contents));
     return outcome::success();
+}
+
+void file_database_handle::sanitize_container_byte_size(
+        llfio::file_handle &container,
+        record_container_meta &containerMeta) noexcept
+{
+    if (containerMeta.byte_size == 0U)
+    {
+        if (auto maxExtentRx = container.maximum_extent();
+            maxExtentRx.has_value())
+        {
+            containerMeta.byte_size
+                    = static_cast<std::uint32_t>(std::min<std::uint64_t>(
+                            UINT32_MAX, maxExtentRx.assume_value()));
+        }
+        containerMeta.byte_size
+                = std::max<std::uint32_t>(containerMeta.byte_size, 1U);
+    }
 }
 
 } // namespace dplx::dlog
