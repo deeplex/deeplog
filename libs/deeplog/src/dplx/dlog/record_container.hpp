@@ -23,10 +23,12 @@
 #include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/items/parse_core.hpp>
 #include <dplx/dp/items/skip_item.hpp>
+#include <dplx/dp/macros.hpp>
 
 #include <dplx/dlog/argument_transmorpher_fmt.hpp>
 #include <dplx/dlog/attribute_transmorpher.hpp>
 #include <dplx/dlog/attributes.hpp>
+#include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/sinks/file_sink.hpp>
 
@@ -117,15 +119,29 @@ private:
 namespace dplx::dlog
 {
 
+struct record_resource
+{
+    log_clock::epoch_info epoch;
+    attribute_container attributes;
+
+    static inline constexpr dp::object_def<
+            dp::property_def<4U, &record_resource::epoch>{},
+            dp::property_def<23U, &record_resource::attributes>{}>
+            layout_descriptor{.version = 0U,
+                              .allow_versioned_auto_decoder = true};
+};
+
 class record_container
 {
 public:
     std::unique_ptr<std::pmr::memory_resource> memory_resource;
-    file_info info;
+    record_resource info;
     std::pmr::vector<record> records;
 };
 
 } // namespace dplx::dlog
+
+DPLX_DP_DECLARE_CODEC_SIMPLE(::dplx::dlog::record_resource);
 
 namespace dplx::dp
 {

@@ -14,17 +14,52 @@
 
 #include <dplx/dp/fwd.hpp>
 #include <dplx/dp/legacy/memory_buffer.hpp>
-#include <dplx/dp/macros.hpp>
-#include <dplx/dp/object_def.hpp>
-#include <dplx/dp/streams/output_buffer.hpp>
 #include <dplx/make.hpp>
 
-#include <dplx/dlog/attribute_transmorpher.hpp>
+#include <dplx/dlog/attributes.hpp>
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/file_database.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/llfio.hpp>
 #include <dplx/dlog/sinks/sink_frontend.hpp>
+
+namespace dplx::dlog
+{
+
+class cbor_attribute_map
+{
+    std::vector<std::byte> mSerialized;
+
+public:
+    cbor_attribute_map() noexcept = default;
+    cbor_attribute_map(detail::attribute_args const &attrs)
+        : mSerialized()
+    {
+        insert_attributes(attrs).value();
+    }
+
+    template <typename... Attrs>
+        requires(... && attribute<std::remove_cvref_t<Attrs>>)
+    static auto from(Attrs &&...attrs) noexcept -> result<cbor_attribute_map>
+    {
+        cbor_attribute_map self;
+        DPLX_TRY(self.insert_attributes(
+                detail::stack_attribute_args<std::remove_cvref_t<Attrs>...>{
+                        attrs...}));
+        return self;
+    }
+
+    [[nodiscard]] auto bytes() const noexcept -> std::span<std::byte const>
+    {
+        return mSerialized;
+    }
+
+private:
+    auto insert_attributes(detail::attribute_args const &attrRefs) noexcept
+            -> result<void>;
+};
+
+} // namespace dplx::dlog
 
 template <>
 struct dplx::make<dplx::dlog::file_sink_backend>
@@ -32,24 +67,13 @@ struct dplx::make<dplx::dlog::file_sink_backend>
     dlog::llfio::path_handle const &base;
     dlog::llfio::path_view path;
     std::size_t target_buffer_size;
+    dlog::cbor_attribute_map attributes;
 
     auto operator()() const noexcept -> result<dlog::file_sink_backend>;
 };
 
 namespace dplx::dlog
 {
-
-struct file_info
-{
-    log_clock::epoch_info epoch;
-    attribute_container attributes;
-
-    static inline constexpr dp::object_def<
-            dp::property_def<4U, &file_info::epoch>{},
-            dp::property_def<23U, &file_info::attributes>{}>
-            layout_descriptor{.version = 0U,
-                              .allow_versioned_auto_decoder = true};
-};
 
 class file_sink_backend : public dp::output_buffer
 {
@@ -59,6 +83,7 @@ class file_sink_backend : public dp::output_buffer
     dp::memory_allocation<llfio::utils::page_allocator<std::byte>>
             mBufferAllocation;
     std::size_t mTargetBufferSize{};
+    dlog::cbor_attribute_map mContainerInfo;
 
 public:
     file_sink_backend() noexcept = default;
@@ -84,7 +109,8 @@ public:
     }
 
 protected:
-    explicit file_sink_backend(std::size_t targetBufferSize) noexcept;
+    explicit file_sink_backend(std::size_t targetBufferSize,
+                               dlog::cbor_attribute_map attributes) noexcept;
 
     auto initialize() noexcept -> result<void>;
 
@@ -137,6 +163,7 @@ struct dplx::make<dplx::dlog::db_file_sink_backend>
     std::string_view file_name_pattern;
     std::size_t target_buffer_size;
     dlog::file_sink_id sink_id;
+    dlog::cbor_attribute_map attributes;
 
     auto operator()() const noexcept -> result<dlog::db_file_sink_backend>;
 };
@@ -178,7 +205,9 @@ public:
 
 private:
     explicit db_file_sink_backend(std::size_t targetBufferSize,
+                                  dlog::cbor_attribute_map attributes,
                                   std::uint64_t maxFileSize,
+                                  std::string fileNamePattern,
                                   file_sink_id sinkId) noexcept;
 
 public:
@@ -199,5 +228,3 @@ using db_file_sink = basic_sink_frontend<db_file_sink_backend>;
 using file_sink_db = db_file_sink;
 
 } // namespace dplx::dlog
-
-DPLX_DP_DECLARE_CODEC_SIMPLE(::dplx::dlog::file_info);

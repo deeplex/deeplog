@@ -14,17 +14,39 @@
 #include <dplx/dp.hpp>
 #include <dplx/dp/codecs/auto_object.hpp>
 #include <dplx/dp/codecs/core.hpp>
-#include <dplx/dp/items/skip_item.hpp>
+#include <dplx/dp/streams/memory_output_stream.hpp>
 
-#include <dplx/dlog/detail/utils.hpp>
+#include <dplx/dlog/record_container.hpp>
+
+namespace dplx::dlog
+{
+
+auto cbor_attribute_map::insert_attributes(
+        detail::attribute_args const &attrRefs) noexcept -> result<void>
+{
+    auto const encodedSize = dp::encoded_size_of(attrRefs);
+    try
+    {
+        mSerialized.resize(encodedSize);
+    }
+    catch (std::bad_alloc const &)
+    {
+        return system_error::errc::not_enough_memory;
+    }
+    dp::memory_output_stream ostream(mSerialized);
+    return dp::encode(ostream, attrRefs);
+}
+
+} // namespace dplx::dlog
 
 auto dplx::make<dplx::dlog::file_sink_backend>::operator()() const noexcept
         -> result<dlog::file_sink_backend>
+try
 {
     using namespace dplx::dlog;
     using file_creation = llfio::file_handle::creation;
 
-    file_sink_backend self{target_buffer_size};
+    file_sink_backend self{target_buffer_size, attributes};
     DPLX_TRY(self.mBackingFile,
              llfio::file(base, path, file_sink_backend::file_mode,
                          file_creation::only_if_not_exist,
@@ -37,6 +59,10 @@ auto dplx::make<dplx::dlog::file_sink_backend>::operator()() const noexcept
     DPLX_TRY(self.initialize());
     fileLock.release();
     return self;
+}
+catch (std::bad_alloc const &)
+{
+    return system_error::errc::not_enough_memory;
 }
 
 namespace dplx::dlog
@@ -58,14 +84,18 @@ auto file_sink_backend::operator=(file_sink_backend &&other)
     mBackingFile = std::move(other.mBackingFile);
     mBufferAllocation = std::move(other.mBufferAllocation);
     mTargetBufferSize = std::exchange(other.mTargetBufferSize, 0U);
+    mContainerInfo = std::exchange(other.mContainerInfo, {});
     // NOLINTEND(bugprone-use-after-move)
     return *this;
 }
 
-file_sink_backend::file_sink_backend(std::size_t targetBufferSize) noexcept
+file_sink_backend::file_sink_backend(
+        std::size_t targetBufferSize,
+        dlog::cbor_attribute_map attributes) noexcept
     : mBackingFile{}
     , mBufferAllocation{}
     , mTargetBufferSize{targetBufferSize}
+    , mContainerInfo{std::move(attributes)}
 {
 }
 
@@ -105,8 +135,30 @@ auto file_sink_backend::rotate() noexcept -> result<void>
     dp::emit_context emitCtx{*this};
 
     DPLX_TRY(bulk_write(as_bytes(std::span(magic))));
-    file_info info{.epoch = log_clock::epoch(), .attributes = {}};
-    DPLX_TRY(dp::encode_object(emitCtx, info));
+
+    DPLX_TRY(dp::emit_map(emitCtx, 3U));
+
+    // resource_v00 version information
+    DPLX_TRY(dp::detail::store_inline_value(*this, 0U, dp::type_code::posint));
+    DPLX_TRY(dp::emit_integer(emitCtx,
+                              record_resource::layout_descriptor.version));
+
+    // epoch
+    DPLX_TRY(dp::emit_integer(
+            emitCtx, record_resource::layout_descriptor.property<0U>().id));
+    DPLX_TRY(dp::encode(emitCtx, log_clock::epoch()));
+
+    // attributes
+    DPLX_TRY(dp::emit_integer(
+            emitCtx, record_resource::layout_descriptor.property<1U>().id));
+    if (auto attributeBytes = mContainerInfo.bytes(); attributeBytes.empty())
+    {
+        DPLX_TRY(dp::emit_map(emitCtx, 0U));
+    }
+    else
+    {
+        DPLX_TRY(bulk_write(attributeBytes));
+    }
 
     DPLX_TRY(dp::emit_array_indefinite(emitCtx));
     llfio::file_handle::const_buffer_type writeBuffers[]
@@ -204,22 +256,20 @@ template class basic_sink_frontend<file_sink_backend>;
 
 auto dplx::make<dplx::dlog::db_file_sink_backend>::operator()() const noexcept
         -> result<dlog::db_file_sink_backend>
+try
 {
     using namespace dplx::dlog;
 
-    db_file_sink_backend self(target_buffer_size, max_file_size, sink_id);
-    try
-    {
-        self.mFileNamePattern = file_name_pattern;
-    }
-    catch (std::bad_alloc const &)
-    {
-        return system_error::errc::not_enough_memory;
-    }
+    db_file_sink_backend self{target_buffer_size, attributes, max_file_size,
+                              std::string(file_name_pattern), sink_id};
     DPLX_TRY(self.mFileDatabase, database.clone());
     DPLX_TRY(self.initialize())
 
     return self;
+}
+catch (std::bad_alloc const &)
+{
+    return system_error::errc::not_enough_memory;
 }
 
 namespace dplx::dlog
@@ -256,12 +306,14 @@ auto db_file_sink_backend::operator=(db_file_sink_backend &&other)
 }
 
 db_file_sink_backend::db_file_sink_backend(std::size_t const targetBufferSize,
+                                           dlog::cbor_attribute_map attributes,
                                            std::uint64_t const maxFileSize,
+                                           std::string fileNamePattern,
                                            file_sink_id const sinkId) noexcept
-    : file_sink_backend(targetBufferSize)
+    : file_sink_backend(targetBufferSize, std::move(attributes))
     , mMaxFileSize(maxFileSize)
     , mFileDatabase()
-    , mFileNamePattern()
+    , mFileNamePattern(std::move(fileNamePattern))
     , mSinkId(sinkId)
     , mCurrentRotation()
 {
@@ -309,5 +361,3 @@ auto db_file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
 template class basic_sink_frontend<db_file_sink_backend>;
 
 } // namespace dplx::dlog
-
-DPLX_DLOG_DEFINE_AUTO_OBJECT_CODEC(::dplx::dlog::file_info)

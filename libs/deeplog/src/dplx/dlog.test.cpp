@@ -45,6 +45,7 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
             .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
             .target_buffer_size = bufferSize,
             .sink_id = dlog::file_sink_id::default_,
+            .attributes = dlog::make_attributes(),
         },
     });
     REQUIRE(createSinkRx);

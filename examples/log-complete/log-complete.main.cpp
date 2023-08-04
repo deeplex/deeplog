@@ -24,6 +24,16 @@ namespace dlog_ex
 
 using namespace dplx;
 
+namespace attr
+{
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+using stat = dlog::basic_attribute_ref<dlog::resource_id{0x1'0000},
+                                       u8"local.stat",
+                                       unsigned>;
+
+} // namespace attr
+
 inline auto main() -> result<void>
 {
     using namespace std::string_literals;
@@ -57,6 +67,7 @@ inline auto main() -> result<void>
                             .file_name_pattern = "log-test.{now:%FT%H-%M-%S}.dlog",
                             .target_buffer_size = bufferSize,
                             .sink_id = dlog::file_sink_id::default_,
+                            .attributes = dlog::make_attributes(attr::stat{3U}),
                     },
     }));
     dlog::set_thread_context(dlog::log_context{core});
