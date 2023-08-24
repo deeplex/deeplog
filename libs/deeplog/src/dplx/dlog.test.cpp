@@ -95,7 +95,7 @@ public:
     }
     void testRunEnded(Catch::TestRunStats const &testRunStats) override
     {
-        if (testRunStats.aborting)
+        if (testRunStats.aborting || !testRunStats.totals.testCases.allOk())
         {
             return;
         }
