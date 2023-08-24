@@ -13,14 +13,6 @@
 #include <shared_mutex>
 #include <utility>
 
-#include <dplx/predef/os.h>
-
-#if defined(DPLX_OS_WINDOWS_AVAILABLE)
-#include <boost/winapi/get_current_process_id.hpp>
-#elif defined(DPLX_OS_UNIX_AVAILABLE) || defined(DPLX_OS_MACOS_AVAILABLE)
-#include <unistd.h>
-#endif
-
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
@@ -37,32 +29,11 @@
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
+#include <dplx/dlog/detail/platform.hpp>
 #include <dplx/dlog/detail/utils.hpp>
 
 namespace dplx::dlog
 {
-
-namespace
-{
-
-#if defined(DPLX_OS_WINDOWS_AVAILABLE)
-auto get_current_process_id() -> std::uint32_t
-{
-    return static_cast<std::uint32_t>(boost::winapi::GetCurrentProcessId());
-}
-#elif defined(DPLX_OS_UNIX_AVAILABLE) || defined(DPLX_OS_MACOS_AVAILABLE)
-auto get_current_process_id() -> std::uint32_t
-{
-    return static_cast<std::uint32_t>(::getpid());
-}
-#else
-auto get_current_process_id() -> std::uint32_t
-{
-    return 0xffff'ffff; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
-}
-#endif
-
-} // namespace
 
 auto file_database_handle::clone() const noexcept
         -> result<file_database_handle>
@@ -506,7 +477,7 @@ auto file_database_handle::create_message_bus(
             .magic = {busMagic.begin(), busMagic.end()},
             .id = std::move(id),
             .rotation = {},
-            .process_id = dlog::get_current_process_id(),
+            .process_id = detail::get_current_process_id(),
     });
     auto &meta = contents.message_buses.back();
 
