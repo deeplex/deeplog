@@ -12,6 +12,8 @@
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 #include <fmt/format.h>
 
+#include <dplx/predef/os/linux.h>
+
 #include <dplx/dlog/bus/mpsc_bus.hpp>
 #include <dplx/dlog/core/file_database.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -20,6 +22,11 @@
 
 #include "test_dir.hpp"
 #include "test_utils.hpp"
+
+#if defined(DPLX_OS_LINUX_AVAILABLE)
+#include <sys/resource.h>
+#include <sys/time.h>
+#endif
 
 namespace dlog_tests
 {
@@ -65,6 +72,19 @@ TEST_CASE("The library can create a new database, as new file_sink and write a "
     REQUIRE(core.destroy_sink(createSinkRx.assume_value()));
 }
 
+static void increase_rlimit()
+{
+#if defined(DPLX_OS_LINUX_AVAILABLE)
+    rlimit64 limits{};
+    if (::getrlimit64(RLIMIT_NOFILE, &limits) != 0)
+    {
+        return;
+    }
+    limits.rlim_cur = limits.rlim_max;
+    (void)::setrlimit64(RLIMIT_NOFILE, &limits);
+#endif
+}
+
 // we don't want to throw from within an initializer
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 constinit llfio::directory_handle test_dir{};
@@ -76,6 +96,7 @@ public:
 
     void testRunStarting(Catch::TestRunInfo const &) override
     {
+        increase_rlimit();
         auto testFilesDir
                 = llfio::directory({}, "_test-files",
                                    llfio::directory_handle::mode::write,
