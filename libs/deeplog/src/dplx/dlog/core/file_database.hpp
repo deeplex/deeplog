@@ -28,6 +28,7 @@ namespace dplx::dlog
 enum class file_sink_id : std::uint32_t
 {
     default_ = 0,
+    recovered = 13,
 };
 constexpr auto format_as(file_sink_id id) noexcept
         -> std::underlying_type_t<file_sink_id>
@@ -113,6 +114,10 @@ public:
     auto operator=(file_database_handle &&) noexcept
             -> file_database_handle & = default;
 
+private:
+    static constexpr llfio::deadline default_100ms
+            = std::chrono::milliseconds{100};
+
     file_database_handle(llfio::file_handle rootHandle,
                          llfio::path_handle rootDirHandle)
         : mRootHandle(std::move(rootHandle))
@@ -121,6 +126,7 @@ public:
     {
     }
 
+public:
     auto clone() const noexcept -> result<file_database_handle>;
 
     static auto file_database(llfio::path_handle const &base,
@@ -196,6 +202,8 @@ public:
             -> result<message_bus_file>;
     auto remove_message_bus(std::string_view id, std::uint32_t rotation)
             -> result<void>;
+    auto prune_message_buses(llfio::deadline deadline = default_100ms)
+            -> result<void>;
 
     auto message_buses() const noexcept -> message_buses_type const &
     {
@@ -222,6 +230,9 @@ private:
     auto validate_magic() noexcept -> result<void>;
     auto initialize_storage() noexcept -> result<void>;
     auto retire_to_storage(contents_t const &contents) noexcept -> result<void>;
+
+    static auto next_rotation(record_containers_type const &vs,
+                              file_sink_id sinkId) noexcept -> std::uint32_t;
 
     static void
     sanitize_container_byte_size(llfio::file_handle &container,

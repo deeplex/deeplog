@@ -7,6 +7,7 @@
 
 #include "dplx/dlog/core/file_database.hpp"
 
+#include <algorithm>
 #include <bit>
 #include <chrono>
 #include <numeric>
@@ -15,6 +16,7 @@
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+#include <fmt/xchar.h>
 
 #include <dplx/dp.hpp>
 #include <dplx/dp/api.hpp>
@@ -26,11 +28,15 @@
 #include <dplx/dp/codecs/std-filesystem.hpp>
 #include <dplx/dp/codecs/std-string.hpp>
 #include <dplx/dp/legacy/memory_buffer.hpp>
+#include <dplx/scope_guard.hpp>
 
+#include <dplx/dlog/attributes.hpp>
+#include <dplx/dlog/bus/mpsc_bus.hpp>
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/detail/interleaving_stream.hpp>
 #include <dplx/dlog/detail/platform.hpp>
 #include <dplx/dlog/detail/utils.hpp>
+#include <dplx/dlog/sinks/file_sink.hpp>
 
 namespace dplx::dlog
 {
@@ -558,6 +564,158 @@ auto file_database_handle::remove_message_bus(std::string_view id,
     return outcome::success();
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+auto file_database_handle::prune_message_buses(llfio::deadline deadline)
+        -> result<void>
+{
+    using file_handle = llfio::file_handle;
+    using mapped_file_handle = llfio::mapped_file_handle;
+    LLFIO_DEADLINE_TO_SLEEP_INIT(deadline)
+
+    llfio::unique_file_lock rootLock{mRootHandle, llfio::lock_kind::unlocked};
+    // FIXME: look into a file lock solution which supports a deadline
+    DPLX_TRY(rootLock.lock());
+    DPLX_TRY(fetch_content_impl());
+
+    auto contents = mContents;
+    auto eraseBusEntry
+            = [this, &contents](message_buses_type::iterator which) noexcept
+            -> result<message_buses_type::iterator>
+    {
+        assert(!contents.message_buses.empty());
+        using std::swap;
+        contents.revision += 1;
+
+        swap(*which, contents.message_buses.back());
+        contents.message_buses.pop_back();
+
+        DPLX_TRY(retire_to_storage(contents));
+
+        return contents.message_buses.end();
+    };
+
+    for (auto it = mContents.message_buses.begin(),
+              end = mContents.message_buses.end();
+         it != end; ++it)
+    {
+        LLFIO_DEADLINE_TO_TIMEOUT_LOOP(deadline)
+
+        auto &candidate = *it;
+        if (auto mpscMagic = as_bytes(std::span(mpsc_bus_handle::magic));
+            !std::equal(candidate.magic.begin(), candidate.magic.end(),
+                        mpscMagic.begin(), mpscMagic.end()))
+        {
+            continue;
+        }
+        auto openRx = mapped_file_handle::mapped_file(
+                mRootDirHandle, candidate.path, mapped_file_handle::mode::write,
+                mapped_file_handle::creation::open_existing);
+        if (openRx.has_error())
+        {
+            if (openRx.assume_error()
+                == system_error::errc::no_such_file_or_directory)
+            {
+                DPLX_TRY(end, eraseBusEntry(it));
+            }
+            continue;
+        }
+        auto &handle = openRx.assume_value();
+        llfio::unique_file_lock busLock{handle, llfio::lock_kind::unlocked};
+        if (!busLock.try_lock())
+        {
+            continue;
+        }
+        scope_exit unlockBus = [&handle, &busLock]
+        {
+            if (!handle.is_valid())
+            {
+                busLock.release();
+            }
+        };
+
+        bool rollback = true;
+
+        contents.record_containers.push_back({
+                .path = {},
+                .byte_size = 0U,
+                .sink_id = file_sink_id::recovered,
+                .rotation = 0U,
+        });
+        scope_guard containerRollback = [&rollback, &contents]
+        {
+            if (rollback)
+            {
+                contents.record_containers.pop_back();
+            }
+        };
+        auto &recoveryContainer = contents.record_containers.back();
+
+        recoveryContainer.rotation = next_rotation(contents.record_containers,
+                                                   file_sink_id::recovered);
+        recoveryContainer.path = fmt::format(
+                u8"{}.{}.{}.dlog", candidate.path.u8string(),
+                file_sink_id::recovered, recoveryContainer.rotation);
+
+        auto openRecoverySinkRx = make<file_sink>{
+                        .threshold = severity::trace,
+                        .backend = {
+                                .base = mRootDirHandle,
+                                .path = recoveryContainer.path,
+                                .target_buffer_size = {}, // use default
+                                .attributes = dlog::make_attributes(
+                                    attr::process_id{candidate.process_id}
+                                ),
+                        },
+                 }();
+        if (openRecoverySinkRx.has_error())
+        {
+            continue;
+        }
+        auto rollbackRecoveryFileHandle = openRecoverySinkRx.assume_value()
+                                                  .backend()
+                                                  .clone_backing_file_handle();
+        scope_guard rollbackSinkFileCreation
+                = [&rollback, &rollbackRecoveryFileHandle]
+        {
+            if (rollback && rollbackRecoveryFileHandle.has_value())
+            {
+                (void)rollbackRecoveryFileHandle.assume_value().unlink();
+            }
+        };
+        auto &recoverySink = openRecoverySinkRx.assume_value();
+
+        detail::simple_consume_record_fn<file_sink,
+                                         mpsc_bus_handle::consume_batch_size>
+                consumeFn(recoverySink);
+
+        DPLX_TRY(auto &&recoveryHandle,
+                 static_cast<file_handle &>(handle).reopen());
+        auto recoverRx = mpsc_bus_handle::recover_mpsc_bus(
+                std::move(handle), consumeFn, llfio::lock_kind::exclusive);
+
+        if (!recoverySink.try_finalize()
+            || (recoverRx.has_error()
+                && recoverRx.assume_error().domain()
+                           != cncr::data_defined_status_domain<errc>))
+        {
+            continue;
+        }
+        if (handle.is_valid()) // NOLINT(bugprone-use-after-move)
+        {
+            busLock.unlock();
+            (void)handle.close();
+        }
+        if (recoveryHandle.unlink().has_error())
+        {
+            continue;
+        }
+        DPLX_TRY(eraseBusEntry(it));
+        rollback = false;
+    }
+
+    return outcome::success();
+}
+
 auto file_database_handle::record_container_filename(
         std::string_view pattern,
         file_sink_id sinkId,
@@ -598,6 +756,18 @@ auto file_database_handle::transform(TransformFn &&transformFn) -> result<void>
 
     DPLX_TRY(retire_to_storage(contents));
     return outcome::success();
+}
+
+auto file_database_handle::next_rotation(record_containers_type const &vs,
+                                         file_sink_id sinkId) noexcept
+        -> std::uint32_t
+{
+
+    return 1U
+         + std::ranges::max(vs, {},
+                            [sinkId](auto const &v)
+                            { return v.sink_id == sinkId ? v.rotation : 0U; })
+                   .rotation;
 }
 
 void file_database_handle::unlink_all_message_buses_impl() noexcept
