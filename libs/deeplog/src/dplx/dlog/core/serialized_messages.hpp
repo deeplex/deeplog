@@ -7,7 +7,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
+#include <span>
 
 #include <boost/variant2.hpp>
 

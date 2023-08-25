@@ -7,6 +7,9 @@
 
 #include "dplx/dlog/core/serialized_messages.hpp"
 
+#include <algorithm>
+#include <span>
+
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/auto_tuple.hpp>
 #include <dplx/dp/items/skip_item.hpp>
@@ -138,7 +141,7 @@ void multicast_messages(
                              [parses, binarySize](auto &sink)
                              { return sink->try_consume(binarySize, parses); });
 
-    sinks = std::span(begin, newEnd);
+    sinks = std::span<std::unique_ptr<sink_frontend_base>>(begin, newEnd);
 }
 
 } // namespace dplx::dlog::detail
