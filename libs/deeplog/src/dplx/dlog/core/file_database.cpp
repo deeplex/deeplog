@@ -607,8 +607,8 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
         return contents.message_buses.end();
     };
 
-    for (auto it = mContents.message_buses.begin(),
-              end = mContents.message_buses.end();
+    for (auto it = contents.message_buses.begin(),
+              end = contents.message_buses.end();
          it != end; ++it)
     {
         LLFIO_DEADLINE_TO_TIMEOUT_LOOP(deadline)
@@ -722,7 +722,7 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
         {
             continue;
         }
-        DPLX_TRY(eraseBusEntry(it));
+        DPLX_TRY(end, eraseBusEntry(it));
         rollback = false;
     }
 
