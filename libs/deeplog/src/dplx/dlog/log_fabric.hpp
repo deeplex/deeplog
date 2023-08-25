@@ -107,6 +107,11 @@ public:
             -> sink_frontend_base *;
     void clear_sinks() noexcept;
 
+    void notify_epoch_changed() noexcept
+    {
+        sync_sinks();
+    }
+
 private:
     [[nodiscard]] auto do_default_threshold() const noexcept
             -> severity override;

@@ -59,6 +59,10 @@ public:
                     Duration, std::chrono::duration<std::int64_t, std::nano>>;
             return time_point_cast<requested_duration>(systemTime);
         }
+
+        friend inline auto operator==(epoch_info const &lhs,
+                                      epoch_info const &rhs) noexcept -> bool
+                = default;
     };
 
 private:
