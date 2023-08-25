@@ -713,6 +713,7 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
         rollback = false;
     }
 
+    mContents = std::move(contents);
     return outcome::success();
 }
 

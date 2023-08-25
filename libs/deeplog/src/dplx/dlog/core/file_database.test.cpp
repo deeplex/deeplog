@@ -75,11 +75,6 @@ TEST_CASE("file database reopen round trip")
         auto createRx
                 = dlog::file_database_handle::file_database({}, dbFullName);
         REQUIRE(createRx);
-        auto &&db = std::move(createRx).assume_value();
-
-        // cleanup
-        auto cleanupRx = db.unlink_all();
-        CHECK(cleanupRx);
     }
 }
 
@@ -137,10 +132,6 @@ TEST_CASE("file database message bus recovery test")
     CHECK(!containers.empty());
     CHECK(std::ranges::count(containers, dlog::file_sink_id::recovered,
                              [](auto const &c) { return c.sink_id; }));
-
-    // cleanup
-    auto cleanupRx = db.unlink_all();
-    CHECK(cleanupRx);
 }
 
 } // namespace dlog_tests
