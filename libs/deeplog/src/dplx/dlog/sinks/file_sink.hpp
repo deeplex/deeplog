@@ -138,6 +138,9 @@ public:
     // or 0 if file_sink_backend wasn't initialized
     auto finalize() noexcept -> result<std::uint32_t>;
 
+    auto clone_backing_file_handle() const noexcept
+            -> result<llfio::file_handle>;
+
 private:
     auto rotate() noexcept -> result<void>;
 
