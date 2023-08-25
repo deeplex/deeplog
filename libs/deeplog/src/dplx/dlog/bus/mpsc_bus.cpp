@@ -203,10 +203,10 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
                            static_cast<std::uint32_t>(realRegionSize)};
 }
 
-auto mpsc_bus_handle::recover_mpsc_bus(llfio::mapped_file_handle &&backingFile,
-                                       record_consumer &consume,
-                                       llfio::lock_kind lockState) noexcept
-        -> result<void>
+auto mpsc_bus_handle::recover_mpsc_bus(
+        llfio::mapped_file_handle &&backingFile,
+        record_consumer &consume,
+        llfio::lock_kind const lockState) noexcept -> result<void>
 {
     if (!backingFile.is_valid() || !backingFile.is_writable())
     {
@@ -224,6 +224,10 @@ auto mpsc_bus_handle::recover_mpsc_bus(llfio::mapped_file_handle &&backingFile,
     {
         backingFile.unlock_file();
     };
+    if (lockState == llfio::lock_kind::exclusive)
+    {
+        lockGuard.release();
+    }
 
     constexpr std::size_t page_size = std::size_t{4U} * 1024U;
     // also updates the memory mapping
