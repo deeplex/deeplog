@@ -206,6 +206,8 @@ private:
             auto *attributeTypeRegistry = attributeTypeRegistryScope.get();
             (void)attributeTypeRegistry->insert<attr::file>();
             (void)attributeTypeRegistry->insert<attr::line>();
+            (void)attributeTypeRegistry->insert<attr::function>();
+            (void)attributeTypeRegistry->insert<attr::process_id>();
         }
 
         dlog::argument_transmorpher argumentTransmorpher;

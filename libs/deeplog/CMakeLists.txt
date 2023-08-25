@@ -91,6 +91,7 @@ dplx_target_sources(deeplog
         dlog/record_container
 
         dlog/detail/interleaving_stream
+        dlog/detail/platform
         dlog/detail/tls
 )
 

@@ -14,6 +14,7 @@
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/core/log_clock.hpp>
+#include <dplx/dlog/detail/platform.hpp>
 
 namespace dplx::dlog::detail
 {
@@ -153,4 +154,9 @@ auto dplx::dp::codec<dplx::dlog::detail::attribute_args>::encode(
 {
     DPLX_TRY(dp::emit_map(ctx, attrs.num_attributes));
     return dlog::detail::encode_attributes(ctx, attrs);
+}
+
+auto dplx::dlog::attr::process_id::current() noexcept -> process_id
+{
+    return process_id{detail::get_current_process_id()};
 }

@@ -138,6 +138,9 @@ public:
     // or 0 if file_sink_backend wasn't initialized
     auto finalize() noexcept -> result<std::uint32_t>;
 
+    auto clone_backing_file_handle() const noexcept
+            -> result<llfio::file_handle>;
+
 private:
     auto rotate() noexcept -> result<void>;
 
@@ -176,6 +179,7 @@ class db_file_sink_backend : public file_sink_backend
     friend struct make<db_file_sink_backend>;
 
     std::uint64_t mMaxFileSize{};
+    log_clock::epoch_info mFileEpoch{};
     file_database_handle mFileDatabase;
     std::string mFileNamePattern;
     file_sink_id mSinkId{};

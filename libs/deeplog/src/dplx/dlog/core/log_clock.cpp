@@ -15,8 +15,9 @@
 namespace dplx::dlog
 {
 
-log_clock::epoch_info const log_clock::epoch_(std::chrono::system_clock::now(),
-                                              internal_clock::now());
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+log_clock::global_epoch_info log_clock::epoch_(std::chrono::system_clock::now(),
+                                               internal_clock::now());
 
 // namespace
 //{
@@ -26,6 +27,44 @@ log_clock::epoch_info const log_clock::epoch_(std::chrono::system_clock::now(),
 //         log_epoch_info_descriptor{};
 //
 // }
+
+log_clock::global_epoch_info::global_epoch_info(
+        system_clock::time_point systemReference,
+        internal_clock::time_point steadyReference) noexcept
+    : system_reference(systemReference.time_since_epoch().count())
+    , steady_reference(steadyReference)
+{
+}
+
+auto log_clock::global_epoch_info::try_sync_with_system() noexcept -> bool
+{
+    using namespace std::chrono_literals;
+
+    auto oldSystemReference = system_reference.load(std::memory_order_acquire);
+    log_clock::epoch_info const oldEpoch(
+            system_clock::time_point(
+                    system_clock::duration(oldSystemReference)),
+            steady_reference);
+    log_clock::epoch_info const currentEpoch(std::chrono::system_clock::now(),
+                                             internal_clock::now());
+
+    auto const sysDiff
+            = currentEpoch.system_reference - oldEpoch.system_reference;
+    auto const steadyDiff
+            = currentEpoch.steady_reference - oldEpoch.steady_reference;
+    auto const drift = sysDiff - steadyDiff;
+    if (abs(drift)
+        < ceil<system_clock::duration>(ceil<internal_clock::duration>(1ms)))
+    {
+        return false;
+    }
+    auto const nextSystemReference
+            = oldSystemReference + round<system_clock::duration>(drift).count();
+
+    return system_reference.compare_exchange_strong(oldSystemReference,
+                                                    nextSystemReference,
+                                                    std::memory_order::acq_rel);
+}
 
 } // namespace dplx::dlog
 

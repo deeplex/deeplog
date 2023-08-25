@@ -15,6 +15,7 @@
 #include <dplx/dp/codecs/auto_object.hpp>
 #include <dplx/dp/codecs/core.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
+#include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/record_container.hpp>
 
@@ -46,7 +47,10 @@ try
     using namespace dplx::dlog;
     using file_creation = llfio::file_handle::creation;
 
-    file_sink_backend self{target_buffer_size, attributes};
+    constexpr unsigned defaultBufferSize = 64U * 1024;
+    file_sink_backend self{target_buffer_size > 0U ? target_buffer_size
+                                                   : defaultBufferSize,
+                           attributes};
     DPLX_TRY(self.mBackingFile,
              llfio::file(base, path, file_sink_backend::file_mode,
                          file_creation::only_if_not_exist,
@@ -124,6 +128,17 @@ auto file_sink_backend::finalize() noexcept -> result<std::uint32_t>
     return static_cast<std::uint32_t>(finalFileSize);
 }
 
+auto file_sink_backend::clone_backing_file_handle() const noexcept
+        -> result<llfio::file_handle>
+{
+    if (!mBackingFile.is_valid())
+    {
+        return system_error::errc::bad_file_descriptor;
+    }
+    DPLX_TRY(auto &&cloned, mBackingFile.reopen());
+    return cloned;
+}
+
 auto file_sink_backend::rotate() noexcept -> result<void>
 {
     DPLX_TRY(auto const needsInit, do_rotate(mBackingFile));
@@ -165,7 +180,7 @@ auto file_sink_backend::rotate() noexcept -> result<void>
             = {mBufferAllocation.as_span().first(mBufferAllocation.size()
                                                  - size())};
 
-    DPLX_TRY(mBackingFile.write({writeBuffers, 0U}))
+    DPLX_TRY(mBackingFile.write({writeBuffers, 0U}));
     reset(mBufferAllocation.as_span());
     return outcome::success();
 }
@@ -328,8 +343,12 @@ auto db_file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
     }
     if (backingFile.is_valid())
     {
+        if (mCurrentRotation == 0)
+        {
+            return false;
+        }
         DPLX_TRY(auto const maxExtent, backingFile.maximum_extent());
-        if (maxExtent <= mMaxFileSize)
+        if (maxExtent <= mMaxFileSize && log_clock::epoch() == mFileEpoch)
         {
             return false;
         }
@@ -338,21 +357,24 @@ auto db_file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
             dp::emit_context ctx{*this};
             DPLX_TRY(dp::emit_break(ctx));
         }
+        auto const rotation = std::exchange(mCurrentRotation, 0);
+        scope_guard releaseFile = [&backingFile]
+        {
+            backingFile.unlock_file();
+            (void)backingFile.close();
+        };
         DPLX_TRY(sync_output());
 
         DPLX_TRY(auto const finalFileSize, backingFile.maximum_extent());
         (void)mFileDatabase.update_record_container_size(
-                mSinkId, mCurrentRotation,
-                static_cast<std::uint32_t>(finalFileSize));
-
-        backingFile.unlock_file();
-        DPLX_TRY(backingFile.close());
+                mSinkId, rotation, static_cast<std::uint32_t>(finalFileSize));
     }
 
     DPLX_TRY(auto &&created, mFileDatabase.create_record_container(
                                      mFileNamePattern, mSinkId, file_mode,
                                      file_caching, file_flags));
     backingFile = std::move(created.handle);
+    mFileEpoch = log_clock::epoch();
     mCurrentRotation = created.rotation;
 
     return true;

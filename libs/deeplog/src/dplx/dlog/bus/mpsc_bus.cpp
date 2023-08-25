@@ -15,7 +15,9 @@
 #include <dplx/dp/api.hpp>
 #include <dplx/dp/codecs/auto_object.hpp>
 #include <dplx/dp/codecs/core.hpp>
+#include <dplx/dp/items/skip_item.hpp>
 #include <dplx/dp/object_def.hpp>
+#include <dplx/dp/streams/memory_input_stream.hpp>
 #include <dplx/predef/hardware.h>
 #include <dplx/scope_guard.hpp>
 
@@ -124,7 +126,8 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
     {
         return errc::invalid_argument;
     }
-    if (numRegions == 0 || regionSize < min_region_size)
+    if (numRegions == 0 || (numRegions & message_flag_mask) != 0
+        || regionSize < min_region_size)
     {
         return errc::invalid_argument;
     }
@@ -172,9 +175,12 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
 
     DPLX_TRY(busStream.bulk_write(as_bytes(std::span(magic))));
 
-    DPLX_TRY(dp::encode(busStream, info{.num_regions = numRegions,
-                                        .region_size = static_cast<unsigned>(
-                                                realRegionSize)}));
+    DPLX_TRY(dp::encode(busStream, info{
+                                           .num_regions = numRegions,
+                                           .region_size = static_cast<unsigned>(
+                                                   realRegionSize),
+                                           .epoch = log_clock::epoch(),
+                                   }));
 
     // initialize the regions
     busStream = dp::memory_output_stream(busMemory.subspan(head_area_size));
@@ -195,6 +201,78 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
     lockGuard.release();
     return mpsc_bus_handle{std::move(backingFile), numRegions,
                            static_cast<std::uint32_t>(realRegionSize)};
+}
+
+auto mpsc_bus_handle::recover_mpsc_bus(llfio::mapped_file_handle &&backingFile,
+                                       record_consumer &consume,
+                                       llfio::lock_kind lockState) noexcept
+        -> result<void>
+{
+    if (!backingFile.is_valid() || !backingFile.is_writable())
+    {
+        return errc::invalid_argument;
+    }
+    if (lockState == llfio::lock_kind::shared)
+    {
+        backingFile.unlock_file_shared();
+    }
+    if (lockState != llfio::lock_kind::exclusive)
+    {
+        DPLX_TRY(backingFile.lock_file());
+    }
+    scope_exit lockGuard = [&backingFile]
+    {
+        backingFile.unlock_file();
+    };
+
+    constexpr std::size_t page_size = std::size_t{4U} * 1024U;
+    // also updates the memory mapping
+    DPLX_TRY(auto const maxExtent, backingFile.maximum_extent());
+    if (maxExtent < page_size)
+    {
+        return errc::missing_data;
+    }
+
+    std::span<std::byte const> fileContent(backingFile.address(), maxExtent);
+    if (!std::ranges::equal(fileContent.first(std::size(magic)),
+                            as_bytes(std::span(magic))))
+    {
+        return errc::invalid_dmpscb_header;
+    }
+
+    mpsc_bus_info info{};
+    if (auto decodeRx = dp::decode(
+                fileContent.first(page_size).subspan(std::size(magic)), info);
+        decodeRx.has_error())
+    {
+        return errc::invalid_dmpscb_header;
+    }
+
+    if (info.num_regions == 0 || (info.num_regions & message_flag_mask) != 0
+        || info.region_size < min_region_size
+        || std::numeric_limits<std::uint32_t>::max() - page_size
+                   < info.region_size
+        || info.region_size % page_size != 0)
+    {
+        return errc::invalid_dmpscb_parameters;
+    }
+    if (page_size
+                + info.num_regions * static_cast<std::size_t>(info.region_size)
+        != maxExtent)
+    {
+        return errc::invalid_dmpscb_file_size;
+    }
+
+    // we transfer the lock ownership into the mpsc bus handle
+    lockGuard.release();
+    mpsc_bus_handle self{std::move(backingFile), info.num_regions,
+                         info.region_size};
+
+    for (std::uint32_t regionId = 0U; regionId < info.num_regions; ++regionId)
+    {
+        DPLX_TRY(self.recover_region(consume, regionId));
+    }
+    return outcome::success();
 }
 
 auto dplx::dlog::mpsc_bus_handle::create_span_context(trace_id trace,
@@ -223,6 +301,72 @@ auto dplx::dlog::mpsc_bus_handle::create_span_context(trace_id trace,
 
     return {trace, detail::derive_span_id(rawTraceId.values[0],
                                           rawTraceId.values[1], ctr)};
+}
+
+auto mpsc_bus_handle::recover_region(record_consumer &consume,
+                                     std::uint32_t regionId) noexcept
+        -> result<void>
+{
+    auto const *const ctx = region(regionId);
+    auto const *const blockData = region_data(regionId);
+    bytes block(blockData, mRegionSize - region_ctrl_overhead);
+
+    auto readPos = ctx->read_ptr;
+    for (std::uint32_t i = 0,
+                       limit = (mRegionSize - region_ctrl_overhead)
+                             / static_cast<unsigned>(sizeof(std::uint32_t));
+         i < limit && readPos != ctx->alloc_ptr;)
+    {
+        std::size_t batchSize = 0U;
+        bytes msgs[consume_batch_size];
+
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+        for (; batchSize < consume_batch_size && i < limit
+               && readPos != ctx->alloc_ptr;
+             ++i)
+        {
+            auto const msgHead
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                    = *reinterpret_cast<std::uint32_t const *>(
+                            block.subspan(readPos, sizeof(std::uint32_t))
+                                    .data());
+
+            auto const msgSize = msgHead & ~message_flag_mask;
+            if (block_size + msgSize > block.size())
+            {
+                // this catches unused_block_content due to
+                // unused_block_content > max_message_size >= block.size()
+                return outcome::success();
+            }
+            if (readPos + block_size + msgSize > block.size())
+            {
+                readPos = std::uint32_t{0U} - block_size;
+            }
+
+            auto const allocSize = cncr::round_up_p2(msgSize, block_size);
+            if ((msgHead & message_flag_mask) == 0U)
+            {
+                auto const msg = block.subspan(readPos + block_size, msgSize);
+                dp::memory_input_stream msgStream(msg);
+                if (dp::parse_context msgParseCtx{msgStream};
+                    dp::skip_item(msgParseCtx).has_value())
+                {
+                    msgs[batchSize++] = msg;
+                }
+            }
+
+            readPos += allocSize + block_size;
+            if (readPos == mRegionSize - region_ctrl_overhead)
+            {
+                readPos = 0U;
+            }
+        }
+
+        consume(std::span(static_cast<bytes const *>(msgs), batchSize));
+        // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+    }
+
+    return outcome::success();
 }
 
 auto db_mpsc_bus_handle::db_mpsc_bus(file_database_handle const &database,
@@ -284,7 +428,8 @@ namespace
 
 constexpr dp::object_def<
         dp::property_def<1U, &mpsc_bus_info_v00::num_regions>{},
-        dp::property_def<2U, &mpsc_bus_info_v00::region_size>{}>
+        dp::property_def<2U, &mpsc_bus_info_v00::region_size>{},
+        dp::property_def<3U, &mpsc_bus_info_v00::epoch>{}>
         info_v00_descriptor{.version = 0U};
 
 }
@@ -303,11 +448,21 @@ auto ::dplx::dp::codec<dplx::dlog::mpsc_bus_info_v00>::encode(
 {
     return dp::encode_object<dplx::dlog::info_v00_descriptor>(ctx, value);
 }
-/*
+
 auto ::dplx::dp::codec<dplx::dlog::mpsc_bus_info_v00>::decode(
         parse_context &ctx, dplx::dlog::mpsc_bus_info_v00 &outValue) noexcept
         -> result<void>
 {
-    return dp::decode_object(ctx, outValue);
+    DPLX_TRY(auto &&headInfo, dp::decode_object_head<true>(ctx));
+    switch (headInfo.version)
+    {
+    default:
+        return errc::item_version_mismatch;
+
+    case dlog::info_v00_descriptor.version:
+        break;
+    }
+
+    return dp::decode_object_properties<dlog::info_v00_descriptor>(
+            ctx, outValue, headInfo.num_properties);
 }
-*/

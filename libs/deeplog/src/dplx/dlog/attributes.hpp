@@ -83,6 +83,7 @@ concept attribute
               typename std::integral_constant<resource_id, T::id>;
           };
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
 namespace attr
 {
 
@@ -95,7 +96,14 @@ using function = basic_attribute_ref<resource_id{4},
                                      u8"code.function",
                                      std::string_view>;
 
+struct process_id
+    : basic_attribute_ref<resource_id{256}, u8"process.pid", std::uint32_t>
+{
+    static auto current() noexcept -> process_id;
+};
+
 } // namespace attr
+  // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
 } // namespace dplx::dlog
 

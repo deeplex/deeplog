@@ -24,6 +24,7 @@
 
 #include <dplx/dlog/concepts.hpp>
 #include <dplx/dlog/core/file_database.hpp>
+#include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
 #include <dplx/dlog/disappointment.hpp>
 #include <dplx/dlog/llfio.hpp>
@@ -53,10 +54,11 @@ namespace dplx::dlog
 //   * magic
 //   * mpsc_bus_info
 
-struct mpsc_bus_info_v00
+struct mpsc_bus_info_v00 // NOLINT(cppcoreguidelines-pro-type-member-init)
 {
     std::uint32_t num_regions;
     std::uint32_t region_size;
+    log_clock::epoch_info epoch;
 };
 using mpsc_bus_info = mpsc_bus_info_v00;
 
@@ -130,6 +132,12 @@ public:
                          = llfio::lock_kind::unlocked) noexcept
             -> result<mpsc_bus_handle>;
 
+    static auto recover_mpsc_bus(llfio::mapped_file_handle &&backingFile,
+                                 record_consumer &consume,
+                                 llfio::lock_kind lockState
+                                 = llfio::lock_kind::unlocked) noexcept
+            -> result<void>;
+
     static inline constexpr llfio::file_handle::mode file_mode
             = llfio::file_handle::mode::write;
     static inline constexpr llfio::file_handle::caching file_caching
@@ -171,7 +179,9 @@ private:
     static constexpr std::uint32_t message_header_size = block_size;
 
     static constexpr std::uint32_t message_lock_flag = 0x8000'0000U;
-    static constexpr std::uint32_t message_consumed_flag = 0xc000'0000U;
+    static constexpr std::uint32_t message_consumed_flag = 0x4000'0000U;
+    static constexpr std::uint32_t message_flag_mask
+            = message_lock_flag | message_consumed_flag;
     static constexpr std::uint32_t unused_block_content = 0xfefe'fefeU;
 
 public:
@@ -304,7 +314,8 @@ private:
             for (std::size_t i = 0U; i < batchSize; ++i)
             {
                 std::atomic_ref<std::uint32_t>{*infos[i].head}.fetch_or(
-                        message_consumed_flag, std::memory_order::relaxed);
+                        message_lock_flag | message_consumed_flag,
+                        std::memory_order::relaxed);
                 std::memset(infos[i].content.data(),
                             static_cast<int>(unused_block_content),
                             infos[i].content.size());
@@ -314,6 +325,9 @@ private:
 
         return outcome::success();
     }
+
+    auto recover_region(record_consumer &consume,
+                        std::uint32_t regionId) noexcept -> result<void>;
 
 public:
     auto allocate_record_buffer_inplace(
