@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <dplx/predef/compiler/clang.h>
 #include <dplx/predef/compiler/visualc.h>
 #include <dplx/predef/library/std.h>
 #include <dplx/predef/version_number.h>
@@ -44,5 +45,10 @@
 // https://developercommunity.visualstudio.com/t/C:-constinit-for-an-optional-fails-if/1406069
 #define DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069                              \
     DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_COMP_MSVC, 19, 36, 32532)
+
+// clang "forgets" to instantiate _M_construct from basic_string
+// https://github.com/llvm/llvm-project/issues/55560
+#define DPLX_DLOG_WORKAROUND_ISSUE_LLVM_55560                                  \
+    DPLX_DLOG_WORKAROUND(DPLX_COMP_CLANG, <, 15, 0, 0)
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

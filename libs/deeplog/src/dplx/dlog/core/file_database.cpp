@@ -36,7 +36,20 @@
 #include <dplx/dlog/detail/interleaving_stream.hpp>
 #include <dplx/dlog/detail/platform.hpp>
 #include <dplx/dlog/detail/utils.hpp>
+#include <dplx/dlog/detail/workaround.hpp>
 #include <dplx/dlog/sinks/file_sink.hpp>
+
+#if DPLX_DLOG_WORKAROUND_ISSUE_LLVM_55560
+namespace dplx::dlog::detail
+{
+
+auto clang_55560_workaround(char8_t const *a, char8_t const *b) -> std::u8string
+{
+    return {a, b};
+}
+
+} // namespace dplx::dlog::detail
+#endif
 
 namespace dplx::dlog
 {
