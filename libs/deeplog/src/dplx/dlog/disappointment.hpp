@@ -36,6 +36,9 @@ enum class [[nodiscard]] errc
     unknown_sink,
     unknown_message_bus,
     sink_finalization_failed,
+    invalid_dmpscb_header,
+    invalid_dmpscb_parameters,
+    invalid_dmpscb_file_size,
 
     LIMIT,
 };
@@ -57,7 +60,7 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
         { code::success, generic_errc::success,
             "No Error/Success" },
         { code::bad, generic_errc::unknown,
-            "an external API did not meet its operation contract"},
+            "an external API did not meet its operation contract" },
         { code::invalid_argument, generic_errc::invalid_argument,
             "Invalid Argument" },
         { code::not_enough_memory, generic_errc::not_enough_memory,
@@ -86,6 +89,12 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "The given message bus (id, rotation) isn't registered with this database." },
         { code::sink_finalization_failed, generic_errc::unknown,
             "Failed to finalize the sink, the failure code is attached to the sink." },
+        { code::invalid_dmpscb_header, generic_errc::unknown,
+            "The given file did not start with the magic byte sequence of a mpsc bus." },
+        { code::invalid_dmpscb_parameters, generic_errc::unknown,
+            "The encoded dmpsc bus header contained invalid parameters." },
+        { code::invalid_dmpscb_file_size, generic_errc::unknown,
+            "The dmpbsc bus file doesn't match its header description." },
   // clang-format on
     };
 };

@@ -119,42 +119,51 @@ auto fill_mpsc_bus(dlog::mpsc_bus_handle &bus, unsigned const limit)
         */
 
         DPLX_TRY(dlog::enqueue_message(bus, {}, i));
-        auto const encodedSize
-                = static_cast<unsigned>(dplx::dp::encoded_size_of(i));
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-        dlog::record_output_buffer_storage outStorage;
-        DPLX_TRY(auto *outStream, bus.allocate_record_buffer_inplace(
-                                          outStorage, encodedSize, {}));
-
-        dlog::record_output_guard busLock(*outStream);
-        DPLX_TRY(dplx::dp::encode(*outStream, i));
     }
     return outcome::success();
 }
 
+struct test_content_consumer final : dlog::record_consumer
+{
+    std::span<std::uint8_t> ids;
+
+    constexpr ~test_content_consumer() noexcept = default;
+    constexpr test_content_consumer() noexcept = default;
+
+    constexpr test_content_consumer(test_content_consumer &&) noexcept
+            = default;
+    constexpr auto operator=(test_content_consumer &&) noexcept
+            -> test_content_consumer & = default;
+
+    explicit test_content_consumer(std::span<std::uint8_t> is) noexcept
+        : ids(is)
+    {
+    }
+
+    void operator()(std::span<dlog::bytes const> records) noexcept override
+    {
+        for (auto const msg : records)
+        {
+            dp::memory_input_stream msgStream(msg);
+            auto value
+                    = dp::decode(dp::as_value<unsigned int>, msgStream).value();
+
+            assert(value < ids.size());
+            ++ids[value];
+        }
+    }
+};
+
 auto consume_content(dlog::mpsc_bus_handle &bus, std::span<std::uint8_t> ids)
         -> result<void>
 {
-    return bus.consume_messages(
-            [ids](std::span<dlog::bytes const> const &msgs) noexcept
-            {
-                for (auto const msg : msgs)
-                {
-                    dp::memory_input_stream msgStream(msg);
-                    auto value
-                            = dp::decode(dp::as_value<unsigned int>, msgStream)
-                                      .value();
-
-                    assert(value < ids.size());
-                    ++ids[value];
-                }
-            });
+    test_content_consumer consumeFn(ids);
+    return bus.consume_messages(consumeFn);
 }
 
 } // namespace
 
-TEST_CASE("mpsc_bus can be concurrently filled and drained",
-          "[.][long-running][concurrent]")
+TEST_CASE("mpsc_bus can be concurrently filled and drained")
 {
     static auto const concurrency
             = std::max(std::thread::hardware_concurrency(), 4U) - 2U;
@@ -162,7 +171,9 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained",
     static_assert(dplx::dp::encoded_item_head_size<dp::type_code::posint>(
                           msgsPerThread)
                   < sizeof(std::uint32_t));
-    constexpr auto sizePerThread = 2 * sizeof(std::uint32_t) * msgsPerThread;
+    constexpr auto regionOverhead = 64U;
+    constexpr auto sizePerThread
+            = 2 * (sizeof(std::uint32_t) * msgsPerThread + regionOverhead);
 
     auto bufferbus
             = dlog::mpsc_bus(
@@ -197,17 +208,42 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained",
     threads.clear();
     REQUIRE(consume_content(bufferbus, poppedIds));
 
-    REQUIRE_THAT(
+    CHECK_THAT(
             threadResults,
             Catch::Matchers::AllMatch(Catch::Matchers::Predicate<result<void>>(
                     [](result<void> const &rx) { return rx.has_value(); },
                     "All threads should complete successfully")));
-    REQUIRE_THAT(
+    CHECK_THAT(
             poppedIds,
             Catch::Matchers::AllMatch(Catch::Matchers::Predicate<std::uint8_t>(
                     [](unsigned v) { return v == concurrency; },
                     "All message ids should have been queued "
                     "'concurrency' times")));
+}
+
+TEST_CASE("mpsc bus can be recovered")
+{
+    auto mpscbus = dlog::mpsc_bus(llfio::mapped_temp_inode().value(), 2U,
+                                  dlog::mpsc_bus_handle::min_region_size)
+                           .value();
+
+    constexpr auto loadFactor = 512U;
+
+    REQUIRE(fill_mpsc_bus(mpscbus, loadFactor));
+    auto h = mpscbus.release();
+
+    std::vector<std::uint8_t> poppedIds(loadFactor, std::uint8_t{});
+    test_content_consumer consumeFn(poppedIds);
+    REQUIRE(dlog::mpsc_bus_handle::recover_mpsc_bus(
+            // false positive due to REQUIRE using do-while(0) under the hood
+            // NOLINTNEXTLINE(bugprone-use-after-move)
+            std::move(h), consumeFn, llfio::lock_kind::exclusive));
+
+    CHECK_THAT(
+            poppedIds,
+            Catch::Matchers::AllMatch(Catch::Matchers::Predicate<std::uint8_t>(
+                    [](unsigned v) { return v == 1; },
+                    "All message ids should have been popped.")));
 }
 
 } // namespace dlog_tests
