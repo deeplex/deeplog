@@ -229,6 +229,11 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
     std::ranges::sort(mContents.record_containers, std::less<void>{},
                       [](record_container_meta const &self)
                       { return self.rotation; });
+    std::erase_if(mContents.message_buses, [](message_bus_meta const &self)
+                  { return self.rotation == 0; });
+    std::ranges::sort(mContents.message_buses, std::less<void>{},
+                      [](message_bus_meta const &self)
+                      { return self.rotation; });
     return outcome::success();
 }
 
@@ -592,31 +597,20 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
 
     auto contents = mContents;
     auto eraseBusEntry
-            = [this, &contents](message_buses_type::iterator which) noexcept
-            -> result<message_buses_type::iterator>
+            = [this,
+               &contents](message_bus_meta &candidate) noexcept -> result<void>
     {
-        assert(!contents.message_buses.empty());
-        using std::swap;
         contents.revision += 1;
-
-        swap(*which, contents.message_buses.back());
-        contents.message_buses.pop_back();
-
-        DPLX_TRY(retire_to_storage(contents));
-
-        return contents.message_buses.end();
+        candidate.rotation = 0U;
+        return retire_to_storage(contents);
     };
 
-    for (auto it = contents.message_buses.begin(),
-              end = contents.message_buses.end();
-         it != end; ++it)
+    for (auto &candidate : contents.message_buses)
     {
         LLFIO_DEADLINE_TO_TIMEOUT_LOOP(deadline)
 
-        auto &candidate = *it;
-        if (auto mpscMagic = as_bytes(std::span(mpsc_bus_handle::magic));
-            !std::equal(candidate.magic.begin(), candidate.magic.end(),
-                        mpscMagic.begin(), mpscMagic.end()))
+        if (!std::ranges::equal(candidate.magic,
+                                as_bytes(std::span(mpsc_bus_handle::magic))))
         {
             continue;
         }
@@ -628,7 +622,7 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
             if (openRx.assume_error()
                 == system_error::errc::no_such_file_or_directory)
             {
-                DPLX_TRY(end, eraseBusEntry(it));
+                DPLX_TRY(eraseBusEntry(candidate));
             }
             continue;
         }
@@ -722,10 +716,12 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
         {
             continue;
         }
-        DPLX_TRY(end, eraseBusEntry(it));
+        DPLX_TRY(eraseBusEntry(candidate));
         rollback = false;
     }
 
+    std::erase_if(contents.message_buses,
+                  [](message_bus_meta const &c) { return c.rotation == 0U; });
     mContents = std::move(contents);
     return outcome::success();
 }
