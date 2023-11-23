@@ -235,8 +235,8 @@ struct reification_type_of<system_error::system_code>
     using type = detail::reified_system_code;
 };
 template <>
-struct reification_type_of<system_error::errored_status_code<
-        system_error::erased<typename system_error::system_code::value_type>>>
+struct reification_type_of<system_error::erased_errored_status_code<
+        typename system_error::system_code::value_type>>
 {
     using type = detail::reified_system_code;
 };

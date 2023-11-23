@@ -25,12 +25,12 @@ class os_input_stream final : public dp::input_buffer
 {
     friend class outcome::basic_result<
             os_input_stream,
-            system_error::errored_status_code<system_error::erased<
-                    system_error::system_code::value_type>>,
+            system_error::erased_errored_status_code<
+                    system_error::system_code::value_type>,
             outcome::experimental::policy::default_status_result_policy<
                     os_input_stream,
-                    system_error::errored_status_code<system_error::erased<
-                            system_error::system_code::value_type>>>>;
+                    system_error::erased_errored_status_code<
+                            system_error::system_code::value_type>>>;
 
     using byte_io_handle = llfio::byte_io_handle;
     using page_allocation

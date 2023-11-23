@@ -283,9 +283,9 @@ inline constexpr any_loggable_ref_storage_id
         any_loggable_ref_storage_tag<system_error::system_code>
         = any_loggable_ref_storage_id::system_code;
 template <>
-inline constexpr any_loggable_ref_storage_id any_loggable_ref_storage_tag<
-        system_error::errored_status_code<system_error::erased<
-                typename system_error::system_code::value_type>>>
+inline constexpr any_loggable_ref_storage_id
+        any_loggable_ref_storage_tag<system_error::erased_errored_status_code<
+                typename system_error::system_code::value_type>>
         = any_loggable_ref_storage_id::system_code;
 
 #define DPLX_X_WITH_THUNK 1
