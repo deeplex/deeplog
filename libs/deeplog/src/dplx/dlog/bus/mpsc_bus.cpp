@@ -82,9 +82,9 @@ auto thread_id_hash(std::thread::id id) noexcept -> std::uint32_t
     // NOLINTNEXTLINE(modernize-use-auto)
     std::uint64_t x = std::bit_cast<uint_t<S>>(id);
     x ^= x >> 27;
-    x *= 0x3c79ac492ba7b653U;
+    x *= 0x3c79'ac49'2ba7'b653U;
     x ^= x >> 33;
-    x *= 0x1c69b3f74ac4ae35U;
+    x *= 0x1c69'b3f7'4ac4'ae35U;
     x ^= x >> 27;
     return static_cast<std::uint32_t>(x);
     // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
@@ -159,8 +159,7 @@ auto mpsc_bus_handle::mpsc_bus(llfio::mapped_file_handle &&backingFile,
     {
         DPLX_TRY(backingFile.lock_file());
     }
-    scope_exit lockGuard = [&backingFile]
-    {
+    scope_exit lockGuard = [&backingFile] {
         backingFile.unlock_file();
     };
 
@@ -220,8 +219,7 @@ auto mpsc_bus_handle::recover_mpsc_bus(
     {
         DPLX_TRY(backingFile.lock_file());
     }
-    scope_exit lockGuard = [&backingFile]
-    {
+    scope_exit lockGuard = [&backingFile] {
         backingFile.unlock_file();
     };
     if (lockState == llfio::lock_kind::exclusive)
@@ -318,7 +316,7 @@ auto mpsc_bus_handle::recover_region(record_consumer &consume,
     auto readPos = ctx->read_ptr;
     for (std::uint32_t i = 0,
                        limit = (mRegionSize - region_ctrl_overhead)
-                             / static_cast<unsigned>(sizeof(std::uint32_t));
+                               / static_cast<unsigned>(sizeof(std::uint32_t));
          i < limit && readPos != ctx->alloc_ptr;)
     {
         std::size_t batchSize = 0U;

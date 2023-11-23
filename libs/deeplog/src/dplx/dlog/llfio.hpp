@@ -47,7 +47,7 @@ xread(llfio::byte_io_handle &h,
     {
         constexpr system_error2::win32_code error_handle_eof(38U);
         constexpr system_error2::nt_code status_end_of_file(
-                static_cast<system_error2::nt_code::value_type>(0xC0000011));
+                static_cast<system_error2::nt_code::value_type>(0xC000'0011));
 
         if (auto const &ec = readRx.assume_error();
             (ec.domain() == status_end_of_file.domain()

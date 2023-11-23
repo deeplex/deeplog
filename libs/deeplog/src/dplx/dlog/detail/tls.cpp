@@ -22,7 +22,7 @@ namespace dplx::dlog::detail
 
 #if DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069
 
-#if __cpp_lib_is_layout_compatible >= 201907L
+#if __cpp_lib_is_layout_compatible >= 201'907L
 static_assert(std::is_layout_compatible_v<log_context, log_context_>);
 static_assert(std::is_layout_compatible_v<log_context_, log_context>);
 #endif
@@ -40,7 +40,7 @@ auto active_context() noexcept -> log_context &
     return *reinterpret_cast<log_context *>(&active_context_);
 }
 
-#else // ^^^ workaround DevCom-1406069 / no workaround vvv
+#else  // ^^^ workaround DevCom-1406069 / no workaround vvv
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local constinit log_context active_context_{};
@@ -52,7 +52,7 @@ auto active_context() noexcept -> log_context &
 
 #endif // ^^^ no workaround ^^^
 
-#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+#else  // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local constinit log_context active_context_{};

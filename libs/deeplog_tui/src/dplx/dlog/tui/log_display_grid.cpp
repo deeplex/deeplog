@@ -20,8 +20,7 @@ auto LogDisplayGridComponent::derive_severity_infos(theme const &t)
 {
     using namespace std::string_literals;
 
-    auto fatalColor = [&]
-    {
+    auto fatalColor = [&] {
         return color(t.inverse_support_01) | bgcolor(t.inverse_02);
     };
     return {
@@ -99,7 +98,7 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
     ftxui::Elements formattedRecords;
 
     auto lines = static_cast<std::size_t>(mDisplayBox.y_max - mDisplayBox.y_min)
-               + 2U;
+                 + 2U;
     if (lines > mLastLines)
     {
         lines = lines * 3 / 2;
@@ -119,7 +118,7 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
 
         ftxui::Element formattedLevel
                 = ftxui::text(severityName) | severityFormat
-                | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, layout_size_level);
+                  | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, layout_size_level);
         ftxui::Decorator lineDecorator = lineDecoratorBase;
         if (focused)
         {
@@ -177,7 +176,7 @@ auto LogDisplayGridComponent::Render() -> ftxui::Element
                           spaceSeperator,
                           ftxui::text(formattedMessage) | ftxui::flex,
                   })
-                | lineDecorator;
+                  | lineDecorator;
 
         previousTime = std::move(iso8601DateTime);
         formattedRecords.push_back(std::move(formattedRecord));

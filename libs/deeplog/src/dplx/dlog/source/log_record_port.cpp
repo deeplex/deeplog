@@ -15,11 +15,11 @@ namespace
 
 // derivative of xxHASH64
 // https://github.com/Cyan4973/xxHash/blob/2b328a10983d232364ceda15df1d33531b5f0eb5/doc/xxhash_spec.md
-constexpr std::uint64_t PRIME64_1 = 0x9e3779b185ebca87U;
-constexpr std::uint64_t PRIME64_2 = 0xc2b2ae3d27d4eb4fU;
-constexpr std::uint64_t PRIME64_3 = 0x165667b19e3779f9U;
-constexpr std::uint64_t PRIME64_4 = 0x85ebca77c2b2ae63U;
-constexpr std::uint64_t PRIME64_5 = 0x27d4eb2f165667c5U;
+constexpr std::uint64_t PRIME64_1 = 0x9e37'79b1'85eb'ca87U;
+constexpr std::uint64_t PRIME64_2 = 0xc2b2'ae3d'27d4'eb4fU;
+constexpr std::uint64_t PRIME64_3 = 0x1656'67b1'9e37'79f9U;
+constexpr std::uint64_t PRIME64_4 = 0x85eb'ca77'c2b2'ae63U;
+constexpr std::uint64_t PRIME64_5 = 0x27d4'eb2f'1656'67c5U;
 
 DPLX_ATTR_FORCE_INLINE constexpr auto
 xxHash64_round(std::uint64_t accN, std::uint64_t const laneN) noexcept

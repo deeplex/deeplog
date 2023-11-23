@@ -94,8 +94,8 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::size_of(
 {
     constexpr std::uint64_t prefixSize = 1U + 9U;
     return prefixSize
-         + dp::item_size_of_u8string(ctx, code.code->domain().name().size())
-         + dp::item_size_of_u8string(ctx, code.code->message().size());
+           + dp::item_size_of_u8string(ctx, code.code->domain().name().size())
+           + dp::item_size_of_u8string(ctx, code.code->message().size());
 }
 
 auto dplx::dp::codec<dplx::dlog::detail::trivial_status_code_view>::encode(
@@ -131,8 +131,8 @@ auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::size_of(
 {
     constexpr std::uint64_t prefixSize = 1U + 9U;
     return prefixSize + dp::item_size_of_integer(ctx, code.code->value())
-         + dp::item_size_of_u8string(ctx, code.code->domain().name().size())
-         + dp::item_size_of_u8string(ctx, code.code->message().size());
+           + dp::item_size_of_u8string(ctx, code.code->domain().name().size())
+           + dp::item_size_of_u8string(ctx, code.code->message().size());
 }
 
 auto dplx::dp::codec<dplx::dlog::detail::trivial_system_code_view>::encode(
@@ -194,7 +194,7 @@ item_size_of_any_loggable(dp::emit_context &ctx,
 #define DPLX_X(name, type, var)                                                \
     case name:                                                                 \
         return 1U + dp::encoded_size_of(ctx, as_reification_id(name))          \
-             + dp::encoded_size_of(ctx, value.var);                            \
+               + dp::encoded_size_of(ctx, value.var);                          \
         break;
 #include <dplx/dlog/detail/x_poly_types.inl>
 #undef DPLX_X
@@ -223,8 +223,7 @@ inline auto encode_any_loggable(dp::emit_context &ctx,
     case null:
         break;
 #define DPLX_X(name, type, var)                                                \
-    case name:                                                                 \
-    {                                                                          \
+    case name: {                                                               \
         DPLX_TRY(dp::emit_array(ctx, 2U));                                     \
         DPLX_TRY(dp::encode(ctx, as_reification_id(name)));                    \
         DPLX_TRY(dp::encode(ctx, value.var));                                  \
@@ -283,7 +282,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     bool const hasLine = args.location.line >= 0;
     bool const hasFileName = args.location.filenameSize >= 0;
     unsigned const numAttributes = static_cast<unsigned>(hasLine)
-                                 + static_cast<unsigned>(hasFileName);
+                                   + static_cast<unsigned>(hasFileName);
     dp::void_stream voidOut;
     dp::emit_context sizeCtx{voidOut};
 
@@ -299,9 +298,9 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     encodedSize += /* ctx array/tuple prefix */ 1U;
     auto const instrumentationScope = logCtx.instrumentation_scope();
     encodedSize += instrumentationScope.empty()
-                         ? 0U
-                         : static_cast<unsigned>(dp::item_size_of_u8string(
-                                 sizeCtx, instrumentationScope.size()));
+                           ? 0U
+                           : static_cast<unsigned>(dp::item_size_of_u8string(
+                                   sizeCtx, instrumentationScope.size()));
     auto const ownerId = logCtx.span();
     auto const hasOwnerSpan = ownerId.spanId != span_id::invalid();
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
@@ -325,14 +324,14 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     if (hasLine)
     {
         encodedSize += /* rid: */ 1U
-                     + static_cast<unsigned>(dp::item_size_of_integer(
-                             sizeCtx, args.location.line));
+                       + static_cast<unsigned>(dp::item_size_of_integer(
+                               sizeCtx, args.location.line));
     }
     if (hasFileName)
     {
         encodedSize += /* rid: */ 1U
-                     + static_cast<unsigned>(dp::item_size_of_u8string(
-                             sizeCtx, args.location.filenameSize));
+                       + static_cast<unsigned>(dp::item_size_of_u8string(
+                               sizeCtx, args.location.filenameSize));
     }
 
     // allocate an output buffer on the message bus

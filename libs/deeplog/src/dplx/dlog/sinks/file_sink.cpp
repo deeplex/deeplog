@@ -358,8 +358,7 @@ auto db_file_sink_backend::do_rotate(llfio::file_handle &backingFile) noexcept
             DPLX_TRY(dp::emit_break(ctx));
         }
         auto const rotation = std::exchange(mCurrentRotation, 0);
-        scope_guard releaseFile = [&backingFile]
-        {
+        scope_guard releaseFile = [&backingFile] {
             backingFile.unlock_file();
             (void)backingFile.close();
         };

@@ -131,7 +131,7 @@ inline auto set_thread_context(log_context next) noexcept -> log_context
 
 } // namespace dplx::dlog
 
-#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+#else  // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
 
 namespace dplx::dlog
 {
@@ -158,7 +158,7 @@ inline auto set_thread_context(log_context next) noexcept -> log_context
 
 #endif // ^^^ no workaround ^^^
 
-#else // ^^^ !DISABLE_IMPLICIT_CONTEXT / DISABLE_IMPLICIT_CONTEXT vvv
+#else  // ^^^ !DISABLE_IMPLICIT_CONTEXT / DISABLE_IMPLICIT_CONTEXT vvv
 
 namespace dplx::dlog
 {

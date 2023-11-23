@@ -39,8 +39,9 @@ auto dplx::dp::codec<dplx::dlog::attribute_container>::size_of(
 {
     return dp::item_size_of_map(
             ctx, attrs.mAttributes,
-            [](emit_context &lctx, auto &idAttrPair) noexcept -> std::uint64_t
-            { return dp::encoded_size_of(lctx, idAttrPair.second); });
+            [](emit_context &lctx, auto &idAttrPair) noexcept -> std::uint64_t {
+                return dp::encoded_size_of(lctx, idAttrPair.second);
+            });
 }
 
 auto dplx::dp::codec<dplx::dlog::attribute_container>::encode(
@@ -49,8 +50,9 @@ auto dplx::dp::codec<dplx::dlog::attribute_container>::encode(
 {
     return dp::emit_map(
             ctx, attrs.mAttributes,
-            [](emit_context &lctx, auto &idAttrPair) noexcept -> result<void>
-            { return dp::encode(lctx, idAttrPair.second); });
+            [](emit_context &lctx, auto &idAttrPair) noexcept -> result<void> {
+                return dp::encode(lctx, idAttrPair.second);
+            });
 }
 
 auto dplx::dp::codec<dplx::dlog::attribute_container>::decode(
@@ -67,8 +69,7 @@ auto dplx::dp::codec<dplx::dlog::attribute_container>::decode(
             ctx, outValue.mAttributes,
             [](dp::parse_context &lctx,
                dlog::attribute_container::map_type &store,
-               std::size_t const) noexcept -> result<void>
-            {
+               std::size_t const) noexcept -> result<void> {
                 auto *registry = lctx.states.try_access(
                         dlog::attribute_type_registry_state);
                 DPLX_TRY(auto &&attr, registry->decode(lctx));

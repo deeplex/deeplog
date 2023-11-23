@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <cstring>
 
-#if __cpp_lib_source_location >= 201907L
+#if __cpp_lib_source_location >= 201'907L
 #include <source_location>
 #endif
 
@@ -175,16 +175,16 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
 
 template <typename... Args>
     requires(... && loggable<Args>)
-[[nodiscard]] inline auto log(
-        log_context const &ctx,
-        severity sev,
-        fmt::format_string<reification_type_of_t<Args>...> message,
+[[nodiscard]] inline auto
+log(log_context const &ctx,
+    severity sev,
+    fmt::format_string<reification_type_of_t<Args>...> message,
 #if DPLX_DLOG_USE_SOURCE_LOCATION
-        std::source_location const &location,
+    std::source_location const &location,
 #else
-        detail::log_location const &location,
+    detail::log_location const &location,
 #endif
-        Args const &...args) noexcept -> result<void>
+    Args const &...args) noexcept -> result<void>
 {
     if (sev < ctx.threshold()) [[unlikely]]
     {
@@ -197,16 +197,16 @@ template <typename... Args>
 
 template <typename... Args>
     requires(... && loggable<Args>)
-[[nodiscard]] inline auto log(
-        log_record_port &port,
-        severity sev,
-        fmt::format_string<reification_type_of_t<Args>...> message,
+[[nodiscard]] inline auto
+log(log_record_port &port,
+    severity sev,
+    fmt::format_string<reification_type_of_t<Args>...> message,
 #if DPLX_DLOG_USE_SOURCE_LOCATION
-        std::source_location const &location,
+    std::source_location const &location,
 #else
-        detail::log_location const &location,
+    detail::log_location const &location,
 #endif
-        Args const &...args) noexcept -> result<void>
+    Args const &...args) noexcept -> result<void>
 {
     log_context ctx(port);
     if (sev < ctx.threshold()) [[unlikely]]

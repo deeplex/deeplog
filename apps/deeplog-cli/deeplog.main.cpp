@@ -57,8 +57,7 @@ public:
         UpdateFileSelection();
         Add(ftxui::Container::Vertical({
                 ftxui::Renderer(mFileSelection,
-                                [this]
-                                {
+                                [this] {
                                     return ftxui::window(
                                             ftxui::text("enabled sinks"),
                                             mFileSelection->Render());
@@ -276,8 +275,8 @@ public:
         }
 
         return ftxui::vbox({mTabToggle->Render(), ftxui::separator(), detail})
-             | color(current_theme.text_02)
-             | bgcolor(current_theme.ui_background);
+               | color(current_theme.text_02)
+               | bgcolor(current_theme.ui_background);
     }
 };
 

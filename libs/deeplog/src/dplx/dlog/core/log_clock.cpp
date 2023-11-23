@@ -100,8 +100,9 @@ auto dplx::dp::codec<dplx::dlog::log_clock::epoch_info>::size_of(
         -> std::uint64_t
 {
     return dp::encoded_item_head_size<type_code::array>(2U)
-         + dp::encoded_size_of(ctx, value.system_reference.time_since_epoch())
-         + dp::encoded_size_of(ctx, value.steady_reference.time_since_epoch());
+           + dp::encoded_size_of(ctx, value.system_reference.time_since_epoch())
+           + dp::encoded_size_of(ctx,
+                                 value.steady_reference.time_since_epoch());
 
     // system_clock::time_point is missing a codec<>
     // return dp::size_of_tuple<dlog::log_epoch_info_descriptor>(ctx, value);

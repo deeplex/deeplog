@@ -50,8 +50,8 @@ public:
 class attribute_type_registry
 {
     using key_type = resource_id;
-    using revive_fn
-            = auto(*)(dp::parse_context &ctx) noexcept -> result<any_attribute>;
+    using revive_fn = auto (*)(dp::parse_context &ctx) noexcept
+            -> result<any_attribute>;
 
 public:
     using allocator_type = std::pmr::polymorphic_allocator<

@@ -73,15 +73,14 @@ struct basic_attribute_ref<Id,
 };
 
 template <typename T>
-concept attribute
-        = requires {
-              typename T;
-              typename T::type;
-              requires loggable<typename T::type>;
-              T::id;
-              requires std::is_same_v<resource_id const, decltype(T::id)>;
-              typename std::integral_constant<resource_id, T::id>;
-          };
+concept attribute = requires {
+    typename T;
+    typename T::type;
+    requires loggable<typename T::type>;
+    T::id;
+    requires std::is_same_v<resource_id const, decltype(T::id)>;
+    typename std::integral_constant<resource_id, T::id>;
+};
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
 namespace attr

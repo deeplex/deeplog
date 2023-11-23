@@ -44,7 +44,7 @@
 // msvc fails to constinit thread_local variables with a constexpr constructor
 // https://developercommunity.visualstudio.com/t/C:-constinit-for-an-optional-fails-if/1406069
 #define DPLX_DLOG_WORKAROUND_ISSUE_DEVCOM_1406069                              \
-    DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_COMP_MSVC, 19, 36, 32532)
+    DPLX_DLOG_WORKAROUND_TESTED_AT(DPLX_COMP_MSVC, 19, 36, 32'532)
 
 // clang "forgets" to instantiate _M_construct from basic_string
 // https://github.com/llvm/llvm-project/issues/55560

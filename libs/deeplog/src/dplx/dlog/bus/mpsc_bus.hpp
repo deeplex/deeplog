@@ -250,8 +250,7 @@ private:
         }
 
         auto readPos = originalReadPos;
-        scope_guard readUpdateGuard = [&readPos, &originalReadPos, &readPtr]
-        {
+        scope_guard readUpdateGuard = [&readPos, &originalReadPos, &readPtr] {
             if (readPos != originalReadPos)
             {
                 readPtr.store(readPos, std::memory_order::release);
@@ -443,8 +442,8 @@ private:
     auto region_data(std::uint32_t which) noexcept -> std::byte *
     {
         return mBackingFile.address() + head_area_size
-             + which * static_cast<std::size_t>(mRegionSize)
-             + region_ctrl_overhead;
+               + which * static_cast<std::size_t>(mRegionSize)
+               + region_ctrl_overhead;
     }
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 };
@@ -588,7 +587,7 @@ public:
                                                     newThreshold);
     }
 
-#else // ^^^ workaround __INTELLISENSE__ / no workaround vvv
+#else  // ^^^ workaround __INTELLISENSE__ / no workaround vvv
     using mpsc_bus_handle::allocate_record_buffer_inplace;
     using mpsc_bus_handle::consume_messages;
     using mpsc_bus_handle::create_span_context;

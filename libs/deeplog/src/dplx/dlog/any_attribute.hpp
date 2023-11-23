@@ -191,7 +191,7 @@ public:
             -> std::uint64_t
     {
         return dp::encoded_size_of(ctx, value.mId)
-             + dp::encoded_size_of(ctx, value.mValue);
+               + dp::encoded_size_of(ctx, value.mValue);
     }
     static auto encode(emit_context &ctx, any_attribute const &value) noexcept
             -> result<void>

@@ -86,15 +86,14 @@ inline constexpr reification_type_id reification_tag_v
         = reification_tag<T>::value;
 
 template <typename T>
-concept reifiable
-        = requires {
-              typename T;
-              typename reification_tag<T>;
-              reification_tag<T>::value;
-              requires std::is_same_v<reification_type_id const,
-                                      decltype(reification_tag<T>::value)>;
-              typename reification_type_constant<reification_tag<T>::value>;
-          } && dp::value_decodable<T>;
+concept reifiable = requires {
+    typename T;
+    typename reification_tag<T>;
+    reification_tag<T>::value;
+    requires std::is_same_v<reification_type_id const,
+                            decltype(reification_tag<T>::value)>;
+    typename reification_type_constant<reification_tag<T>::value>;
+} && dp::value_decodable<T>;
 
 // core reification tag specializations
 
@@ -202,8 +201,8 @@ using reification_type_of_t = typename reification_type_of<T>::type;
 template <typename T>
 concept loggable
         = requires { typename T; } && dp::encodable<detail::remap_c_string_t<T>>
-       && requires { typename reification_type_of<T>::type; }
-       && reifiable<typename reification_type_of<T>::type>;
+          && requires { typename reification_type_of<T>::type; }
+          && reifiable<typename reification_type_of<T>::type>;
 
 // core reification type maps
 

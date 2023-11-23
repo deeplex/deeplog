@@ -329,8 +329,8 @@ public:
             -> std::uint64_t
     {
         return value.mReified != nullptr
-                     ? value.mReified->encoded_size(ctx)
-                     : dp::encoded_size_of(ctx, dp::null_value);
+                       ? value.mReified->encoded_size(ctx)
+                       : dp::encoded_size_of(ctx, dp::null_value);
     }
     static auto encode(emit_context &ctx, any_reified const &value) noexcept
             -> result<void>

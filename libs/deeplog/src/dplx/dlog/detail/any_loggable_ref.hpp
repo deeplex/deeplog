@@ -79,9 +79,9 @@ enum class erased_loggable_thunk_mode
     encode_raw,
 };
 using erased_loggable_thunk_ptr
-        = auto(*)(void const *self,
-                  erased_loggable_thunk_mode mode,
-                  dp::emit_context &ctx) noexcept -> result<std::uint64_t>;
+        = auto (*)(void const *self,
+                   erased_loggable_thunk_mode mode,
+                   dp::emit_context &ctx) noexcept -> result<std::uint64_t>;
 
 struct erased_loggable_ref
 {
@@ -117,7 +117,7 @@ private:
         {
         case size_of:
             return 1U + dp::encoded_size_of(ctx, effective_reification_tag_v<T>)
-                 + dp::encoded_size_of(ctx, typedSelf);
+                   + dp::encoded_size_of(ctx, typedSelf);
 
         case size_of_raw:
             return dp::encoded_size_of(ctx, typedSelf);

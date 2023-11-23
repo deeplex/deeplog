@@ -117,8 +117,8 @@ private:
         if (input_buffer::size() < requiredSize)
         {
             return requiredSize > dp::minimum_input_buffer_size
-                         ? dp::errc::buffer_size_exceeded
-                         : dp::errc::end_of_stream;
+                           ? dp::errc::buffer_size_exceeded
+                           : dp::errc::end_of_stream;
         }
         return outcome::success();
     }
@@ -214,9 +214,9 @@ private:
         if (readRx.has_failure())
         {
 #if defined(DPLX_OS_WINDOWS_AVAILABLE)
-            constexpr system_error::win32_code error_handle_eof{0x00000026};
+            constexpr system_error::win32_code error_handle_eof{0x0000'0026};
             constexpr system_error::nt_code status_end_of_file{
-                    static_cast<long>(0xc0000011U)};
+                    static_cast<long>(0xc000'0011U)};
             if (readRx.assume_error() == error_handle_eof
                 || readRx.assume_error() == status_end_of_file)
             {

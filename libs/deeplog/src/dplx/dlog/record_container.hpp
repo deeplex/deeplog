@@ -175,10 +175,12 @@ public:
 
         DPLX_TRY(dp::parse_array(ctx, value.records,
                                  [this](parse_context &lctx, container &records,
-                                        std::size_t const) noexcept
-                                 { return parse_item(lctx, records); }));
-        std::erase_if(value.records, [](dlog::record const &r)
-                      { return r.severity == dlog::severity::none; });
+                                        std::size_t const) noexcept {
+                                     return parse_item(lctx, records);
+                                 }));
+        std::erase_if(value.records, [](dlog::record const &r) {
+            return r.severity == dlog::severity::none;
+        });
 
         return outcome::success();
     }
