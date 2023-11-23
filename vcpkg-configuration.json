@@ -8,7 +8,8 @@
         {
             "kind": "git",
             "repository": "https://github.com/deeplex/vcpkg-registry",
-            "baseline": "df49cf72329a8aaa90c75a4bb52ba3f208ca42ab",
+            "baseline": "d2bc1789b17dea4fc05ce54bcf5a08b0409005d6",
+            "reference": "dev/ports/concrete/add-0.0.0-alpha.11",
             "packages": [
                 "concrete",
                 "deeppack"
