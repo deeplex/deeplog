@@ -470,6 +470,7 @@ inline auto mpsc_bus(llfio::mapped_file_handle &&backingFile,
 template <>
 struct dplx::make<dplx::dlog::mpsc_bus_handle>
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dlog::llfio::path_handle const &base;
     dlog::llfio::path_view path;
     std::uint32_t num_regions;
@@ -485,6 +486,7 @@ struct dplx::make<dplx::dlog::mpsc_bus_handle>
 template <>
 struct dplx::make<dplx::dlog::db_mpsc_bus_handle>
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dlog::file_database_handle const &database;
     std::string bus_id;
     std::string_view file_name_pattern;

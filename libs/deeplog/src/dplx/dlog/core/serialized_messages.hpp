@@ -113,6 +113,7 @@ struct consume_record_fn final : record_consumer
 template <std::derived_from<sink_frontend_base> Sink, std::size_t MaxBatchSize>
 struct simple_consume_record_fn final : record_consumer
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     Sink &sink;
 
     constexpr ~simple_consume_record_fn() noexcept = default;

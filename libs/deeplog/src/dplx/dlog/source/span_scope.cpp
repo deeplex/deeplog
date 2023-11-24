@@ -45,6 +45,7 @@ struct span_start_msg
     log_clock::time_point timestamp;
     std::string_view name;
     std::span<span_context, 0> links;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::attribute_args const &attributes;
 };
 

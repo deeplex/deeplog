@@ -51,6 +51,7 @@ struct record_output_buffer_storage
 
 class record_output_guard
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     record_output_buffer &mOutput;
 
 public:

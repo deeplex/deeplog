@@ -30,6 +30,7 @@ struct basic_attribute_ref
     static constexpr std::u8string_view otlp_id{OtlpId.data(), OtlpId.size()};
 
     using type = T;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     type const &value;
 };
 template <resource_id Id, dp::fixed_u8string OtlpId, typename T>
@@ -151,8 +152,11 @@ class stack_attribute_args : public attribute_args
     static_assert(sizeof...(Args) <= UINT_LEAST16_MAX);
 
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::any_loggable_ref_storage const values[sizeof...(Args)];
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::any_loggable_ref_storage_id const types[sizeof...(Args)];
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     resource_id const rids[sizeof...(Args)];
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

@@ -78,7 +78,9 @@ class stack_log_args : public log_args
     static_assert(sizeof...(Args) <= UINT_LEAST16_MAX);
 
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::any_loggable_ref_storage const values[sizeof...(Args)];
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::any_loggable_ref_storage_id const types[sizeof...(Args)];
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

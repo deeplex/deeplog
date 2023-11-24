@@ -40,7 +40,9 @@ struct options
 
 class OptionsComponent : public ftxui::ComponentBase
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     file_database_handle &mFileDb;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     options &mValue;
 
     ftxui::Component mFileSelection;
@@ -128,7 +130,9 @@ private:
 
 class LogDisplayComponent : public ftxui::ComponentBase
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     file_database_handle &mFileDb;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     options &mOptions;
 
     boost::unordered_map<std::string, record_container> mClosedContainers;
