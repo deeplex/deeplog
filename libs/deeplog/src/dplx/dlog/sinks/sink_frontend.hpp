@@ -204,7 +204,7 @@ private:
         if constexpr (requires {
                           {
                               mBackend.finalize()
-                              } -> cncr::tryable;
+                          } -> cncr::tryable;
                       })
         {
             DPLX_TRY(mBackend.finalize());

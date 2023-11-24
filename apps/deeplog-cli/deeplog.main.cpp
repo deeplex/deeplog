@@ -40,7 +40,9 @@ struct options
 
 class OptionsComponent : public ftxui::ComponentBase
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     file_database_handle &mFileDb;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     options &mValue;
 
     ftxui::Component mFileSelection;
@@ -57,8 +59,7 @@ public:
         UpdateFileSelection();
         Add(ftxui::Container::Vertical({
                 ftxui::Renderer(mFileSelection,
-                                [this]
-                                {
+                                [this] {
                                     return ftxui::window(
                                             ftxui::text("enabled sinks"),
                                             mFileSelection->Render());
@@ -129,7 +130,9 @@ private:
 
 class LogDisplayComponent : public ftxui::ComponentBase
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     file_database_handle &mFileDb;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     options &mOptions;
 
     boost::unordered_map<std::string, record_container> mClosedContainers;
@@ -276,8 +279,8 @@ public:
         }
 
         return ftxui::vbox({mTabToggle->Render(), ftxui::separator(), detail})
-             | color(current_theme.text_02)
-             | bgcolor(current_theme.ui_background);
+               | color(current_theme.text_02)
+               | bgcolor(current_theme.ui_background);
     }
 };
 

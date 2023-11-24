@@ -12,6 +12,7 @@ Checks: >
   clang-diagnostic-*,
   cppcoreguidelines-*,
     -cppcoreguidelines-avoid-c-arrays,
+    -cppcoreguidelines-avoid-do-while,
     -cppcoreguidelines-special-member-functions,
   modernize-*,
     -modernize-avoid-c-arrays,

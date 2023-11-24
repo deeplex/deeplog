@@ -83,8 +83,7 @@ TEST_CASE("mpsc_bus can be filled and drained")
     msgId = 0;
 
     auto consumeRx = bufferbus.consume_messages(
-            [&](std::span<dlog::bytes const> const &msgs) noexcept
-            {
+            [&](std::span<dlog::bytes const> const &msgs) noexcept {
                 for (auto const msg : msgs)
                 {
                     dp::memory_input_stream msgStream(msg);
@@ -192,9 +191,9 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained")
     for (unsigned i = 0U; i < concurrency; ++i)
     {
         auto *rx = &threadResults.emplace_back(outcome::success());
-        threads.emplace_back(
-                [&bufferbus, rx]
-                { *rx = fill_mpsc_bus(bufferbus, msgsPerThread); });
+        threads.emplace_back([&bufferbus, rx] {
+            *rx = fill_mpsc_bus(bufferbus, msgsPerThread);
+        });
     }
 
     std::vector<std::uint8_t> poppedIds(msgsPerThread, std::uint8_t{});

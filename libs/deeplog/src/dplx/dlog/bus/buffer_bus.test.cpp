@@ -63,8 +63,7 @@ TEST_CASE("bufferbus buffers messages and outputs them afterwards")
     msgId = 0;
 
     auto consumeRx = bufferbus.consume_messages(
-            [&](std::span<dlog::bytes const> const &msgs) noexcept
-            {
+            [&](std::span<dlog::bytes const> const &msgs) noexcept {
                 for (auto const msg : msgs)
                 {
                     dp::memory_input_stream msgStream(msg);

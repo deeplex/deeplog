@@ -208,6 +208,7 @@ inline auto bufferbus(llfio::mapped_file_handle &&backingFile,
 template <>
 struct dplx::make<dplx::dlog::bufferbus_handle>
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dlog::llfio::path_handle const &base;
     dlog::llfio::path_view path;
     unsigned int buffer_size;

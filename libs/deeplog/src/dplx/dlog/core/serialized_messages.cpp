@@ -136,10 +136,10 @@ void multicast_messages(
         std::span<serialized_message_info> const parses) noexcept
 {
     auto begin = sinks.begin();
-    auto newEnd
-            = std::partition(begin, sinks.end(),
-                             [parses, binarySize](auto &sink)
-                             { return sink->try_consume(binarySize, parses); });
+    auto newEnd = std::partition(
+            begin, sinks.end(), [parses, binarySize](auto &sink) {
+                return sink->try_consume(binarySize, parses);
+            });
 
     sinks = std::span<std::unique_ptr<sink_frontend_base>>(begin, newEnd);
 }

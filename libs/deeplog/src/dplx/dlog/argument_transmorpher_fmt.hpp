@@ -85,8 +85,9 @@ public:
         if (auto parseRx = dp::parse_array_finite(
                     ctx, store,
                     [this](parse_context &lctx, dynamic_arg_store &lstore,
-                           std::size_t const) noexcept
-                    { return decode_arg(lctx, lstore); });
+                           std::size_t const) noexcept {
+                        return decode_arg(lctx, lstore);
+                    });
             parseRx.has_failure())
         {
             return std::move(parseRx).as_failure();

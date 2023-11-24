@@ -89,11 +89,11 @@ public:
 
     template <typename... Attrs>
         requires(... && attribute<Attrs>)
-    static auto open(
-            std::string_view name,
-            Attrs const &...attrs,
-            span_kind kind
-            = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
+    static auto
+    open(std::string_view name,
+         Attrs const &...attrs,
+         span_kind kind
+         = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
             -> span_scope
     {
         return do_open(
@@ -102,12 +102,12 @@ public:
     }
     template <typename... Attrs>
         requires(... && attribute<Attrs>)
-    static auto open(
-            std::string_view name,
-            span_context parent,
-            Attrs const &...attrs,
-            span_kind kind
-            = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
+    static auto
+    open(std::string_view name,
+         span_context parent,
+         Attrs const &...attrs,
+         span_kind kind
+         = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
             -> span_scope
     {
         return do_open(
@@ -116,12 +116,12 @@ public:
     }
     template <typename... Attrs>
         requires(... && attribute<Attrs>)
-    static auto open(
-            log_context &ctx,
-            std::string_view name,
-            Attrs const &...attrs,
-            span_kind kind
-            = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
+    static auto
+    open(log_context &ctx,
+         std::string_view name,
+         Attrs const &...attrs,
+         span_kind kind
+         = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
             -> span_scope
     {
         return do_open(
@@ -130,13 +130,13 @@ public:
     }
     template <typename... Attrs>
         requires(... && attribute<Attrs>)
-    static auto open(
-            log_context &ctx,
-            std::string_view name,
-            span_context parent,
-            Attrs const &...attrs,
-            span_kind kind
-            = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
+    static auto
+    open(log_context &ctx,
+         std::string_view name,
+         span_context parent,
+         Attrs const &...attrs,
+         span_kind kind
+         = span_kind::internal DPLX_DLOG_DETAIL_ATTR_FUNCTION_DEF) noexcept
             -> span_scope
     {
         return do_open(

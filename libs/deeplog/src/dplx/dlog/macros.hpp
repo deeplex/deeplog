@@ -43,7 +43,8 @@
             (void)::dplx::dlog::log(_dlog_materialized_temporary_, (severity), \
                                     (message), DPLX_DLOG_LOCATION,             \
                                     __VA_ARGS__);                              \
-    } while (0)
+    }                                                                          \
+    while (0)
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 #define DLOG_(severityName, message, ...)                                      \
@@ -61,7 +62,8 @@
             (void)::dplx::dlog::log(                                           \
                     _dlog_materialized_temporary_, (severity), (message),      \
                     DPLX_DLOG_LOCATION __VA_OPT__(, __VA_ARGS__));             \
-    } while (0)
+    }                                                                          \
+    while (0)
 
 #if !DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 #define DLOG_(severityName, message, ...)                                      \

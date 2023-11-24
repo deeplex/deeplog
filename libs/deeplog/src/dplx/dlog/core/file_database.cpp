@@ -226,14 +226,15 @@ auto file_database_handle::fetch_content_impl() noexcept -> result<void>
     {
         mContents.revision += 1;
     }
-    std::ranges::sort(mContents.record_containers, std::less<void>{},
-                      [](record_container_meta const &self)
-                      { return self.rotation; });
-    std::erase_if(mContents.message_buses, [](message_bus_meta const &self)
-                  { return self.rotation == 0; });
-    std::ranges::sort(mContents.message_buses, std::less<void>{},
-                      [](message_bus_meta const &self)
-                      { return self.rotation; });
+    std::ranges::sort(
+            mContents.record_containers, std::less<void>{},
+            [](record_container_meta const &self) { return self.rotation; });
+    std::erase_if(mContents.message_buses, [](message_bus_meta const &self) {
+        return self.rotation == 0;
+    });
+    std::ranges::sort(
+            mContents.message_buses, std::less<void>{},
+            [](message_bus_meta const &self) { return self.rotation; });
     return outcome::success();
 }
 
@@ -258,8 +259,8 @@ auto file_database_handle::create_record_container(
     auto const lastRotation = std::ranges::max(contents.record_containers, {},
                                                [sinkId](auto const &rcm) {
                                                    return rcm.sink_id == sinkId
-                                                                ? rcm.rotation
-                                                                : 0U;
+                                                                  ? rcm.rotation
+                                                                  : 0U;
                                                })
                                       .rotation;
     meta.rotation = lastRotation + 1;
@@ -297,7 +298,8 @@ auto file_database_handle::create_record_container(
         {
             return std::move(openRx).as_failure();
         }
-    } while (!file.is_valid());
+    }
+    while (!file.is_valid());
 
     if (auto retireRx = retire_to_storage(contents); retireRx.has_failure())
     {
@@ -325,8 +327,9 @@ auto file_database_handle::update_record_container_size(file_sink_id which,
 
     if (auto const it = std::ranges::find_if(
                 contents.record_containers,
-                [which, rotation](record_container_meta const &meta)
-                { return meta.sink_id == which && meta.rotation == rotation; });
+                [which, rotation](record_container_meta const &meta) {
+                    return meta.sink_id == which && meta.rotation == rotation;
+                });
         it != contents.record_containers.end())
     {
         it->byte_size = newSize;
@@ -346,80 +349,10 @@ auto file_database_handle::prune_record_containers(
                 predicate) -> result<void>
 {
     using file_handle = llfio::file_handle;
-    return transform(
-            [&](contents_t &contents) -> result<void>
-            {
-                std::erase_if(
-                        contents.record_containers,
-                        [&](record_container_meta &containerMeta)
-                        {
-                            file_handle container;
-                            if (auto openRx = llfio::file(
-                                        mRootDirHandle, containerMeta.path,
-                                        file_handle::mode::write);
-                                openRx.has_value())
-                            {
-                                container = std::move(openRx).assume_value();
-                            }
-                            else if (openRx.assume_error()
-                                     == system_error::errc::
-                                             no_such_file_or_directory)
-                            {
-                                return true;
-                            }
-                            else
-                            {
-                                return false;
-                            }
-                            llfio::unique_file_lock containerLock{
-                                    container, llfio::lock_kind::unlocked};
-                            if (!containerLock.try_lock())
-                            {
-                                return false;
-                            }
-                            sanitize_container_byte_size(container,
-                                                         containerMeta);
-
-                            auto predicateResult
-                                    = predicate(container, containerMeta);
-                            if (!container.is_valid())
-                            {
-                                containerLock.release();
-                                return true;
-                            }
-                            auto pruneCandidate
-                                    = predicateResult.has_value()
-                                   && predicateResult.assume_value();
-                            if (pruneCandidate)
-                            {
-                                containerLock.unlock();
-                                (void)container.unlink();
-                            }
-                            return pruneCandidate;
-                        });
-                return outcome::success();
-            });
-}
-
-auto file_database_handle::prune_record_containers(
-        file_database_limits const limits) -> result<void>
-{
-    using file_handle = llfio::file_handle;
-    return transform(
-            [&](contents_t &contents) -> result<void>
-            {
-                auto const pageSize = llfio::utils::page_size();
-                std::uint32_t numFiles = 0;
-                std::uint64_t accumulatedSize = 0;
-                // clang-14 and -15 can't grok `ranges::reverse_view`,
-                // so reverse iteration isn't really possible with ranged for.
-                // NOLINTNEXTLINE(modernize-loop-convert)
-                for (auto it = contents.record_containers.rbegin(),
-                          end = contents.record_containers.rend();
-                     it != end; ++it)
-                {
-                    record_container_meta &containerMeta = *it;
-
+    return transform([&](contents_t &contents) -> result<void> {
+        std::erase_if(
+                contents.record_containers,
+                [&](record_container_meta &containerMeta) {
                     file_handle container;
                     if (auto openRx
                         = llfio::file(mRootDirHandle, containerMeta.path,
@@ -428,43 +361,104 @@ auto file_database_handle::prune_record_containers(
                     {
                         container = std::move(openRx).assume_value();
                     }
+                    else if (openRx.assume_error()
+                             == system_error::errc::no_such_file_or_directory)
+                    {
+                        return true;
+                    }
                     else
                     {
-                        if (openRx.assume_error()
-                            == system_error::errc::no_such_file_or_directory)
-                        {
-                            containerMeta = {};
-                        }
-                        continue;
+                        return false;
                     }
                     llfio::unique_file_lock containerLock{
                             container, llfio::lock_kind::unlocked};
                     if (!containerLock.try_lock())
                     {
-                        continue;
+                        return false;
                     }
+                    sanitize_container_byte_size(container, containerMeta);
 
-                    if (numFiles > limits.max_files_to_keep
-                        || accumulatedSize >= limits.global_size_limit)
+                    auto predicateResult = predicate(container, containerMeta);
+                    if (!container.is_valid())
+                    {
+                        containerLock.release();
+                        return true;
+                    }
+                    auto pruneCandidate = predicateResult.has_value()
+                                          && predicateResult.assume_value();
+                    if (pruneCandidate)
                     {
                         containerLock.unlock();
                         (void)container.unlink();
-                        containerMeta = {};
                     }
-                    else
-                    {
-                        sanitize_container_byte_size(container, containerMeta);
-                        numFiles += 1;
-                        accumulatedSize += cncr::round_up_p2(
-                                containerMeta.byte_size, pageSize);
-                    }
-                }
+                    return pruneCandidate;
+                });
+        return outcome::success();
+    });
+}
 
-                std::erase_if(contents.record_containers,
-                              [](record_container_meta const &meta)
-                              { return meta.path.empty(); });
-                return outcome::success();
-            });
+auto file_database_handle::prune_record_containers(
+        file_database_limits const limits) -> result<void>
+{
+    using file_handle = llfio::file_handle;
+    return transform([&](contents_t &contents) -> result<void> {
+        auto const pageSize = llfio::utils::page_size();
+        std::uint32_t numFiles = 0;
+        std::uint64_t accumulatedSize = 0;
+        // clang-14 and -15 can't grok `ranges::reverse_view`,
+        // so reverse iteration isn't really possible with ranged for.
+        // NOLINTNEXTLINE(modernize-loop-convert)
+        for (auto it = contents.record_containers.rbegin(),
+                  end = contents.record_containers.rend();
+             it != end; ++it)
+        {
+            record_container_meta &containerMeta = *it;
+
+            file_handle container;
+            if (auto openRx = llfio::file(mRootDirHandle, containerMeta.path,
+                                          file_handle::mode::write);
+                openRx.has_value())
+            {
+                container = std::move(openRx).assume_value();
+            }
+            else
+            {
+                if (openRx.assume_error()
+                    == system_error::errc::no_such_file_or_directory)
+                {
+                    containerMeta = {};
+                }
+                continue;
+            }
+            llfio::unique_file_lock containerLock{container,
+                                                  llfio::lock_kind::unlocked};
+            if (!containerLock.try_lock())
+            {
+                continue;
+            }
+
+            if (numFiles > limits.max_files_to_keep
+                || accumulatedSize >= limits.global_size_limit)
+            {
+                containerLock.unlock();
+                (void)container.unlink();
+                containerMeta = {};
+            }
+            else
+            {
+                sanitize_container_byte_size(container, containerMeta);
+                numFiles += 1;
+                accumulatedSize
+                        += cncr::round_up_p2(containerMeta.byte_size, pageSize);
+            }
+        }
+
+        std::erase_if(contents.record_containers,
+                      [](record_container_meta const &meta) {
+                          return meta.path.empty();
+                      });
+        return outcome::success();
+    });
 }
 
 auto file_database_handle::open_record_container(
@@ -546,7 +540,8 @@ auto file_database_handle::create_message_bus(
         {
             return std::move(openRx).as_failure();
         }
-    } while (!file.is_valid());
+    }
+    while (!file.is_valid());
 
     if (auto retireRx = retire_to_storage(contents); retireRx.has_failure())
     {
@@ -571,8 +566,10 @@ auto file_database_handle::remove_message_bus(std::string_view id,
     auto contents = mContents;
     contents.revision += 1;
 
-    if (std::erase_if(contents.message_buses, [id, rotation](auto const &mbm)
-                      { return mbm.id == id && mbm.rotation == rotation; })
+    if (std::erase_if(contents.message_buses,
+                      [id, rotation](auto const &mbm) {
+                          return mbm.id == id && mbm.rotation == rotation;
+                      })
         == 0)
     {
         return errc::unknown_message_bus;
@@ -597,9 +594,8 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
 
     auto contents = mContents;
     auto eraseBusEntry
-            = [this,
-               &contents](message_bus_meta &candidate) noexcept -> result<void>
-    {
+            = [this, &contents](
+                      message_bus_meta &candidate) noexcept -> result<void> {
         contents.revision += 1;
         candidate.rotation = 0U;
         return retire_to_storage(contents);
@@ -632,8 +628,7 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
         {
             continue;
         }
-        scope_exit unlockBus = [&handle, &busLock]
-        {
+        scope_exit unlockBus = [&handle, &busLock] {
             if (!handle.is_valid())
             {
                 busLock.release();
@@ -648,8 +643,7 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
                 .sink_id = file_sink_id::recovered,
                 .rotation = 0U,
         });
-        scope_guard containerRollback = [&rollback, &contents]
-        {
+        scope_guard containerRollback = [&rollback, &contents] {
             if (rollback)
             {
                 contents.record_containers.pop_back();
@@ -681,9 +675,8 @@ auto file_database_handle::prune_message_buses(llfio::deadline deadline)
         auto rollbackRecoveryFileHandle = openRecoverySinkRx.assume_value()
                                                   .backend()
                                                   .clone_backing_file_handle();
-        scope_guard rollbackSinkFileCreation
-                = [&rollback, &rollbackRecoveryFileHandle]
-        {
+        scope_guard rollbackSinkFileCreation = [&rollback,
+                                                &rollbackRecoveryFileHandle] {
             if (rollback && rollbackRecoveryFileHandle.has_value())
             {
                 (void)rollbackRecoveryFileHandle.assume_value().unlink();
@@ -773,11 +766,9 @@ auto file_database_handle::next_rotation(record_containers_type const &vs,
         -> std::uint32_t
 {
 
-    return 1U
-         + std::ranges::max(vs, {},
-                            [sinkId](auto const &v)
-                            { return v.sink_id == sinkId ? v.rotation : 0U; })
-                   .rotation;
+    return 1U + std::ranges::max(vs, {}, [sinkId](auto const &v) {
+                    return v.sink_id == sinkId ? v.rotation : 0U;
+                }).rotation;
 }
 
 void file_database_handle::unlink_all_message_buses_impl() noexcept

@@ -17,6 +17,7 @@ namespace
 
 struct copy_message_fn
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dp::output_buffer &out;
     severity threshold;
 

@@ -43,14 +43,14 @@ inline auto item_size_of_any_attribute(dp::emit_context &ctx,
 #define DPLX_X(name, type, var)                                                \
     case name:                                                                 \
         return dp::encoded_size_of(ctx, attributeId)                           \
-             + dp::encoded_size_of(ctx, value.var);                            \
+               + dp::encoded_size_of(ctx, value.var);                          \
         break;
 #include <dplx/dlog/detail/x_poly_types.inl>
 #undef DPLX_X
     case thunk:
         return dp::encoded_size_of(ctx, attributeId)
-             + value.thunk.func(value.thunk.self, size_of_raw, ctx)
-                       .assume_value();
+               + value.thunk.func(value.thunk.self, size_of_raw, ctx)
+                         .assume_value();
         break;
     case LIMIT:
     default:
@@ -75,8 +75,7 @@ inline auto encode_any_attribute(dp::emit_context &ctx,
     case null:
         break;
 #define DPLX_X(name, type, var)                                                \
-    case name:                                                                 \
-    {                                                                          \
+    case name: {                                                               \
         DPLX_TRY(dp::encode(ctx, attributeId));                                \
         DPLX_TRY(dp::encode(ctx, value.var));                                  \
         break;                                                                 \
@@ -147,7 +146,7 @@ auto dplx::dp::codec<dplx::dlog::detail::attribute_args>::size_of(
         emit_context &ctx, value_type const &attrs) noexcept -> std::uint64_t
 {
     return dp::encoded_item_head_size<type_code::map>(attrs.num_attributes)
-         + dlog::detail::encoded_size_of_attributes(ctx, attrs);
+           + dlog::detail::encoded_size_of_attributes(ctx, attrs);
 }
 auto dplx::dp::codec<dplx::dlog::detail::attribute_args>::encode(
         emit_context &ctx, value_type const &attrs) noexcept -> result<void>

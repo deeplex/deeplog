@@ -26,14 +26,19 @@
 namespace dplx::dlog::detail
 {
 
+struct transparent_string_hash : private boost::hash<std::string_view>
+{
+    using is_transparent = int;
+    using is_avalanching = int;
+
+    inline auto operator()(std::string_view value) const noexcept -> std::size_t
+    {
+        return boost::hash<std::string_view>::operator()(value);
+    }
+};
+
 class log_fabric_base : public log_record_port
 {
-protected:
-    struct transparent_string_hash : boost::hash<std::string_view>
-    {
-        using is_transparent = int;
-    };
-
 public:
     using scope_threshold_map
             = boost::unordered_flat_map<std::string,

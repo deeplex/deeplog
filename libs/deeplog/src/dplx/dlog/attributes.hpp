@@ -30,6 +30,7 @@ struct basic_attribute_ref
     static constexpr std::u8string_view otlp_id{OtlpId.data(), OtlpId.size()};
 
     using type = T;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     type const &value;
 };
 template <resource_id Id, dp::fixed_u8string OtlpId, typename T>
@@ -73,15 +74,14 @@ struct basic_attribute_ref<Id,
 };
 
 template <typename T>
-concept attribute
-        = requires {
-              typename T;
-              typename T::type;
-              requires loggable<typename T::type>;
-              T::id;
-              requires std::is_same_v<resource_id const, decltype(T::id)>;
-              typename std::integral_constant<resource_id, T::id>;
-          };
+concept attribute = requires {
+    typename T;
+    typename T::type;
+    requires loggable<typename T::type>;
+    T::id;
+    requires std::is_same_v<resource_id const, decltype(T::id)>;
+    typename std::integral_constant<resource_id, T::id>;
+};
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
 namespace attr
@@ -152,8 +152,11 @@ class stack_attribute_args : public attribute_args
     static_assert(sizeof...(Args) <= UINT_LEAST16_MAX);
 
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::any_loggable_ref_storage const values[sizeof...(Args)];
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     detail::any_loggable_ref_storage_id const types[sizeof...(Args)];
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     resource_id const rids[sizeof...(Args)];
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

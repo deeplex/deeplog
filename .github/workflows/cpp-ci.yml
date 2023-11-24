@@ -17,13 +17,21 @@ jobs:
         os: [ubuntu-22.04, windows-2022]
         compiler: [gcc, clang, msvc]
         exclude:
-          - os: windows-2022
-            compiler: gcc
           - os: ubuntu-22.04
             compiler: msvc
+          - os: windows-2022
+            compiler: gcc
         include:
           - os: ubuntu-22.04
             triplet: x64-linux
+          - os: ubuntu-22.04
+            triplet: x64-linux
+            compiler: clang
+            install: |
+              sudo cp tools/llvm-snapshot.gpg.key.asc /etc/apt/trusted.gpg.d/llvm-snapshot.asc
+              sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
+              sudo apt-get -qq update
+              sudo apt-get -qq -y install clang-16
           - os: windows-2022
             triplet: x64-windows
 
@@ -33,17 +41,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install required packages / compilers
+        if: ${{ matrix.install }}
+        run: ${{ matrix.install }}
+
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: 3.22.6
 
       - name: Initialize vcpkg
-        uses: lukka/run-vcpkg@v10
+        uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace }}/build/vcpkg
-          vcpkgGitCommitId: f6a5d4e8eb7476b8d7fc12a56dff300c1c986131
-          prependedCacheKey: compiler=${{ matrix.compiler }}
-          #appendedCacheKey: r00
+          vcpkgGitCommitId: a42af01b72c28a8e1d7b48107b33e4f286a55ef6
 
       - name: Build ${{ matrix.triplet }}-${{ matrix.compiler }} preset
         uses: lukka/run-cmake@v10
@@ -79,24 +89,22 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: "Install clang-tools-15"
+      - name: "Install clang-tools-16"
         run: |
           sudo cp ${{ github.workspace }}/tools/llvm-snapshot.gpg.key.asc /etc/apt/trusted.gpg.d/llvm-snapshot.asc
-          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
+          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
           sudo apt-get -qq update
-          sudo apt-get -qq -y install clang-15 clang-tidy-15 clang-format-15
+          sudo apt-get -qq -y install clang-16 clang-tidy-16 clang-format-16
 
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: 3.22.6
 
       - name: Initialize vcpkg
-        uses: lukka/run-vcpkg@v10
+        uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace }}/../vcpkg
-          vcpkgGitCommitId: f6a5d4e8eb7476b8d7fc12a56dff300c1c986131
-          prependedCacheKey: compiler=clang-15
-          #appendedCacheKey: r00
+          vcpkgGitCommitId: a42af01b72c28a8e1d7b48107b33e4f286a55ef6
 
       - name: Configure x64-linux-clang preset
         uses: lukka/run-cmake@v10
@@ -109,7 +117,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          version: 15.0.7
+          version: 16.0.6
           style: file # use .clang-format settings
           tidy-checks: '' # use .clang-tidy settings
           extensions: cpp,hpp

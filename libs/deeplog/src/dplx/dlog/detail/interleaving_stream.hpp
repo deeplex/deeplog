@@ -44,7 +44,7 @@ protected:
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
         return (idx < 5U ? (twodd) << idx
                          : (two << 4) * (idx - 3U) + (uodd << 4))
-             * page_size;
+               * page_size;
     }
     static constexpr auto index_to_file_size(unsigned idx) noexcept
             -> std::uint64_t
@@ -60,7 +60,7 @@ protected:
 
     static constexpr std::uint64_t max_stream_size
             = static_cast<std::uint64_t>(std::numeric_limits<unsigned>::max())
-            * page_size;
+              * page_size;
 };
 
 class interleaving_input_stream_handle final

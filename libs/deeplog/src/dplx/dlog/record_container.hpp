@@ -59,6 +59,7 @@ template <>
 class basic_decoder<dlog::record> // TODO: transform into a codec
 {
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dlog::argument_transmorpher &parse_arguments;
 
     auto operator()(parse_context &ctx, dlog::record &value) -> result<void>
@@ -154,6 +155,7 @@ class basic_decoder<dlog::record_container> // TODO: transform into a codec
     using container = std::pmr::vector<dlog::record>;
 
 public:
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     basic_decoder<dlog::record> &record_decoder;
 
     auto operator()(parse_context &ctx, dlog::record_container &value)
@@ -175,10 +177,12 @@ public:
 
         DPLX_TRY(dp::parse_array(ctx, value.records,
                                  [this](parse_context &lctx, container &records,
-                                        std::size_t const) noexcept
-                                 { return parse_item(lctx, records); }));
-        std::erase_if(value.records, [](dlog::record const &r)
-                      { return r.severity == dlog::severity::none; });
+                                        std::size_t const) noexcept {
+                                     return parse_item(lctx, records);
+                                 }));
+        std::erase_if(value.records, [](dlog::record const &r) {
+            return r.severity == dlog::severity::none;
+        });
 
         return outcome::success();
     }

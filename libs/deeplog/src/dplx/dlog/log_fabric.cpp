@@ -59,8 +59,9 @@ auto log_fabric_base::destroy_sink(sink_frontend_base *which) noexcept
 
 void log_fabric_base::remove_sink(sink_frontend_base *const which) noexcept
 {
-    std::erase_if(mSinks, [which](sink_owner const &ptr)
-                  { return which == ptr.get(); });
+    std::erase_if(mSinks, [which](sink_owner const &ptr) {
+        return which == ptr.get();
+    });
 }
 
 auto log_fabric_base::release_sink(sink_frontend_base *const which) noexcept

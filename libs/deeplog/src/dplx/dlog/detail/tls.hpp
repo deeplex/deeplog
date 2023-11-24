@@ -52,7 +52,7 @@ extern thread_local constinit log_context active_context_;
 
 #endif // ^^^ no workaround ^^^
 
-#else // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
+#else  // ^^^ workaround WINDOWS_AVAILABLE / no workaround vvv
 
 // active_context_ is defined in log_context.hpp
 #define DPLX_DLOG_INTERNAL_ACTIVE_CONTEXT ::dplx::dlog::detail::active_context_

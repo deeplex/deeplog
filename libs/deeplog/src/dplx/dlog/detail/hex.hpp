@@ -25,7 +25,7 @@ struct in_out_result
 
     template <class I2, class O2>
         requires std::convertible_to<I const &, I2>
-              && std::convertible_to<O const &, O2>
+                 && std::convertible_to<O const &, O2>
     constexpr operator in_out_result<I2, O2>() const &
     {
         return {in, out};
@@ -62,10 +62,10 @@ constexpr auto hex_digit_of_nibble(unsigned nibble) noexcept -> char
 
 template <std::input_iterator I, std::sentinel_for<I> S, typename O>
     requires std::same_as<std::iter_value_t<I>, char>
-          && (std::output_iterator<O, std::byte>
-              || std::output_iterator<O, std::uint8_t>)
-             constexpr auto hex_decode(I first, S last, O result) noexcept
-             -> in_out_result<I, O>
+             && (std::output_iterator<O, std::byte>
+                 || std::output_iterator<O, std::uint8_t>)
+constexpr auto hex_decode(I first, S last, O result) noexcept
+        -> in_out_result<I, O>
 {
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 

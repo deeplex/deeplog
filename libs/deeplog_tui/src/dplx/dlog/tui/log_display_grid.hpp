@@ -31,13 +31,16 @@ struct severity_info
 
 class LogDisplayGridComponent final : public ftxui::ComponentBase
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     std::vector<record *> &mRecords;
     std::size_t mSelected;
     std::size_t mLastLines;
     ftxui::Box mDisplayBox;
     ftxui::Box mSelectedRowBox;
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     log_clock::epoch_info &mDisplayEpoch;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     theme const &mCurrentTheme;
 
     std::vector<severity_info> mSeverities;

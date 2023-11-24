@@ -64,6 +64,7 @@ private:
 template <>
 struct dplx::make<dplx::dlog::file_sink_backend>
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dlog::llfio::path_handle const &base;
     dlog::llfio::path_view path;
     std::size_t target_buffer_size;
@@ -162,6 +163,7 @@ template <>
 struct dplx::make<dplx::dlog::db_file_sink_backend>
 {
     std::uint64_t max_file_size;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     dlog::file_database_handle const &database;
     std::string_view file_name_pattern;
     std::size_t target_buffer_size;

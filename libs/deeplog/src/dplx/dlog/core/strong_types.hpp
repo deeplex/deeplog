@@ -141,7 +141,7 @@ struct hash<dplx::dlog::trace_id>
         else if constexpr (sizeof(std::size_t) == sizeof(std::uint32_t))
         {
             return value._state[0] ^ value._state[1] ^ value._state[2]
-                 ^ value._state[3];
+                   ^ value._state[3];
         }
         else
         {
@@ -317,9 +317,9 @@ public:
             -> std::uint64_t
     {
         return spanCtx == dlog::span_context{}
-                     ? 1U
-                     : 1U + codec<dlog::trace_id>::size_of(ctx, {})
-                               + codec<dlog::span_id>::size_of(ctx, {});
+                       ? 1U
+                       : 1U + codec<dlog::trace_id>::size_of(ctx, {})
+                                 + codec<dlog::span_id>::size_of(ctx, {});
     }
     static auto encode(emit_context &ctx, dlog::span_context spanCtx) noexcept
             -> result<void>;

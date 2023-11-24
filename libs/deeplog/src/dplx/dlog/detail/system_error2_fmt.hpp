@@ -38,7 +38,7 @@ public:
 
 SYSTEM_ERROR2_NAMESPACE_END
 
-#if __cpp_lib_format >= 202106L
+#if __cpp_lib_format >= 202'106L
 #include <format>
 
 SYSTEM_ERROR2_NAMESPACE_BEGIN

@@ -79,9 +79,9 @@ enum class erased_loggable_thunk_mode
     encode_raw,
 };
 using erased_loggable_thunk_ptr
-        = auto(*)(void const *self,
-                  erased_loggable_thunk_mode mode,
-                  dp::emit_context &ctx) noexcept -> result<std::uint64_t>;
+        = auto (*)(void const *self,
+                   erased_loggable_thunk_mode mode,
+                   dp::emit_context &ctx) noexcept -> result<std::uint64_t>;
 
 struct erased_loggable_ref
 {
@@ -117,7 +117,7 @@ private:
         {
         case size_of:
             return 1U + dp::encoded_size_of(ctx, effective_reification_tag_v<T>)
-                 + dp::encoded_size_of(ctx, typedSelf);
+                   + dp::encoded_size_of(ctx, typedSelf);
 
         case size_of_raw:
             return dp::encoded_size_of(ctx, typedSelf);
@@ -283,9 +283,9 @@ inline constexpr any_loggable_ref_storage_id
         any_loggable_ref_storage_tag<system_error::system_code>
         = any_loggable_ref_storage_id::system_code;
 template <>
-inline constexpr any_loggable_ref_storage_id any_loggable_ref_storage_tag<
-        system_error::errored_status_code<system_error::erased<
-                typename system_error::system_code::value_type>>>
+inline constexpr any_loggable_ref_storage_id
+        any_loggable_ref_storage_tag<system_error::erased_errored_status_code<
+                typename system_error::system_code::value_type>>
         = any_loggable_ref_storage_id::system_code;
 
 #define DPLX_X_WITH_THUNK 1
