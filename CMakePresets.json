@@ -157,11 +157,13 @@
             }
         },
         {
-            "name": "x64-macos",
-            "hidden": true,
-            "inherits": [ "base" ],
+            "name": "arm64-macos-clang",
+            "inherits": [
+                "base"
+            ],
             "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-osx"
+                "VCPKG_TARGET_TRIPLET": "arm64-macos-clang-16-brew",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/arm64-macos-clang-16-brew.cmake"
             },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
@@ -172,19 +174,20 @@
             }
         },
         {
-            "name": "x64-macos-clang",
-            "inherits": [ "x64-macos" ],
-            "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-osx-clang-16-brew",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-macos-clang-16-brew.cmake"
-            }
-        },
-        {
             "name": "x64-macos-gcc",
-            "inherits": [ "x64-macos" ],
+            "inherits": [
+                "base"
+            ],
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-osx-gcc-12",
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-macos-gcc-12.cmake"
+            },
+            "vendor": {
+                "microsoft.com/VisualStudioSettings/CMake/1.0": {
+                    "hostOS": [
+                        "macOS"
+                    ]
+                }
             }
         }
     ],
@@ -230,13 +233,13 @@
             "configuration": "RelWithDebInfo"
         },
         {
-            "name": "x64-macos-clang",
-            "configurePreset": "x64-macos-clang",
+            "name": "arm64-macos-clang",
+            "configurePreset": "arm64-macos-clang",
             "configuration": "Debug"
         },
         {
-            "name": "x64-macos-clang-release",
-            "inherits": "x64-macos-clang",
+            "name": "arm64-macos-clang-release",
+            "inherits": "arm64-macos-clang",
             "configuration": "RelWithDebInfo"
         },
         {
@@ -301,13 +304,13 @@
             "configuration": "RelWithDebInfo"
         },
         {
-            "name": "x64-macos-clang",
-            "configurePreset": "x64-macos-clang",
+            "name": "arm64-macos-clang",
+            "configurePreset": "arm64-macos-clang",
             "configuration": "Debug"
         },
         {
-            "name": "x64-macos-clang-release",
-            "inherits": "x64-macos-clang",
+            "name": "arm64-macos-clang-release",
+            "inherits": "arm64-macos-clang",
             "configuration": "RelWithDebInfo"
         },
         {
