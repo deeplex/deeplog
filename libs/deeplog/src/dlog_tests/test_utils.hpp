@@ -66,6 +66,21 @@ struct Catch::StringMaker<dplx::result<T>>
     }
 };
 
+template <typename T>
+struct Catch::StringMaker<dplx::result<T>>
+{
+    static auto convert(dplx::result<T> const &rx) -> std::string
+    {
+        using namespace std::string_literals;
+        if (rx.has_value())
+        {
+            return "{{rx: ?}}"s;
+        }
+
+        return dlog_tests::detail::format_error(rx.assume_error());
+    }
+};
+
 template <>
 struct Catch::StringMaker<dplx::result<void>>
 {

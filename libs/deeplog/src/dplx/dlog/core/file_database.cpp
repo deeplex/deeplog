@@ -882,7 +882,7 @@ auto file_database_handle::retire_to_storage(
                      mRootHandle, contents.revision & 0b01));
 
     DPLX_TRY(dp::encode(outStream, contents));
-    return outcome::success();
+    return outStream.finalize();
 }
 
 void file_database_handle::sanitize_container_byte_size(
