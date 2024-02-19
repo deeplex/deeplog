@@ -221,6 +221,7 @@ public:
     {
         if (mDataSink != nullptr)
         {
+            (void)sync_output();
             (void)write_current_chunk();
         }
     }
@@ -345,7 +346,9 @@ public:
             return errc::bad;
         }
 
+        DPLX_TRY(sync_output());
         DPLX_TRY(write_current_chunk());
+        reset();
         mDataSink = nullptr;
         return outcome::success();
     }
