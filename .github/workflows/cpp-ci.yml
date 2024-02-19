@@ -53,7 +53,6 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace }}/build/vcpkg
-          vcpkgGitCommitId: a42af01b72c28a8e1d7b48107b33e4f286a55ef6
 
       - name: Build ${{ matrix.triplet }}-${{ matrix.compiler }} preset
         uses: lukka/run-cmake@v10
@@ -74,12 +73,6 @@ jobs:
         env:
           CC: ''
           CXX: ''
-
-      - name: Prevent uploading a corrupted vcpkg cache
-        if: ${{ failure() || cancelled() }}
-        run: |
-          echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
-        shell: bash
 
 
   check-format:
@@ -104,7 +97,6 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace }}/../vcpkg
-          vcpkgGitCommitId: a42af01b72c28a8e1d7b48107b33e4f286a55ef6
 
       - name: Configure x64-linux-clang preset
         uses: lukka/run-cmake@v10
@@ -128,8 +120,3 @@ jobs:
       - name: Fail if issues have been raised
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
-
-      - if: ${{ failure() || cancelled() }}
-        run: |
-          echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
-        shell: bash

@@ -19,7 +19,7 @@ target_compile_definitions(deeplog
     PRIVATE DPLX_DLOG_BUILDING
 )
 if (BUILD_SHARED_LIBS)
-    target_compile_definitions(deeplog 
+    target_compile_definitions(deeplog
         PUBLIC DPLX_DLOG_DYNAMIC
         PRIVATE DPLX_DLOG_DYNAMIC_EXPORTS
     )
@@ -133,8 +133,8 @@ dplx_target_sources(deeplog
         dlog/source/record_output_buffer.hpp
 )
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail)
-configure_file(../../tools/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail/config.hpp @ONLY)
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail")
+configure_file(../../tools/config.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail/config.hpp" @ONLY)
 target_sources(deeplog PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated/src/dplx/dlog/detail/config.hpp>)
 
 if (BUILD_TESTING)
