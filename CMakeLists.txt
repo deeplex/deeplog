@@ -10,7 +10,7 @@
 #     http://creativecommons.org/publicdomain/zero/1.0/
 #
 ########################################################################
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.23...4.0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake/")
 
 ########################################################################

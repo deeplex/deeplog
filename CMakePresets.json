@@ -18,6 +18,7 @@
                 "DPLX_DLOG_USE_SOURCE_LOCATION": true,
                 "WARNINGS_AS_ERRORS": true,
                 "CMAKE_DEBUG_POSTFIX": "-dbg",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/zinstall"
             }
         },
@@ -35,8 +36,7 @@
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static"
             },
-            "environment": {
-            },
+            "environment": {},
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
                     "hostOS": [
@@ -53,6 +53,12 @@
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER": "cl"
             }
+        },
+        {
+            "name": "x64-windows-msvc-ci",
+            "inherits": [
+                "x64-windows-msvc"
+            ]
         },
         {
             "name": "x64-windows-msvc-lto",
@@ -88,6 +94,12 @@
                     "enableClangTidyCodeAnalysis": true
                 }
             }
+        },
+        {
+            "name": "x64-windows-clang-ci",
+            "inherits": [
+                "x64-windows-clang"
+            ]
         },
         {
             "name": "x64-linux",
@@ -129,21 +141,41 @@
                 "x64-linux"
             ],
             "cacheVariables": {
-                "DPLX_DLOG_USE_SOURCE_LOCATION": false,
-                "VCPKG_TARGET_TRIPLET": "x64-linux-clang-16",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-clang-16.cmake"
+                "VCPKG_TARGET_TRIPLET": "x64-linux-clang",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-clang.cmake"
             }
         },
         {
-            "name": "x64-linux-ci-lint",
+            "name": "x64-linux-clang-19",
             "inherits": [
                 "x64-linux-clang"
             ],
             "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-linux-clang-16",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-clang-16.cmake",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": true
+                "VCPKG_TARGET_TRIPLET": "x64-linux-clang-19",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-clang-19.cmake"
             }
+        },
+        {
+            "name": "x64-linux-clang-20",
+            "inherits": [
+                "x64-linux-clang"
+            ],
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-linux-clang-20",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-clang-20.cmake"
+            }
+        },
+        {
+            "name": "x64-linux-clang-ci",
+            "inherits": [
+                "x64-linux-clang-19"
+            ]
+        },
+        {
+            "name": "x64-linux-ci-lint",
+            "inherits": [
+                "x64-linux-clang-20"
+            ]
         },
         {
             "name": "x64-linux-gcc",
@@ -151,10 +183,25 @@
                 "x64-linux"
             ],
             "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-gcc-12.cmake",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-gcc.cmake",
                 "CMAKE_CXX_FLAGS": "-fconcepts-diagnostics-depth=0 -ftemplate-backtrace-limit=0 -fsanitize=address,leak,undefined -g -fno-omit-frame-pointer",
                 "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,leak,undefined"
             }
+        },
+        {
+            "name": "x64-linux-gcc-12",
+            "inherits": [
+                "x64-linux-gcc"
+            ],
+            "cacheVariables": {
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-linux-gcc-12.cmake"
+            }
+        },
+        {
+            "name": "x64-linux-gcc-ci",
+            "inherits": [
+                "x64-linux-gcc-12"
+            ]
         },
         {
             "name": "arm64-macos-clang",
@@ -162,8 +209,8 @@
                 "base"
             ],
             "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "arm64-macos-clang-16-brew",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/arm64-macos-clang-16-brew.cmake"
+                "VCPKG_TARGET_TRIPLET": "arm64-macos-clang-19-brew",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/arm64-macos-clang-19-brew.cmake"
             },
             "vendor": {
                 "microsoft.com/VisualStudioSettings/CMake/1.0": {
@@ -172,6 +219,12 @@
                     ]
                 }
             }
+        },
+        {
+            "name": "arm64-macos-clang-ci",
+            "inherits": [
+                "arm64-macos-clang"
+            ]
         },
         {
             "name": "x64-macos-gcc",
@@ -189,6 +242,12 @@
                     ]
                 }
             }
+        },
+        {
+            "name": "x64-macos-gcc-ci",
+            "inherits": [
+                "x64-macos-gcc"
+            ]
         }
     ],
     "buildPresets": [
@@ -203,6 +262,16 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "x64-windows-msvc-ci",
+            "configurePreset": "x64-windows-msvc-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-msvc-ci-release",
+            "inherits": "x64-windows-msvc-ci",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "x64-windows-clang",
             "configurePreset": "x64-windows-clang",
             "configuration": "Debug"
@@ -210,6 +279,16 @@
         {
             "name": "x64-windows-clang-release",
             "inherits": "x64-windows-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-windows-clang-ci",
+            "configurePreset": "x64-windows-clang-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-clang-ci-release",
+            "inherits": "x64-windows-clang-ci",
             "configuration": "RelWithDebInfo"
         },
         {
@@ -223,6 +302,16 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "x64-linux-clang-ci",
+            "configurePreset": "x64-linux-clang-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-clang-ci-release",
+            "inherits": "x64-linux-clang-ci",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "x64-linux-gcc",
             "configurePreset": "x64-linux-gcc",
             "configuration": "Debug"
@@ -230,6 +319,16 @@
         {
             "name": "x64-linux-gcc-release",
             "inherits": "x64-linux-gcc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-linux-gcc-ci",
+            "configurePreset": "x64-linux-gcc-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-gcc-ci-release",
+            "inherits": "x64-linux-gcc-ci",
             "configuration": "RelWithDebInfo"
         },
         {
@@ -243,6 +342,16 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "arm64-macos-clang-ci",
+            "configurePreset": "arm64-macos-clang-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "arm64-macos-clang-ci-release",
+            "inherits": "arm64-macos-clang-ci",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "x64-macos-gcc",
             "configurePreset": "x64-macos-gcc",
             "configuration": "Debug"
@@ -250,6 +359,16 @@
         {
             "name": "x64-macos-gcc-release",
             "inherits": "x64-macos-gcc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-macos-gcc-ci",
+            "configurePreset": "x64-macos-gcc-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-macos-gcc-ci-release",
+            "inherits": "x64-macos-gcc-ci",
             "configuration": "RelWithDebInfo"
         }
     ],
@@ -273,6 +392,16 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "x64-windows-msvc-ci",
+            "configurePreset": "x64-windows-msvc-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-msvc-ci-release",
+            "inherits": "x64-windows-msvc-ci",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "x64-windows-clang",
             "configurePreset": "x64-windows-clang",
             "configuration": "Debug"
@@ -283,6 +412,16 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "x64-windows-clang-ci",
+            "configurePreset": "x64-windows-clang-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-windows-clang-ci-release",
+            "inherits": "x64-windows-clang-ci",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "x64-linux-clang",
             "configurePreset": "x64-linux-clang",
             "configuration": "Debug"
@@ -290,6 +429,16 @@
         {
             "name": "x64-linux-clang-release",
             "inherits": "x64-linux-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-linux-clang-ci",
+            "configurePreset": "x64-linux-clang-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-clang-ci-release",
+            "inherits": "x64-linux-clang-ci",
             "configuration": "RelWithDebInfo"
         },
         {
@@ -304,6 +453,17 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "x64-linux-gcc-ci",
+            "inherits": "sanitizer_env",
+            "configurePreset": "x64-linux-gcc-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-linux-gcc-ci-release",
+            "inherits": "x64-linux-gcc-ci",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "arm64-macos-clang",
             "configurePreset": "arm64-macos-clang",
             "configuration": "Debug"
@@ -311,6 +471,16 @@
         {
             "name": "arm64-macos-clang-release",
             "inherits": "arm64-macos-clang",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "arm64-macos-clang-ci",
+            "configurePreset": "arm64-macos-clang-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "arm64-macos-clang-ci-release",
+            "inherits": "arm64-macos-clang-ci",
             "configuration": "RelWithDebInfo"
         },
         {
@@ -322,6 +492,16 @@
         {
             "name": "x64-macos-gcc-release",
             "inherits": "x64-macos-gcc",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "x64-macos-gcc-ci",
+            "configurePreset": "x64-macos-gcc-ci",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-macos-gcc-ci-release",
+            "inherits": "x64-macos-gcc-ci",
             "configuration": "RelWithDebInfo"
         }
     ]

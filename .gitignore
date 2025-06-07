@@ -17,6 +17,5 @@ build/
 /.idea
 /cmake-build-debug
 /cmake-build-release
-
-# redirected clang-tidy output files
-*.tidy.log
+# cache directory used eg by clangd
+.cache
