@@ -364,7 +364,7 @@ public:
                 return cncr::data_defined_status_code<errc>{allocCode};
             }
         }
-
+        // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         return new (static_cast<void *>(&bufferPlacementStorage))
                 output_buffer(out);
     }
