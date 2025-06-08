@@ -56,7 +56,7 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
     static constexpr char domain_name[] = "dplx::dlog error domain";
 
     static constexpr value_descriptor values[] = {
-  // clang-format off
+            // clang-format off
         { code::success, generic_errc::success,
             "No Error/Success" },
         { code::bad, generic_errc::unknown,
@@ -95,6 +95,6 @@ struct dplx::cncr::status_enum_definition<::dplx::dlog::errc>
             "The encoded dmpsc bus header contained invalid parameters." },
         { code::invalid_dmpscb_file_size, generic_errc::unknown,
             "The dmpbsc bus file doesn't match its header description." },
-  // clang-format on
+            // clang-format on
     };
 };

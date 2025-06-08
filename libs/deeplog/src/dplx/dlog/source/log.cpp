@@ -300,7 +300,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     encodedSize += instrumentationScope.empty()
                            ? 0U
                            : static_cast<unsigned>(dp::item_size_of_u8string(
-                                   sizeCtx, instrumentationScope.size()));
+                                     sizeCtx, instrumentationScope.size()));
     auto const ownerId = logCtx.span();
     auto const hasOwnerSpan = ownerId.spanId != span_id::invalid();
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)

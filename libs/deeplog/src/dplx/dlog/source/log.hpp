@@ -90,13 +90,13 @@ public:
                    std::source_location const &loc,
                    Args const &...args)
         : log_args(log_args{
-                msg,
-                values,
-                types,
-                detail::from_source_location(loc),
-                static_cast<std::uint_least16_t>(sizeof...(Args)),
-                xsev,
-        })
+                  msg,
+                  values,
+                  types,
+                  detail::from_source_location(loc),
+                  static_cast<std::uint_least16_t>(sizeof...(Args)),
+                  xsev,
+          })
         , values{detail::any_loggable_ref_storage_type_of_t<
                   detail::any_loggable_ref_storage_tag<Args>>(args)...}
         , types{detail::any_loggable_ref_storage_tag<Args>...}
@@ -108,13 +108,13 @@ public:
                    detail::log_location loc,
                    Args const &...args)
         : log_args(log_args{
-                msg,
-                values,
-                types,
-                loc,
-                static_cast<std::uint_least16_t>(sizeof...(Args)),
-                xsev,
-        })
+                  msg,
+                  values,
+                  types,
+                  loc,
+                  static_cast<std::uint_least16_t>(sizeof...(Args)),
+                  xsev,
+          })
         , values{detail::any_loggable_ref_storage_type_of_t<
                   detail::any_loggable_ref_storage_tag<Args>>(args)...}
         , types{detail::any_loggable_ref_storage_tag<Args>...}
@@ -136,13 +136,13 @@ public:
                    severity xsev,
                    std::source_location const &loc)
         : log_args(log_args{
-                msg,
-                nullptr,
-                nullptr,
-                detail::from_source_location(loc),
-                0U,
-                xsev,
-        })
+                  msg,
+                  nullptr,
+                  nullptr,
+                  detail::from_source_location(loc),
+                  0U,
+                  xsev,
+          })
     {
     }
 #else
@@ -150,13 +150,13 @@ public:
                    severity xsev,
                    detail::log_location loc)
         : log_args(log_args{
-                msg,
-                nullptr,
-                nullptr,
-                loc,
-                0U,
-                xsev,
-        })
+                  msg,
+                  nullptr,
+                  nullptr,
+                  loc,
+                  0U,
+                  xsev,
+          })
     {
     }
 #endif

@@ -162,11 +162,11 @@ public:
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
     stack_attribute_args(Args... args)
         : attribute_args(attribute_args{
-                values,
-                types,
-                rids,
-                static_cast<std::uint_least16_t>(sizeof...(Args)),
-        })
+                  values,
+                  types,
+                  rids,
+                  static_cast<std::uint_least16_t>(sizeof...(Args)),
+          })
         , values{detail::any_loggable_ref_storage_type_of_t<
                   detail::any_loggable_ref_storage_tag<typename Args::type>>(
                   args.value)...}
@@ -187,11 +187,11 @@ class stack_attribute_args<> : public attribute_args
 public:
     stack_attribute_args()
         : attribute_args(attribute_args{
-                nullptr,
-                nullptr,
-                nullptr,
-                0U,
-        })
+                  nullptr,
+                  nullptr,
+                  nullptr,
+                  0U,
+          })
     {
     }
 };
