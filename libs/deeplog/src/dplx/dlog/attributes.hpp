@@ -115,7 +115,7 @@ consteval auto make_attribute_function(std::source_location current
                                        = std::source_location::current())
         -> attr::function
 {
-    auto const function = current.function_name();
+    auto const *const function = current.function_name();
     auto const functionSize = std::char_traits<char>::length(function);
     return {
             {function, functionSize}
