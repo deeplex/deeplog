@@ -293,8 +293,7 @@ try
     using namespace dplx;
     namespace llfio = dlog::llfio;
 
-    std::span<char *> args(static_cast<char **>(argv),
-                           static_cast<std::size_t>(argc));
+    std::span<char *> args(argv, static_cast<std::size_t>(argc));
     if (args.size() < 2)
     {
         return -3;
