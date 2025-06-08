@@ -20,6 +20,9 @@ include(VcpkgDefaults)
 if (BUILD_TESTING OR NOT DEFINED BUILD_TESTING)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
+if (DPLX_DLOG_USE_BOOST_ATOMIC_REF)
+    list(APPEND VCPKG_MANIFEST_FEATURES "boost-atomic-ref")
+endif()
 
 ########################################################################
 project(deeplog
@@ -28,6 +31,7 @@ project(deeplog
 )
 
 include(EnforceOutOfSourceBuilds)
+include(CheckStdAtomicRefSupport)
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
 include(FeatureSummary)
@@ -40,6 +44,7 @@ if (BUILD_TESTING)
     enable_testing()
 endif()
 
+check_std_atomic_ref_support(DPLX_DLOG_HAS_STD_ATOMIC_REF)
 
 ########################################################################
 # options
@@ -48,6 +53,7 @@ option(DPLX_DLOG_DISABLE_WORKAROUNDS "Disable all workarounds" OFF)
 option(DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS "Emit compiler errors for workarounds which are active, but haven't been validated for this version" OFF)
 
 option(DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT "Disable implicit context support via TLS" OFF)
+cmake_dependent_option(DPLX_DLOG_USE_BOOST_ATOMIC_REF "Use boost::atomic_ref instead of std::atomic_ref" OFF "DPLX_DLOG_HAS_STD_ATOMIC_REF" ON)
 
 option(BUILD_EXAMPLES "Build the example executables" OFF)
 
@@ -59,6 +65,10 @@ set_property(CACHE DLOG_LLFIO_TARGET PROPERTY STRINGS "hl;sl;dl")
 # dependencies
 
 set(Boost_NO_WARN_NEW_VERSIONS ON)
+set(DLOG_REQUIRED_BOOST_COMPONENTS config mp11 unordered variant2)
+if (DPLX_DLOG_USE_BOOST_ATOMIC_REF)
+    list(APPEND DLOG_REQUIRED_BOOST_COMPONENTS atomic)
+endif()
 
 find_package(fmt 10 CONFIG REQUIRED)
 
@@ -71,7 +81,7 @@ find_package(llfio CONFIG REQUIRED)
 find_package(concrete 0.0 CONFIG REQUIRED)
 find_package(deeppack 0.1 CONFIG REQUIRED)
 
-find_package(Boost 1.82 REQUIRED)
+find_package(Boost 1.82 REQUIRED COMPONENTS ${DLOG_REQUIRED_BOOST_COMPONENTS})
 
 find_package(Catch2 CONFIG)
 set_package_properties(Catch2 PROPERTIES

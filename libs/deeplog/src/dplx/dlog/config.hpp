@@ -18,3 +18,12 @@
 #if !defined(DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS)
 #define DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS 0
 #endif
+
+#if !defined(DPLX_DLOG_USE_BOOST_ATOMIC_REF)
+#include <version>
+#if __cpp_lib_atomic_ref >= 201'806L
+#define DPLX_DLOG_USE_BOOST_ATOMIC_REF 0
+#else
+#define DPLX_DLOG_USE_BOOST_ATOMIC_REF 1
+#endif
+#endif

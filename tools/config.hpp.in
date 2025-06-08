@@ -16,6 +16,7 @@
 
 #cmakedefine01 DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 #cmakedefine01 DPLX_DLOG_USE_SOURCE_LOCATION
+#cmakedefine01 DPLX_DLOG_USE_BOOST_ATOMIC_REF
 
 // NOLINTEND(cppcoreguidelines-macro-to-enum)
 // NOLINTEND(cppcoreguidelines-macro-usage)

@@ -295,8 +295,8 @@ auto dplx::dlog::mpsc_bus_handle::create_span_context(trace_id trace,
                     ^ traceBlob.values[3],
             mNumRegions);
     auto const ctr
-            = std::atomic_ref<std::uint64_t>(region(regionId)->span_prng_ctr)
-                      .fetch_add(1U, std::memory_order_relaxed);
+            = detail::atomic_ref<std::uint64_t>(region(regionId)->span_prng_ctr)
+                      .fetch_add(1U, detail::memory_order::relaxed);
     auto const rawTraceId
             = std::bit_cast<cncr::blob<std::uint64_t, 2, alignof(trace_id)>>(
                     trace);

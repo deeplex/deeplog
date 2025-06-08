@@ -20,9 +20,11 @@
 #include <dplx/dp/macros.hpp>
 #include <dplx/dp/streams/memory_output_stream.hpp>
 #include <dplx/make.hpp>
+#include <dplx/predef/os.h>
 #include <dplx/scope_guard.hpp>
 
 #include <dplx/dlog/concepts.hpp>
+#include <dplx/dlog/config.hpp>
 #include <dplx/dlog/core/file_database.hpp>
 #include <dplx/dlog/core/log_clock.hpp>
 #include <dplx/dlog/core/strong_types.hpp>
@@ -31,8 +33,22 @@
 #include <dplx/dlog/log_fabric.hpp>
 #include <dplx/dlog/source/record_output_buffer.hpp>
 
+#if DPLX_DLOG_USE_BOOST_ATOMIC_REF
+#include <boost/atomic/atomic_ref.hpp>
+#endif
+
 namespace dplx::dlog::detail
 {
+
+#if DPLX_DLOG_USE_BOOST_ATOMIC_REF
+template <typename T>
+using atomic_ref = boost::atomic_ref<T>;
+using memory_order = boost::memory_order;
+#else
+template <typename T>
+using atomic_ref = std::atomic_ref<T>;
+using memory_order = std::memory_order;
+#endif
 
 auto hashed_this_thread_id() noexcept -> std::uint32_t;
 
@@ -64,11 +80,11 @@ using mpsc_bus_info = mpsc_bus_info_v00;
 
 struct mpsc_bus_region_ctrl
 {
-    alignas(std::atomic_ref<std::uint32_t>::required_alignment)
+    alignas(detail::atomic_ref<std::uint32_t>::required_alignment)
             std::uint32_t read_ptr;
-    alignas(std::atomic_ref<std::uint32_t>::required_alignment)
+    alignas(detail::atomic_ref<std::uint32_t>::required_alignment)
             std::uint32_t alloc_ptr;
-    alignas(std::atomic_ref<std::uint64_t>::required_alignment) std::uint64_t
+    alignas(detail::atomic_ref<std::uint64_t>::required_alignment) std::uint64_t
             span_prng_ctr;
 
     std::uint8_t padding[48]; // NOLINT(cppcoreguidelines-avoid-magic-numbers)
@@ -174,7 +190,7 @@ private:
             = static_cast<std::uint32_t>(sizeof(region_ctrl));
 
     static constexpr std::uint32_t write_alignment
-            = std::atomic_ref<std::uint32_t>::required_alignment;
+            = detail::atomic_ref<std::uint32_t>::required_alignment;
     static constexpr std::uint32_t block_size = write_alignment;
     static constexpr std::uint32_t message_header_size = block_size;
 
@@ -209,8 +225,8 @@ public:
                 return errc::bad;
             }
 
-            std::atomic_ref<std::uint32_t>(*mMsgCtrl).fetch_and(
-                    max_message_size, std::memory_order::release);
+            detail::atomic_ref<std::uint32_t>(*mMsgCtrl).fetch_and(
+                    max_message_size, detail::memory_order::release);
             // reset();
             mMsgCtrl = nullptr;
             return outcome::success();
@@ -238,11 +254,12 @@ private:
         auto *const blockData = region_data(regionId);
         writable_bytes block(blockData, mRegionSize - region_ctrl_overhead);
 
-        std::atomic_ref<std::uint32_t> const readPtr(ctx->read_ptr);
-        std::atomic_ref<std::uint32_t> const allocPtr(ctx->alloc_ptr);
+        detail::atomic_ref<std::uint32_t> const readPtr(ctx->read_ptr);
+        detail::atomic_ref<std::uint32_t> const allocPtr(ctx->alloc_ptr);
 
-        auto const originalReadPos = readPtr.load(std::memory_order::relaxed);
-        auto const allocPos = allocPtr.load(std::memory_order::relaxed);
+        auto const originalReadPos
+                = readPtr.load(detail::memory_order::relaxed);
+        auto const allocPos = allocPtr.load(detail::memory_order::relaxed);
         if (allocPos == originalReadPos)
         {
             // nothing to see here
@@ -253,7 +270,7 @@ private:
         scope_guard readUpdateGuard = [&readPos, &originalReadPos, &readPtr] {
             if (readPos != originalReadPos)
             {
-                readPtr.store(readPos, std::memory_order::release);
+                readPtr.store(readPos, detail::memory_order::release);
             }
         };
 
@@ -276,8 +293,8 @@ private:
                         blockData + readPos);
 
                 auto const msgHead
-                        = std::atomic_ref<std::uint32_t>{*msgHeadPtr}.load(
-                                std::memory_order::acquire);
+                        = detail::atomic_ref<std::uint32_t>{*msgHeadPtr}.load(
+                                detail::memory_order::acquire);
                 if ((msgHead & message_lock_flag) != 0U)
                 {
                     break;
@@ -312,9 +329,9 @@ private:
 
             for (std::size_t i = 0U; i < batchSize; ++i)
             {
-                std::atomic_ref<std::uint32_t>{*infos[i].head}.fetch_or(
+                detail::atomic_ref<std::uint32_t>{*infos[i].head}.fetch_or(
                         message_lock_flag | message_consumed_flag,
-                        std::memory_order::relaxed);
+                        detail::memory_order::relaxed);
                 std::memset(infos[i].content.data(),
                             static_cast<int>(unused_block_content),
                             infos[i].content.size());
@@ -379,12 +396,13 @@ private:
         auto const regionEnd = mRegionSize - region_ctrl_overhead;
         auto const allocSize = cncr::round_up_p2(payloadSize, block_size);
 
-        std::atomic_ref<std::uint32_t> const sharedReadHand(ctx->read_ptr);
-        std::atomic_ref<std::uint32_t> const sharedAllocHand(ctx->alloc_ptr);
+        detail::atomic_ref<std::uint32_t> const sharedReadHand(ctx->read_ptr);
+        detail::atomic_ref<std::uint32_t> const sharedAllocHand(ctx->alloc_ptr);
 
-        auto const readHand = sharedReadHand.load(std::memory_order::acquire);
+        auto const readHand
+                = sharedReadHand.load(detail::memory_order::acquire);
         std::uint32_t allocHand
-                = sharedAllocHand.load(std::memory_order::relaxed);
+                = sharedAllocHand.load(detail::memory_order::relaxed);
         // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
         std::uint32_t payloadPosition;
         for (;;)
@@ -412,7 +430,7 @@ private:
             }
 
             if (sharedAllocHand.compare_exchange_weak(
-                        allocHand, payloadEnd, std::memory_order::relaxed))
+                        allocHand, payloadEnd, detail::memory_order::relaxed))
                     [[likely]]
             {
                 break;
@@ -424,8 +442,8 @@ private:
         auto *ctrl = reinterpret_cast<std::uint32_t *>(regionData + allocHand);
         auto *data = regionData + payloadPosition;
         // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        std::atomic_ref<std::uint32_t>(*ctrl).store(
-                payloadSize | message_lock_flag, std::memory_order::relaxed);
+        detail::atomic_ref<std::uint32_t>(*ctrl).store(
+                payloadSize | message_lock_flag, detail::memory_order::relaxed);
         out.reset(data, allocSize);
         out.mMsgCtrl = ctrl;
         return errc::success;
