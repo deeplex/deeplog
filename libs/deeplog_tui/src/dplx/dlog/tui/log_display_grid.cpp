@@ -74,7 +74,7 @@ static auto compute_render_window(std::size_t selected,
     return {selected - lineSplit, selected + lineSplit};
 }
 
-auto LogDisplayGridComponent::Render() -> ftxui::Element
+auto LogDisplayGridComponent::OnRender() -> ftxui::Element
 {
     constexpr int layout_size_level = 6;
     constexpr int iso8601_datetime_long_size = 26;

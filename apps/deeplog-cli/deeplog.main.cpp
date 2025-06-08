@@ -67,7 +67,7 @@ public:
         }));
     }
 
-    auto Render() -> ftxui::Element override
+    auto OnRender() -> ftxui::Element override
     {
 
         return ComponentBase::Render();
@@ -177,7 +177,7 @@ public:
                                  [](record *r) { return r->timestamp; });
     }
 
-    auto Render() -> ftxui::Element override
+    auto OnRender() -> ftxui::Element override
     {
         return mLogGrid->Render();
     }
@@ -264,7 +264,7 @@ public:
                                      &mTabSelector)}));
     }
 
-    auto Render() -> ftxui::Element override
+    auto OnRender() -> ftxui::Element override
     {
         ftxui::Element detail
                 = ftxui::text("u broke the main component render :(");
