@@ -109,7 +109,6 @@ TEST_CASE("file database message bus recovery test")
             = fmt::format("bus_recovery-{}", llfio::utils::random_string(4U));
     auto const dbFullName
             = std::string{dbName}.append(dlog::file_database_handle::extension);
-    auto const sinkFilePattern = dbName + ".{ctr}_{now:%FT%H-%M-%S}.dlog";
     auto const busNamePattern = dbName + ".{id}.{ctr}_{pid}.dmpscb";
 
     auto createRx
