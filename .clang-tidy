@@ -50,6 +50,8 @@ WarningsAsErrors: true
 HeaderFilterRegex: ".*/src/dp(lx|_tests)/.*"
 FormatStyle: file
 CheckOptions:
+  - key: bugprone-unused-return-value.AllowCastToVoid
+    value: true
   - key: modernize-use-override.AllowOverrideAndFinal
     value: true
   - key: cppcoreguidelines-macro-usage.AllowedRegexp
