@@ -48,9 +48,9 @@ constexpr auto is_hex_digit(char const digit) noexcept -> bool
 
 constexpr auto value_of_hex_digit(char const digit) noexcept -> std::uint8_t
 {
-    return static_cast<std::uint8_t>((static_cast<unsigned>(digit) & 0xfU)
-                                     + (static_cast<unsigned>(digit) >> 6U)
-                                               * 9U);
+    return static_cast<std::uint8_t>(
+            (static_cast<unsigned>(digit) & 0xfU)
+            + ((static_cast<unsigned>(digit) >> 6U) * 9U));
 }
 
 constexpr auto hex_digit_of_nibble(unsigned nibble) noexcept -> char

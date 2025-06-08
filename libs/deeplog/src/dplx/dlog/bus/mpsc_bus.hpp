@@ -437,12 +437,12 @@ private:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         return std::launder(reinterpret_cast<region_ctrl *>(
                 mBackingFile.address() + head_area_size
-                + which * static_cast<std::size_t>(mRegionSize)));
+                + (which * static_cast<std::size_t>(mRegionSize))));
     }
     auto region_data(std::uint32_t which) noexcept -> std::byte *
     {
         return mBackingFile.address() + head_area_size
-               + which * static_cast<std::size_t>(mRegionSize)
+               + (which * static_cast<std::size_t>(mRegionSize))
                + region_ctrl_overhead;
     }
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
