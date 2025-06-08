@@ -58,7 +58,7 @@ public:
     {
     }
     auto operator=(any_attribute &&other) noexcept(
-            // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+            // NOLINTNEXTLINE(performance-noexcept-move-constructor,cppcoreguidelines-noexcept-move-operations)
             allocator_traits::is_always_equal::value) -> any_attribute &
     {
         if (&other == this)

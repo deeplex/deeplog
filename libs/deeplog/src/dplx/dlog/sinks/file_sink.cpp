@@ -77,19 +77,17 @@ file_sink_backend::~file_sink_backend()
     (void)finalize();
 }
 
-// NOLINTNEXTLINE(performance-noexcept-move-constructor)
+// NOLINTNEXTLINE(performance-noexcept-move-constructor,cppcoreguidelines-noexcept-move-operations)
 auto file_sink_backend::operator=(file_sink_backend &&other)
         -> file_sink_backend &
 {
     finalize().value();
 
-    output_buffer::operator=(std::move(other));
-    // NOLINTBEGIN(bugprone-use-after-move)
+    output_buffer::operator=(static_cast<output_buffer &&>(other));
     mBackingFile = std::move(other.mBackingFile);
     mBufferAllocation = std::move(other.mBufferAllocation);
     mTargetBufferSize = std::exchange(other.mTargetBufferSize, 0U);
     mContainerInfo = std::exchange(other.mContainerInfo, {});
-    // NOLINTEND(bugprone-use-after-move)
     return *this;
 }
 
@@ -300,7 +298,7 @@ db_file_sink_backend::~db_file_sink_backend()
     }
 }
 
-// NOLINTNEXTLINE(performance-noexcept-move-constructor)
+// NOLINTNEXTLINE(performance-noexcept-move-constructor,cppcoreguidelines-noexcept-move-operations)
 auto db_file_sink_backend::operator=(db_file_sink_backend &&other)
         -> db_file_sink_backend &
 {
@@ -309,14 +307,12 @@ auto db_file_sink_backend::operator=(db_file_sink_backend &&other)
                                           finalize().value())
             .value();
 
-    file_sink_backend::operator=(std::move(other));
-    // NOLINTBEGIN(bugprone-use-after-move)
+    file_sink_backend::operator=(static_cast<file_sink_backend &&>(other));
     mMaxFileSize = std::exchange(other.mMaxFileSize, 0U);
     mFileDatabase = std::move(other.mFileDatabase);
     mFileNamePattern = std::move(other.mFileNamePattern);
     mSinkId = std::exchange(other.mSinkId, file_sink_id{});
     mCurrentRotation = std::exchange(other.mCurrentRotation, 0U);
-    // NOLINTEND(bugprone-use-after-move)
     return *this;
 }
 
