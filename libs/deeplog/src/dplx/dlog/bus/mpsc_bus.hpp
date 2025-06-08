@@ -509,8 +509,8 @@ public:
     db_mpsc_bus_handle() = default;
 
     db_mpsc_bus_handle(db_mpsc_bus_handle &&other) noexcept
-        : mpsc_bus_handle(std::move(other))
-        , mFileDb(std::move(other).mFileDb)
+        : mpsc_bus_handle(static_cast<mpsc_bus_handle &&>(other))
+        , mFileDb(std::move(other.mFileDb))
         , mId(std::move(other.mId))
         , mRotation(std::exchange(other.mRotation, 0U))
     {

@@ -71,7 +71,7 @@ public:
 
 protected:
     log_fabric_base(log_fabric_base &&other) noexcept
-        : log_record_port(std::move(other))
+        : log_record_port(static_cast<log_record_port &&>(other))
         , mSinks(std::move(other.mSinks))
         , mThresholds(std::move(other.mThresholds))
         , mDefaultThreshold(std::exchange(other.mDefaultThreshold,
