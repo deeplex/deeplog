@@ -232,6 +232,7 @@
                 "base"
             ],
             "cacheVariables": {
+                "DPLX_DLOG_USE_SOURCE_LOCATION": false,
                 "VCPKG_TARGET_TRIPLET": "x64-osx-gcc-14",
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/tools/toolchains/x64-macos-gcc-14.cmake"
             },
