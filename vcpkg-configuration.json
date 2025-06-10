@@ -11,8 +11,7 @@
         {
             "kind": "git",
             "repository": "https://github.com/deeplex/vcpkg-registry",
-            "reference": "dev/renovations-2025.06",
-            "baseline": "e7ceeab660a6992d8d219c7976c8d026fb1c3106",
+            "baseline": "70800657bcd57ab9ac7d0963e01d475236b4da03",
             "packages": [
                 "concrete",
                 "deeppack"
