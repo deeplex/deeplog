@@ -67,7 +67,7 @@ public:
     static auto derive_severity_infos(theme const &t)
             -> std::vector<severity_info>;
 
-    auto Render() -> ftxui::Element override;
+    auto OnRender() -> ftxui::Element override;
     auto OnEvent(ftxui::Event event) -> bool override;
 
     [[nodiscard]] auto Focusable() const -> bool override;

@@ -202,9 +202,7 @@ private:
     auto do_finalize() noexcept -> result<void> override
     {
         if constexpr (requires {
-                          {
-                              mBackend.finalize()
-                          } -> cncr::tryable;
+                          { mBackend.finalize() } -> cncr::tryable;
                       })
         {
             DPLX_TRY(mBackend.finalize());

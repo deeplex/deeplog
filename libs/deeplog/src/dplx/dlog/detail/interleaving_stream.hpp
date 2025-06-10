@@ -43,7 +43,7 @@ protected:
         auto const twodd = two | uodd;
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
         return (idx < 5U ? (twodd) << idx
-                         : (two << 4) * (idx - 3U) + (uodd << 4))
+                         : ((two << 4) * (idx - 3U)) + (uodd << 4))
                * page_size;
     }
     static constexpr auto index_to_file_size(unsigned idx) noexcept

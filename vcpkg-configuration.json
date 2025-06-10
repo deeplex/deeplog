@@ -2,17 +2,24 @@
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg-configuration.schema.json",
     "default-registry": {
         "kind": "builtin",
-        "baseline": "a42af01b72c28a8e1d7b48107b33e4f286a55ef6"
+        "baseline": "ce613c41372b23b1f51333815feb3edd87ef8a8b"
     },
+    "overlay-triplets": [
+        "tools/triplets"
+    ],
     "registries": [
         {
             "kind": "git",
             "repository": "https://github.com/deeplex/vcpkg-registry",
-            "baseline": "5fcc58303af6541dcc6f4b60159237a6bbb35197",
+            "reference": "dev/renovations-2025.06",
+            "baseline": "e7ceeab660a6992d8d219c7976c8d026fb1c3106",
             "packages": [
                 "concrete",
                 "deeppack"
             ]
         }
+    ],
+    "overlay-ports": [
+        "tools/ports"
     ]
 }

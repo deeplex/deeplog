@@ -9,7 +9,7 @@
 
 #include <cstddef>
 #include <memory>
-#include <span>
+#include <type_traits>
 #include <vector>
 
 #include <boost/unordered/unordered_flat_map.hpp>
@@ -28,8 +28,8 @@ namespace dplx::dlog::detail
 
 struct transparent_string_hash : private boost::hash<std::string_view>
 {
-    using is_transparent = int;
-    using is_avalanching = int;
+    using is_transparent = std::true_type;
+    using is_avalanching = std::true_type;
 
     inline auto operator()(std::string_view value) const noexcept -> std::size_t
     {
@@ -71,7 +71,7 @@ public:
 
 protected:
     log_fabric_base(log_fabric_base &&other) noexcept
-        : log_record_port(std::move(other))
+        : log_record_port(static_cast<log_record_port &&>(other))
         , mSinks(std::move(other.mSinks))
         , mThresholds(std::move(other.mThresholds))
         , mDefaultThreshold(std::exchange(other.mDefaultThreshold,

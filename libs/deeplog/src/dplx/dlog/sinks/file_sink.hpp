@@ -91,7 +91,7 @@ public:
     virtual ~file_sink_backend();
 
     file_sink_backend(file_sink_backend &&) noexcept = default;
-    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor,cppcoreguidelines-noexcept-move-operations)
     auto operator=(file_sink_backend &&other) -> file_sink_backend &;
 
     friend inline void swap(file_sink_backend &lhs,
@@ -192,7 +192,7 @@ public:
     db_file_sink_backend() noexcept = default;
 
     db_file_sink_backend(db_file_sink_backend &&) noexcept = default;
-    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor,cppcoreguidelines-noexcept-move-operations)
     auto operator=(db_file_sink_backend &&other) -> db_file_sink_backend &;
 
     friend inline void swap(db_file_sink_backend &lhs,

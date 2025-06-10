@@ -305,7 +305,7 @@ public:
     template <loggable T>
     explicit constexpr any_loggable_ref(T const &v)
         : mRef(typename any_loggable_ref_storage_type_of<
-                any_loggable_ref_storage_tag<T>>::type(v))
+                  any_loggable_ref_storage_tag<T>>::type(v))
         , mRefType(any_loggable_ref_storage_tag<T>)
     {
     }

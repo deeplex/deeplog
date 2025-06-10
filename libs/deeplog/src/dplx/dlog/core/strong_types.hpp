@@ -11,7 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <utility>
+#include <type_traits>
 
 #include <fmt/core.h>
 
@@ -129,7 +129,7 @@ namespace std
 template <>
 struct hash<dplx::dlog::trace_id>
 {
-    using is_avalanching = void;
+    using is_avalanching = std::true_type;
     using value_type = dplx::dlog::trace_id;
 
     auto operator()(value_type const value) const noexcept -> std::size_t
@@ -153,7 +153,7 @@ struct hash<dplx::dlog::trace_id>
 template <>
 struct hash<dplx::dlog::span_id>
 {
-    using is_avalanching = void;
+    using is_avalanching = std::true_type;
     using value_type = dplx::dlog::span_id;
 
     auto operator()(value_type const value) const noexcept -> std::size_t

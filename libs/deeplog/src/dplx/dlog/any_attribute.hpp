@@ -58,7 +58,7 @@ public:
     {
     }
     auto operator=(any_attribute &&other) noexcept(
-            // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+            // NOLINTNEXTLINE(performance-noexcept-move-constructor,cppcoreguidelines-noexcept-move-operations)
             allocator_traits::is_always_equal::value) -> any_attribute &
     {
         if (&other == this)
@@ -107,10 +107,12 @@ public:
                                 ? static_cast<any_attribute &&>(other)
                                 : any_attribute{allocator})
     {
+        // NOLINTBEGIN(clang-analyzer-cplusplus.Move)
         if (other.mOtlpId.get_allocator() != allocator)
         {
             operator=(static_cast<any_attribute &&>(other));
         }
+        // NOLINTEND(clang-analyzer-cplusplus.Move)
     }
 #if DPLX_DLOG_WORKAROUND_ISSUE_LIBSTDCPP_108952
     any_attribute(any_attribute &other, allocator_type const &allocator)
@@ -118,10 +120,12 @@ public:
                                 ? static_cast<any_attribute &&>(other)
                                 : any_attribute{allocator})
     {
+        // NOLINTBEGIN(clang-analyzer-cplusplus.Move)
         if (other.mOtlpId.get_allocator() != allocator)
         {
             operator=(static_cast<any_attribute &&>(other));
         }
+        // NOLINTEND(clang-analyzer-cplusplus.Move)
     }
 #endif
 

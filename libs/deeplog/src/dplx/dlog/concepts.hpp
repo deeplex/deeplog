@@ -61,9 +61,7 @@ concept bus_ex
 template <typename Fn>
 concept raw_message_consumer
         = requires(Fn fn, std::span<bytes const> const msgs) {
-              {
-                  static_cast<Fn &&>(fn)(msgs)
-              } noexcept;
+              { static_cast<Fn &&>(fn)(msgs) } noexcept;
           };
 
 template <typename T>

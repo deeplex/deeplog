@@ -34,6 +34,8 @@ target_include_directories(deeplog PUBLIC
 target_link_libraries(deeplog PUBLIC
     Deeplex::deeppack
 
+    Boost::boost
+    $<$<BOOL:${DPLX_DLOG_USE_BOOST_ATOMIC_REF}>:Boost::atomic>
     fmt::fmt
     llfio::${DLOG_LLFIO_TARGET}
     outcome::hl

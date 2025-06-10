@@ -186,7 +186,7 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained")
 
     std::vector<result<void>> threadResults;
     threadResults.reserve(concurrency);
-    std::vector<std::jthread> threads;
+    std::vector<std::thread> threads;
     threads.reserve(concurrency);
     for (unsigned i = 0U; i < concurrency; ++i)
     {
@@ -204,6 +204,10 @@ TEST_CASE("mpsc_bus can be concurrently filled and drained")
         // std::this_thread::sleep_for(3ms);
     }
 
+    for (auto &t : threads)
+    {
+        t.join();
+    }
     threads.clear();
     REQUIRE(consume_content(bufferbus, poppedIds));
 

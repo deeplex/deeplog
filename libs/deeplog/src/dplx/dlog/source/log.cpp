@@ -300,7 +300,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     encodedSize += instrumentationScope.empty()
                            ? 0U
                            : static_cast<unsigned>(dp::item_size_of_u8string(
-                                   sizeCtx, instrumentationScope.size()));
+                                     sizeCtx, instrumentationScope.size()));
     auto const ownerId = logCtx.span();
     auto const hasOwnerSpan = ownerId.spanId != span_id::invalid();
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
@@ -312,7 +312,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     encodedSize += static_cast<unsigned>(
             dp::encoded_item_head_size<dp::type_code::array>(
                     args.num_arguments));
-    for (int i = 0; i < args.num_arguments; ++i)
+    for (unsigned i = 0; i < args.num_arguments; ++i)
     {
         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         encodedSize += static_cast<unsigned>(detail::item_size_of_any_loggable(
@@ -376,7 +376,7 @@ auto vlog(log_context const &logCtx, log_args const &args) noexcept
     (void)dp::emit_u8string(ctx, args.message.data(), args.message.size());
 
     (void)dp::emit_array<unsigned>(ctx, args.num_arguments);
-    for (int i = 0; i < args.num_arguments; ++i)
+    for (unsigned i = 0; i < args.num_arguments; ++i)
     {
         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         DPLX_TRY(detail::encode_any_loggable(ctx, args.part_types[i],

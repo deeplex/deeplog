@@ -9,12 +9,15 @@
 
 // NOLINTBEGIN(modernize-macro-to-enum)
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
+// NOLINTBEGIN(cppcoreguidelines-macro-to-enum)
 
 #cmakedefine01 DPLX_DLOG_DISABLE_WORKAROUNDS
 #cmakedefine01 DPLX_DLOG_FLAG_OUTDATED_WORKAROUNDS
 
 #cmakedefine01 DPLX_DLOG_DISABLE_IMPLICIT_CONTEXT
 #cmakedefine01 DPLX_DLOG_USE_SOURCE_LOCATION
+#cmakedefine01 DPLX_DLOG_USE_BOOST_ATOMIC_REF
 
+// NOLINTEND(cppcoreguidelines-macro-to-enum)
 // NOLINTEND(cppcoreguidelines-macro-usage)
 // NOLINTEND(modernize-macro-to-enum)

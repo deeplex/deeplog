@@ -4,11 +4,18 @@
     "version-semver": "0.0.0-beta.6",
     "homepage": "https://github.com/deeplex/deeplog",
     "dependencies": [
+        {
+            "name": "boost-atomic",
+            "platform": "osx"
+        },
         "boost-config",
         "boost-mp11",
         "boost-unordered",
         "boost-variant2",
-        "boost-winapi",
+        {
+            "name": "boost-winapi",
+            "platform": "windows"
+        },
         "concrete",
         "deeppack",
         "fmt",
@@ -20,6 +27,10 @@
         "outcome"
     ],
     "features": {
+        "boost-atomic-ref": {
+            "description": "Use boost::atomic_ref instead of std::atomic_ref",
+            "dependencies": [ "boost-atomic" ]
+        },
         "tests": {
             "description": "Build the test suite",
             "dependencies": [ "catch2" ]

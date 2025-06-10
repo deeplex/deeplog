@@ -180,6 +180,7 @@ public:
 
         dp::emit_context ctx{out};
         (void)dp::emit_binary(ctx, messageSize);
+        // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         return new (static_cast<void *>(&bufferPlacementStorage))
                 output_buffer(static_cast<output_buffer &&>(out));
     }
