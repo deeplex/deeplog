@@ -85,16 +85,17 @@ void fill_mpsc_bus_orphan(
         dplx::make<dlog::db_mpsc_bus_handle> const &makeMpscBus)
 {
     dlog::log_fabric<dlog::db_mpsc_bus_handle> fabric(makeMpscBus().value());
-    dlog::set_thread_context(dlog::log_context(fabric));
+    dlog::log_context ctx(fabric);
 
-    DLOG_(warn, "hello from no scope");
+    DLOG_TO(ctx, dlog::severity::warn, "hello from no scope");
     {
-        auto fillScope = dlog::span_scope::open("test/db/mpsc/fill");
-        DLOG_(warn, "hello from outer scope");
+        auto fillScope = dlog::span_scope::open(ctx, "test/db/mpsc/fill");
+        DLOG_TO(ctx, dlog::severity::warn, "hello from outer scope");
 
         {
-            auto innerScope = dlog::span_scope::open("test/db/mpsc/fill/inner");
-            DLOG_(warn, "hello from inner scope");
+            auto innerScope
+                    = dlog::span_scope::open(ctx, "test/db/mpsc/fill/inner");
+            DLOG_TO(ctx, dlog::severity::warn, "hello from inner scope");
         }
     }
 }
