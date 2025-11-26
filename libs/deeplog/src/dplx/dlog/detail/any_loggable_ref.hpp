@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <dplx/cncr/utils.hpp>
 #include <dplx/dp/api.hpp>

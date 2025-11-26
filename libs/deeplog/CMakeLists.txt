@@ -111,6 +111,7 @@ dplx_target_sources(deeplog
 
         dlog/detail/any_loggable_ref
         dlog/detail/any_reified
+        dlog/detail/system_error2_fmt
         dlog/detail/workaround
 )
 
@@ -126,7 +127,6 @@ dplx_target_sources(deeplog
         dlog/macros.hpp
 
         dlog/detail/hex.hpp
-        dlog/detail/system_error2_fmt.hpp
         dlog/detail/utils.hpp
         dlog/detail/x_poly_types.inl
 

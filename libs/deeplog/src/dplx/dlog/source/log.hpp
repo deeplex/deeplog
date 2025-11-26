@@ -14,7 +14,7 @@
 #include <source_location>
 #endif
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <dplx/dlog/config.hpp>
 #include <dplx/dlog/core/strong_types.hpp>

@@ -12,7 +12,6 @@
 #include <memory_resource>
 #include <string_view>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
 
 #include <dplx/dp.hpp>

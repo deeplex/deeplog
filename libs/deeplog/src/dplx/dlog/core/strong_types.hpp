@@ -13,7 +13,7 @@
 #include <span>
 #include <type_traits>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <dplx/cncr/utils.hpp>
 #include <dplx/dp/fwd.hpp>

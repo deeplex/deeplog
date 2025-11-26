@@ -14,7 +14,6 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include <fmt/args.h>
-#include <fmt/core.h>
 #include <fmt/format.h>
 
 #include <dplx/dp.hpp>
