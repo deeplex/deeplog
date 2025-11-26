@@ -10,7 +10,6 @@
 #include <string>
 
 #include <catch2/catch_tostring.hpp>
-#include <fmt/core.h>
 #include <fmt/format.h>
 
 #include <dplx/predef/compiler.h>

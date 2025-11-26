@@ -1,5 +1,5 @@
 
-// Copyright Henrik Steffen Gaßmann 2023
+// Copyright Henrik Steffen Gaßmann 2023, 2025.
 //
 // Distributed under the Boost Software License, Version 1.0.
 //         (See accompanying file LICENSE or copy at
@@ -28,8 +28,8 @@ public:
     }
 
     template <typename FormatContext>
-    auto format(status_code_domain::string_ref const &str, FormatContext &ctx)
-            -> typename FormatContext::iterator
+    auto format(status_code_domain::string_ref const &str,
+                FormatContext &ctx) const -> typename FormatContext::iterator
     {
         return base::format(StringView(str.data(), str.size()), ctx);
     }
@@ -59,7 +59,7 @@ struct std::formatter<SYSTEM_ERROR2_NAMESPACE::status_code_domain::string_ref,
 };
 #endif
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 SYSTEM_ERROR2_NAMESPACE_BEGIN
 namespace detail
@@ -92,7 +92,7 @@ struct trivial_status_code_view
 {
     system_error2::status_code<void> const *code;
 
-    trivial_status_code_view() noexcept = default;
+    constexpr trivial_status_code_view() noexcept = default;
 
     DPLX_ATTR_FORCE_INLINE
     trivial_status_code_view(system_error2::status_code<void> const &sc)
@@ -105,15 +105,13 @@ struct reified_status_code
     std::uint64_t mDomainId{};
     std::pmr::string mDomainName;
     std::pmr::string mMessage;
-
-    reified_status_code() noexcept = default;
 };
 
 struct trivial_system_code_view
 {
     system_error2::system_code const *code;
 
-    trivial_system_code_view() noexcept = default;
+    constexpr trivial_system_code_view() noexcept = default;
 
     DPLX_ATTR_FORCE_INLINE
     trivial_system_code_view(system_error2::system_code const &sc)
@@ -127,8 +125,6 @@ struct reified_system_code
     std::uint64_t mRawValue{};
     std::pmr::string mDomainName;
     std::pmr::string mMessage;
-
-    reified_system_code() noexcept = default;
 };
 
 } // namespace dplx::dlog::detail
