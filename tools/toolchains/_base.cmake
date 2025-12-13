@@ -13,3 +13,4 @@ endif()
 
 set(CMAKE_C_STANDARD 17 CACHE STRING "C standard")
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard")
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "C++ module scanning")
