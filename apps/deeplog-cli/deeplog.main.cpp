@@ -207,6 +207,11 @@ private:
                 ctx.states, attribute_type_registry_state);
         {
             auto *attributeTypeRegistry = attributeTypeRegistryScope.get();
+            if (attributeTypeRegistry == nullptr)
+            {
+                // technically not possible, but GCC-15 doesn't realize that
+                return errc::not_enough_memory;
+            }
             (void)attributeTypeRegistry->insert<attr::file>();
             (void)attributeTypeRegistry->insert<attr::line>();
             (void)attributeTypeRegistry->insert<attr::function>();
